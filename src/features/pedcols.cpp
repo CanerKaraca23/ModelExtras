@@ -4,6 +4,7 @@
 #include <RenderWare.h>
 #include <rw/rpworld.h>
 #include <rw/rwplcore.h>
+#include <CGeneral.h>
 #include "utils/datamgr.h"
 
 using namespace plugin;
