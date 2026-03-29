@@ -61,15 +61,15 @@ void DashboardLEDs::Init()
 	ModelInfoMgr::RegisterRender([](CVehicle *pControlVeh) {
 		int model = pControlVeh->m_nModelIndex;
 
-		if (pControlVeh->bEngineOn) {
+		if (pControlVeh->m_nVehicleFlags.bEngineOn) {
 			EnableLED(pControlVeh, eMaterialType::EngineOnLed);
 		}
 
-		if (pControlVeh->bEngineBroken) {
+		if (pControlVeh->m_nVehicleFlags.bEngineBroken) {
 			EnableLED(pControlVeh, eMaterialType::EngineBrokenLed);
 		}
 
-		if (pControlVeh->bSirenOrAlarm) {
+		if (pControlVeh->m_nVehicleFlags.bSirenOrAlarm) {
 			EnableLED(pControlVeh, eMaterialType::SirenLed);
 		}
 
