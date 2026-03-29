@@ -65,8 +65,8 @@ jobs:
       run: |
         xmake f -m release \
           --mingw=/usr \
-          --cc=i686-w64-mingw32-gcc \
-          --cxx=i686-w64-mingw32-g++ \
+          --cc=clang-19 \
+          --cxx=clang++-19 \
           --cxflags="-D__cpp_concepts=202002L" \
           -c -y
         xmake -j$(nproc)
