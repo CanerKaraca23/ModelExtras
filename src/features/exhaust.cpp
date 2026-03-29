@@ -201,7 +201,8 @@ void ExhaustFx::RenderSmokeFx(CVehicle *pVeh, const ExhaustData &info)
     particleDir *= -1;
 
     CVector parVelocity;
-    if (DotProduct(particleDir, pVeh->m_vecMoveSpeed) >= 0.05f)
+    const float velocityDot = particleDir.x * pVeh->m_vecMoveSpeed.x + particleDir.y * pVeh->m_vecMoveSpeed.y + particleDir.z * pVeh->m_vecMoveSpeed.z;
+    if (velocityDot >= 0.05f)
     {
         parVelocity = pVeh->m_vecMoveSpeed * 30.0f;
     }
@@ -249,7 +250,7 @@ void ExhaustFx::RenderSmokeFx(CVehicle *pVeh, const ExhaustData &info)
             0);
 
         // secondary emission
-        if (pVeh->m_fGasPedal > 0.5f && pVeh->m_nCurrentGear < 3 && (CGeneral::GetRandomNumber() % 2))
+        if (pVeh->m_fGasPedal > 0.5f && pVeh->m_nCurrentGear < 3 && (CGeneral::GetRandomNumberInRange(0, 2) == 1))
         {
             FxSystem_c *secondaryFxSystem = isExhaustSubmerged ? g_fx.m_pPrtBubble : g_fx.m_pPrtSmokeII3expand;
 
