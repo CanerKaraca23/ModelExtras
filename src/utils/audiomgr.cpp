@@ -3,7 +3,6 @@
 #include "defines.h"
 #include <cstdint>
 #include <extensions/ScriptCommands.h>
-#include <CAudioEngine.h>
 
 using namespace plugin;
 
@@ -71,7 +70,8 @@ void AudioMgr::PlayClickSound()
     {
         return;
     }
-    AudioEngine.ReportFrontendAudioEvent(AE_FRONTEND_RADIO_CLICK_ON, 10.0, 1.0);
+    static std::string path = MOD_DATA_PATH("audio/switch_toggle.wav");
+    PlayFileSound(path, FindPlayerPed(), 1.0f, true);
 }
 
 void AudioMgr::PlaySwitchSound(CEntity *pEntity)
