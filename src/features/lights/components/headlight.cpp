@@ -35,7 +35,7 @@ void HeadlightComponent::Process(CVehicle* pVeh, VehLightData& data) {
         static size_t prev = 0;
         static uint32_t longLightKey = gConfig.ReadInteger("KEYS", "LongLightKey", VK_G);
 
-        if (KeyPressed(longLightKey) && (pVeh->bLightsOn || CarUtil::IsLightsForcedOn(pVeh))) {
+        if (KeyPressed(longLightKey) && (pVeh->m_nVehicleFlags.bLightsOn || CarUtil::IsLightsForcedOn(pVeh))) {
             size_t now = CTimer::m_snTimeInMilliseconds;
             if (now - prev > 500) {
                 data.bLongLightsOn = !data.bLongLightsOn;
@@ -49,7 +49,7 @@ void HeadlightComponent::Process(CVehicle* pVeh, VehLightData& data) {
             bool isRightFrontOk = !Util::IsLightDamaged(pVeh, eLights::LIGHT_FRONT_RIGHT);
             // Render Headlights directly from Process logic for AI/Parked if visible to camera.
             // This replicates the old ProcessScriptsEvent headlight render for non-player vehicles.
-            if (pVeh->bLightsOn || CarUtil::IsLightsForcedOn(pVeh) || Util::IsNightTime()) {
+            if (pVeh->m_nVehicleFlags.bLightsOn || CarUtil::IsLightsForcedOn(pVeh) || Util::IsNightTime()) {
                 std::string texName = data.bLongLightsOn ? "headlight_long" : "headlight_short";
                 LightManager::RenderLight(pVeh, data, eMaterialType::HeadLightLeft, isLeftFrontOk, texName);
                 LightManager::RenderLight(pVeh, data, eMaterialType::HeadLightRight, isRightFrontOk, texName);
@@ -61,7 +61,7 @@ void HeadlightComponent::Process(CVehicle* pVeh, VehLightData& data) {
 void HeadlightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehLightData& data) {
     if (CarUtil::IsLightsForcedOff(pControlVeh)) return;
 
-    if (pControlVeh->m_pDriver == FindPlayerPed() && (pControlVeh->bLightsOn || CarUtil::IsLightsForcedOn(pControlVeh) || Util::IsNightTime())) {
+    if (pControlVeh->m_pDriver == FindPlayerPed() && (pControlVeh->m_nVehicleFlags.bLightsOn || CarUtil::IsLightsForcedOn(pControlVeh) || Util::IsNightTime())) {
         bool leftOn = pControlVeh->m_renderLights.m_bLeftFront && !Util::IsLightDamaged(pControlVeh, eLights::LIGHT_FRONT_LEFT);
         bool rightOn = pControlVeh->m_renderLights.m_bRightFront && !Util::IsLightDamaged(pControlVeh, eLights::LIGHT_FRONT_RIGHT);
         
@@ -76,4 +76,3 @@ void HeadlightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehL
         }
     }
 }
-
