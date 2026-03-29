@@ -14,7 +14,7 @@
 
 bool VehicleSiren::GetSirenState()
 {
-	return (Mute == false) ? (vehicle->bSirenOrAlarm) : (true);
+	return (Mute == false) ? (vehicle->m_nVehicleFlags.bSirenOrAlarm) : (true);
 }
 
 bool IsValidSirenVehicle(RwFrame *pFrame)
@@ -46,7 +46,7 @@ char __fastcall Sirens::hkUsesSiren(CVehicle *ptr)
 {
 	if (Util::IsEngineOff(ptr))
 	{
-		ptr->bSirenOrAlarm = false;
+		ptr->m_nVehicleFlags.bSirenOrAlarm = false;
 		return false;
 	}
 
@@ -689,7 +689,7 @@ void Sirens::Init()
 				vehicleData[vehicle]->Mute = !vehicleData[vehicle]->Mute;
 
 				if (vehicleData[vehicle]->Mute)
-					vehicle->bSirenOrAlarm = false;
+					vehicle->m_nVehicleFlags.bSirenOrAlarm = false;
 
 				AudioMgr::PlaySwitchSound(vehicle);
 			}
@@ -785,7 +785,7 @@ void Sirens::Init()
 		}
 
 		if (Util::IsEngineOff(vehicle)) {
-			vehicle->bSirenOrAlarm = false;
+			vehicle->m_nVehicleFlags.bSirenOrAlarm = false;
 			return;
 		}
 
@@ -1030,7 +1030,7 @@ VehicleSiren::VehicleSiren(CVehicle *_vehicle)
 	if (modelInfo->m_nVehicleType == eVehicleType::VEHICLE_HELI || modelInfo->m_nVehicleType == eVehicleType::VEHICLE_PLANE)
 		this->Mute = true;
 
-	SirenState = _vehicle->bSirenOrAlarm;
+	SirenState = _vehicle->m_nVehicleFlags.bSirenOrAlarm;
 
 	if (modelInfo->m_nVehicleType == eVehicleType::VEHICLE_TRAILER)
 		Trailer = true;
