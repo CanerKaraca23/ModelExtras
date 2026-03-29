@@ -2,16 +2,23 @@
 #include "matrix.h"
 #include "utils/frameextention.h"
 
+static inline RwV3d Cross(const RwV3d& a, const RwV3d& b)
+{
+    return {
+        a.y * b.z - a.z * b.y,
+        a.z * b.x - a.x * b.z,
+        a.x * b.y - a.y * b.x
+    };
+}
+
 void MatrixUtil::ForceRightVector(RwMatrix* matrix, RwV3d& newRight)
 {
     // NOTE: the code is based on CMatrix::ForceUpVector<0x59B7E0>
     // and adjusted for RwMatrix since it swaps up and forward vectors
 
-    RwV3d up;
-    RwV3dCrossProduct(&up, &newRight, &matrix->at);
+    RwV3d up = Cross(newRight, matrix->at);
 
-    RwV3d newForward;
-    RwV3dCrossProduct(&newForward, &up, &newRight);
+    RwV3d newForward = Cross(up, newRight);
 
     matrix->right = newRight;
     matrix->up = up;
