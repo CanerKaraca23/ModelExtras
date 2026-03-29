@@ -54,7 +54,7 @@ jobs:
 
         # Common flags
         FLAGS="-I. -Ishared -Ishared/game -Iplugin_sa -Iplugin_sa/game_sa -Iplugin_sa/game_sa/rw -Isafetyhook -DGTASA -DPLUGIN_SGV_10US -DRW"
-        CXXFLAGS="-std=gnu++2b -fpermissive -fcommon -O2 -D__cpp_concepts=202002L"
+        CXXFLAGS="-std=c++2b -fpermissive -fcommon -fms-extensions -O2 -D__cpp_concepts=202002L"
         CFLAGS="-fcommon -O2"
 
         # Parallel build
