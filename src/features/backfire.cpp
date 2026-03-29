@@ -7,6 +7,7 @@
 #include "utils/audiomgr.h"
 #include "enums/vehdummy.h"
 #include <CCamera.h>
+#include <CGeneral.h>
 #include "ModelExtrasAPI.h"
 
 using namespace plugin;
@@ -52,7 +53,7 @@ void BackFireEffect::BackFireSingle(CVehicle *pVeh)
 
         vx = 0.0f;
         pos = pInfo->m_pVehicleStruct->m_avDummyPos[eVehicleDummies::EXHAUST_SECONDARY];
-        if (!pos.IsZero())
+        if (pos.x != 0.0f || pos.y != 0.0f || pos.z != 0.0f)
         {
             if (pVeh->m_pHandlingData->m_bDoubleExhaust)
             {
@@ -82,7 +83,7 @@ void BackFireEffect::BackFireSingle(CVehicle *pVeh)
 
 void BackFireEffect::BackFireMulti(CVehicle *pVeh)
 {
-    int num = RandomNumberInRange(0, 3) - 1;
+    int num = CGeneral::GetRandomNumberInRange(0, 3) - 1;
 
     BackFireSingle(pVeh);
     BackfireData &data = m_VehData.Get(pVeh);
@@ -117,7 +118,7 @@ void BackFireEffect::Init()
 // Inspired by Junior's https://www.mixmods.com.br/2016/06/backfire-als-v2-5-mod-estalar-escapamento/
 void BackFireEffect::Process(CVehicle *pVeh)
 {
-    if (!pVeh->GetIsOnScreen() || pVeh->bEngineBroken || !pVeh->bEngineOn || pVeh->bIsBig || pVeh->bIsVan || pVeh->bIsBus || pVeh->bIsRCVehicle)
+    if (!pVeh->GetIsOnScreen() || pVeh->m_nVehicleFlags.bEngineBroken || !pVeh->m_nVehicleFlags.bEngineOn || pVeh->m_nVehicleFlags.bIsBig || pVeh->m_nVehicleFlags.bIsVan || pVeh->m_nVehicleFlags.bIsBus || pVeh->m_nVehicleFlags.bIsRCVehicle)
     {
         return;
     }
