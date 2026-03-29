@@ -24,11 +24,11 @@ float Util::NormalizeAngle(float angle)
 }
 
 double Util::RadToDeg(double rad) {
-    return rad * (180.0 / PI);
+    return rad * (180.0 / M_PI);
 }
 
 double Util::DegToRad(double deg) {
-    return deg * (PI / 180.0);
+    return deg * (M_PI / 180.0);
 }
 
 float Util::GetVehicleSpeed(CVehicle *pVeh)
@@ -170,7 +170,7 @@ bool Util::IsNightTime()
 
 bool Util::IsEngineOff(CVehicle *pVeh)
 {
-	return !pVeh->bEngineOn || pVeh->bEngineBroken;
+	return !pVeh->m_nVehicleFlags.bEngineOn || pVeh->m_nVehicleFlags.bEngineBroken;
 }
 
 float mx1, my1, mz1;
