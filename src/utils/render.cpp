@@ -41,7 +41,8 @@ bool IsShadowTowardVehicle(CMatrix *dummyMatrix, CVector vehicleCenter)
     toVehicle.Normalise();
 
     // If dot > 0, shadow is cast toward vehicle
-    return DotProduct(shadowDir, toVehicle) > 0.0f;
+    const float dot = shadowDir.x * toVehicle.x + shadowDir.y * toVehicle.y + shadowDir.z * toVehicle.z;
+    return dot > 0.0f;
 }
 
 void RotateMatrix180Z(CMatrix &mat)
@@ -60,7 +61,7 @@ bool IsDummyPointingUp(CMatrix mat)
 {
     CVector forward = mat.up;
     CVector up = {0.0f, 0.0f, 1.0f};
-    float alignment = DotProduct(forward, up);
+    float alignment = forward.x * up.x + forward.y * up.y + forward.z * up.z;
     return alignment > 0.7f;
 }
 
@@ -169,9 +170,9 @@ void RenderUtil::RegisterShadowDirectional(const DummyConfig *pConfig, const std
 
     // Apply inverse rotation manually
     CVector dummyOffset;
-    dummyOffset.x = DotProduct(worldOffset, vehMat.right);
-    dummyOffset.y = DotProduct(worldOffset, vehMat.up);
-    dummyOffset.z = DotProduct(worldOffset, vehMat.at);
+    dummyOffset.x = worldOffset.x * vehMat.right.x + worldOffset.y * vehMat.right.y + worldOffset.z * vehMat.right.z;
+    dummyOffset.y = worldOffset.x * vehMat.up.x + worldOffset.y * vehMat.up.y + worldOffset.z * vehMat.up.z;
+    dummyOffset.z = worldOffset.x * vehMat.at.x + worldOffset.y * vehMat.at.y + worldOffset.z * vehMat.at.z;
 
     if (pConfig->mirroredX)
     {
@@ -226,7 +227,7 @@ void RenderUtil::RegisterShadow(CEntity *pEntity, CVector position, CRGBA col, f
         return;
     }
 
-    const float angleRad = DegToRad(angle);
+    const float angleRad = Util::DegToRad(angle);
     const CVector vehPos = pEntity->GetPosition();
     const CMatrix &entityMatrix = *(CMatrix *)pEntity->m_matrix;
 
