@@ -62,7 +62,7 @@ PedData::PedData(CPed *pPed) {
 			const auto& variations = pedCols["variations"];
 
 			if (!variations.empty()) {
-				size_t varIdx = RandomNumberInRange<size_t>(0, variations.size() - 1);
+				size_t varIdx = static_cast<size_t>(CGeneral::GetRandomNumberInRange(0, static_cast<int>(variations.size())));
 				const auto& selectedVar = variations[varIdx];
 
 				const std::vector<std::string> keys = { "primary", "secondary", "tertiary", "quaternary" };
