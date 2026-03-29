@@ -323,7 +323,7 @@ void Lights::Init()
 			static uint32_t fogLightKey = gConfig.ReadInteger("KEYS", "FogLightKey", VK_J);
 
 			static bool foglightTiedtoHeadlight = gConfig.ReadBoolean("TWEAKS", "FoglightTiedToHeadlight", true);
-			bool headlightStatus = !foglightTiedtoHeadlight || pVeh->bLightsOn;
+			bool headlightStatus = !foglightTiedtoHeadlight || pVeh->m_nVehicleFlags.bLightsOn;
 			if (KeyPressed(fogLightKey) && IsMatAvail(pVeh, {eMaterialType::FogLightLeft, eMaterialType::FogLightRight}) && headlightStatus)
 			{
 				size_t now = CTimer::m_snTimeInMilliseconds;
@@ -337,7 +337,7 @@ void Lights::Init()
 			}
 
 			static uint32_t longLightKey = gConfig.ReadInteger("KEYS", "LongLightKey", VK_G);
-			if (KeyPressed(longLightKey) && (pVeh->bLightsOn || CarUtil::IsLightsForcedOn(pVeh)))
+			if (KeyPressed(longLightKey) && (pVeh->m_nVehicleFlags.bLightsOn || CarUtil::IsLightsForcedOn(pVeh)))
 			{
 				size_t now = CTimer::m_snTimeInMilliseconds;
 				if (now - prev > 500.0f)
@@ -390,7 +390,7 @@ void Lights::Init()
 
 		// Fix for UIF SAMP server https://github.com/user-grinch/ModelExtras/issues/112
 		if (Util::IsEngineOff(pControlVeh) || CarUtil::IsLightsForcedOff(pControlVeh)) {
-			pControlVeh->bLightsOn = false;
+			pControlVeh->m_nVehicleFlags.bLightsOn = false;
 			pControlVeh->m_renderLights.m_bLeftFront = false;
 			pControlVeh->m_renderLights.m_bRightFront = false;
 			pControlVeh->m_renderLights.m_bLeftRear = false;
@@ -620,7 +620,7 @@ void Lights::Init()
 			{
 				if ((pControlVeh->m_nVehicleSubClass == VEHICLE_AUTOMOBILE || pControlVeh->m_nVehicleSubClass == VEHICLE_BIKE || pControlVeh->m_nVehicleSubClass == VEHICLE_QUAD) &&
 					(pControlVeh->GetVehicleAppearance() == VEHICLE_APPEARANCE_AUTOMOBILE || pControlVeh->GetVehicleAppearance() == VEHICLE_APPEARANCE_BIKE) &&
-					pControlVeh->bEngineOn && pControlVeh->m_fHealth > 0 && !pControlVeh->bIsDrowning && !pControlVeh->m_pAttachedTo)
+					pControlVeh->m_nVehicleFlags.bEngineOn && pControlVeh->m_fHealth > 0 && !pControlVeh->m_pAttachedTo)
 				{
 					data.m_bUsingGlobalIndicators = true;
 				}
@@ -751,7 +751,7 @@ void Lights::RenderHeadlights(CVehicle *pControlVeh, bool isLeftOn, bool isRight
 		return;
 	}
 
-	if (pControlVeh->bLightsOn || CarUtil::IsLightsForcedOn(pControlVeh) || Util::IsNightTime())
+	if (pControlVeh->m_nVehicleFlags.bLightsOn || CarUtil::IsLightsForcedOn(pControlVeh) || Util::IsNightTime())
 	{
 		bool isFoggy = (CWeather::NewWeatherType == WEATHER_FOGGY_SF || CWeather::NewWeatherType == WEATHER_SANDSTORM_DESERT || CWeather::OldWeatherType == WEATHER_FOGGY_SF || CWeather::OldWeatherType == WEATHER_SANDSTORM_DESERT);
 		std::string texName = data.m_bLongLightsOn ? "headlight_long" : "headlight_short";
