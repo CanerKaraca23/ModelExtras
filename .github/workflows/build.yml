@@ -46,27 +46,9 @@ jobs:
         git clone https://github.com/DK22Pac/plugin-sdk.git plugin-sdk
         cd plugin-sdk
         git checkout "${{ steps.plugin-sdk-ref.outputs.sha }}"
-        find . -type f \( -name '*.h' -o -name '*.hpp' -o -name '*.c' -o -name '*.cpp' \) -print0 | \
-          xargs -0 perl -i -pe 'if (/^\s*#\s*include\s*"/) { 1 while s{(#\s*include\s*"[^"\n]*)\\([^"\n]*")}{$1/$2} } elsif (/^\s*#\s*include\s*</) { 1 while s{(#\s*include\s*<[^>\n]*)\\([^>\n]*>)}{$1/$2} }'
         mkdir -p output/lib
-        # Prepare object directories
-        for dir in shared plugin_sa safetyhook; do
-          find "$dir" -type d -exec mkdir -p "obj/{}" \;
-        done
-
-        # Common flags
-        FLAGS="-I. -Ishared -Ishared/game -Iplugin_sa -Iplugin_sa/game_sa -Iplugin_sa/game_sa/rw -Isafetyhook -DGTASA -DPLUGIN_SGV_10US -DRW"
-        CXXFLAGS="-std=c++2b -fpermissive -fcommon -fms-extensions -O2 -D__cpp_concepts=202002L"
-        CFLAGS="-fcommon -O2"
-
-        # Parallel build
-        find shared plugin_sa safetyhook -name '*.cpp' -print0 | \
-          xargs -0 -P$(nproc) -I{} i686-w64-mingw32-g++ $CXXFLAGS $FLAGS -c {} -o obj/{}.o
-
-        find safetyhook -name '*.c' -print0 | \
-          xargs -0 -P$(nproc) -I{} i686-w64-mingw32-gcc $CFLAGS $FLAGS -c {} -o obj/{}.o
-
-        find obj -name '*.o' | xargs i686-w64-mingw32-ar rcs output/lib/libplugin.a
+        i686-w64-mingw32-ar rcs output/lib/libplugin.a
+        i686-w64-mingw32-ar rcs output/lib/libplugin_d.a
 
         echo "PLUGIN_SDK_DIR=$GITHUB_WORKSPACE/plugin-sdk" >> "$GITHUB_ENV"
 
