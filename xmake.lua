@@ -74,6 +74,8 @@ target("ModelExtras")
         "-lpthread", 
         "-Wl,-Bdynamic", 
         "-Wl,--allow-multiple-definition",
+        "-Wl,--unresolved-symbols=ignore-all",
+        "-Wl,--allow-shlib-undefined",
         "-Wl,--build-id",
         {force = true}
     )
