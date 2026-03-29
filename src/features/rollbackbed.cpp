@@ -167,7 +167,7 @@ void RollbackBed::Init()
 
         if (KeyPressed(toggleKey) && now - prev > 500.0f)
         {
-            CVehicle *pVeh = FindPlayerVehicle();
+            CVehicle *pVeh = FindPlayerVehicle(-1, false);
             if (pVeh)
             {
                 RollbackBedData &data = m_VehData.Get(pVeh);
