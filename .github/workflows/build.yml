@@ -56,6 +56,11 @@ jobs:
       if: steps.plugin-sdk-cache.outputs.cache-hit == 'true'
       run: echo "PLUGIN_SDK_DIR=$GITHUB_WORKSPACE/plugin-sdk" >> "$GITHUB_ENV"
 
+    - name: Normalize plugin-sdk header casing
+      run: |
+        find "$PLUGIN_SDK_DIR" -type f \( -name '*.h' -o -name '*.hpp' \) -print0 | \
+          xargs -0 sed -i 's/<Windows\.h>/<windows.h>/g'
+
     - name: Build ModelExtras with xmake
       run: |
         xmake f -m release \
