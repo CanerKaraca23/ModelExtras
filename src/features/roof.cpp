@@ -155,7 +155,7 @@ void ConvertibleRoof::Init()
 
         if (KeyPressed(roofToggleKey) && now - prev > 500.0f)
         {
-            CVehicle *pVeh = FindPlayerVehicle();
+            CVehicle *pVeh = FindPlayerVehicle(-1, false);
             if (pVeh)
             {
                 RoofData &data = m_VehData.Get(pVeh);
