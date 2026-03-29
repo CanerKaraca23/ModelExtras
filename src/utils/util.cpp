@@ -14,6 +14,8 @@
 #include "enums/lightoverride.h"
 #include <math.h>
 
+static constexpr double kPi = 3.14159265358979323846;
+
 float Util::NormalizeAngle(float angle)
 {
     while (angle < 0.0f)
@@ -24,11 +26,11 @@ float Util::NormalizeAngle(float angle)
 }
 
 double Util::RadToDeg(double rad) {
-    return rad * (180.0 / M_PI);
+    return rad * (180.0 / kPi);
 }
 
 double Util::DegToRad(double deg) {
-    return deg * (M_PI / 180.0);
+    return deg * (kPi / 180.0);
 }
 
 float Util::GetVehicleSpeed(CVehicle *pVeh)
