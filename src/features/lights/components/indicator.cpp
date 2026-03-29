@@ -36,7 +36,7 @@ bool IndicatorComponent::TryRegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const
 }
 
 static CVector2D GetCarPathLinkPosition(CCarPathLinkAddress &address) {
-    if (address.m_nAreaId >= 0 && address.m_nCarPathLinkId >= 0 && ThePaths.m_pNaviNodes && ThePaths.m_pNaviNodes[address.m_nAreaId]) {
+    if (address.m_nAreaId >= 0 && address.m_nCarPathLinkId >= 0 && ThePaths.m_pNaviNodes[address.m_nAreaId]) {
         return CVector2D(static_cast<float>(ThePaths.m_pNaviNodes[address.m_nAreaId][address.m_nCarPathLinkId].m_vecPosn.x) / 8.0f,
                          static_cast<float>(ThePaths.m_pNaviNodes[address.m_nAreaId][address.m_nCarPathLinkId].m_vecPosn.y) / 8.0f);
     }
@@ -109,4 +109,3 @@ void IndicatorComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehL
         LightManager::RenderLight(pTowedVeh, data, eMaterialType::IndicatorLightRightRear, isRightRearOk, "indicator");
     }
 }
-

@@ -61,6 +61,8 @@ target("ModelExtras")
         "-fms-extensions", 
         "-Wno-invalid-offsetof",
         "-Wno-microsoft-include",
+        "-Wno-nan-infinity-disabled",
+        "-Wno-builtin-macro-redefined",
         "-g",               
         "-gdwarf-4",         
         "-fdebug-macro"        
