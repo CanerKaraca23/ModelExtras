@@ -59,7 +59,7 @@ jobs:
     - name: Normalize plugin-sdk header casing
       run: |
         find "$PLUGIN_SDK_DIR" -type f \( -name '*.h' -o -name '*.hpp' \) -print0 | \
-          xargs -0 sed -i 's/<Windows\.h>/<windows.h>/g'
+          xargs -0 sed -i -e 's/<Windows\.h>/<windows.h>/g' -e 's/"renderware\.h"/"RenderWare.h"/g'
 
     - name: Build ModelExtras with xmake
       run: |
