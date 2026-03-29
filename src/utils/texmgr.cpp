@@ -121,8 +121,8 @@ void TextureMgr::SetAlpha(RwTexture *texture, RwUInt8 alpha)
         return;
     }
 
-    int width = RwRasterGetWidth(oldRaster);
-    int height = RwRasterGetHeight(oldRaster);
+    int width = oldRaster->width;
+    int height = oldRaster->height;
 
     RwImage *image = RwImageCreate(width, height, 32); // 32-bit = supports RGBA
     RwImageAllocatePixels(image);
@@ -168,13 +168,8 @@ RwTexture *TextureMgr::FindInDict(std::string name, RwTexDictionary *pDict, bool
         }
 
         if (!pTex) {
-            LOG_VERBOSE("TextureMgr: Unable to find '{}' in the ModelExtras TXD file. Searching in the vehicle TXD file instead.", name);
-            pTex = RwTexDictionaryFindNamedTexture(CVehicleModelInfo::ms_pVehicleTxd, name.c_str());
-        }
-
-        if (!pTex) {
-            LOG_VERBOSE("TextureMgr: Unable to find '{}' in the vehicle TXD file. Using the default white texture", name);
-            pTex = CVehicleModelInfo::ms_pWhiteTexture;
+            LOG_VERBOSE("TextureMgr: Unable to find '{}' in the ModelExtras TXD file. Falling back to white texture from ModelExtras TXD.", name);
+            pTex = TextureMgr::Get("white");
         }
     }
 
