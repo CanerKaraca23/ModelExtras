@@ -244,11 +244,11 @@ bool LicensePlate::CCustomCarPlateMgr_RenderLicenseplateTextToRaster(const char 
     if (!pCharsetLockedData)
         return false;
 
-    const auto plateRasterStride = RwRasterGetStride(plateRaster);
+    const auto plateRasterStride = plateRaster->stride;
     if (!plateRasterStride)
         return false;
 
-    const auto charsRasterStride = RwRasterGetStride(charsRaster);
+    const auto charsRasterStride = charsRaster->stride;
     if (!charsRasterStride)
         return false;
 
