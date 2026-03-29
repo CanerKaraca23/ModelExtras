@@ -4,7 +4,6 @@
 #include <CWorld.h>
 #include <CCamera.h>
 #include <CGeneral.h>
-#include <CWaterLevel.h>
 #include <Fx_c.h>
 
 #include "utils/modelinfomgr.h"
@@ -15,6 +14,11 @@
 #include <rwplcore.h>
 
 #define NODE_NAME "x_exhaust"
+
+class CWaterLevel {
+public:
+    static bool GetWaterLevel(float x, float y, float z, float* outLevel, bool touchWater, CVector* unkPos);
+};
 
 // Global trampolines
 ExhaustFn_t ogFunc1 = nullptr, ogFunc2 = nullptr;
@@ -159,7 +163,7 @@ ExhaustData ExhaustFx::LoadData(CVehicle *pVeh, RwFrame *pFrame)
 
 void ExhaustFx::RenderSmokeFx(CVehicle *pVeh, const ExhaustData &info)
 {
-    if (!pVeh || !pVeh->GetIsOnScreen() || !pVeh->bEngineOn || pVeh->bEngineBroken)
+    if (!pVeh || !pVeh->GetIsOnScreen() || !pVeh->m_nVehicleFlags.bEngineOn || pVeh->m_nVehicleFlags.bEngineBroken)
     {
         return;
     }
@@ -173,7 +177,7 @@ void ExhaustFx::RenderSmokeFx(CVehicle *pVeh, const ExhaustData &info)
     }
 
     CVector exhaustPos = info.pFrame->ltm.pos;
-    if (exhaustPos.IsZero())
+    if (exhaustPos.x == 0.0f && exhaustPos.y == 0.0f && exhaustPos.z == 0.0f)
     {
         return;
     }
@@ -209,7 +213,7 @@ void ExhaustFx::RenderSmokeFx(CVehicle *pVeh, const ExhaustData &info)
 
     bool isExhaustSubmerged = false;
     float waterLevel = 0.0f;
-    if (pVeh->bTouchingWater &&
+    if (pVeh->m_nPhysicalFlags.bTouchingWater &&
         CWaterLevel::GetWaterLevel(exhaustPos.x, exhaustPos.y, exhaustPos.z, &waterLevel, true, nullptr) &&
         waterLevel >= exhaustPos.z)
     {
@@ -274,7 +278,7 @@ void ExhaustFx::RenderNitroFx(CVehicle *pVeh, float power)
 
     auto &data = m_VehData.Get(pVeh);
 
-    if (!data.isUsed || !pVeh->bEngineOn || pVeh->bEngineBroken)
+    if (!data.isUsed || !pVeh->m_nVehicleFlags.bEngineOn || pVeh->m_nVehicleFlags.bEngineBroken)
     {
         return;
     }
@@ -289,7 +293,7 @@ void ExhaustFx::RenderNitroFx(CVehicle *pVeh, float power)
         RwMatrix *dummyMatrix = &e.second.pFrame->ltm;
 
         bool isExhaustSubmerged = false;
-        if (pVeh->bTouchingWater)
+        if (pVeh->m_nPhysicalFlags.bTouchingWater)
         {
             float level = 0.0f;
             CVector pos = dummyMatrix->pos;
