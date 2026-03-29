@@ -51,7 +51,9 @@ jobs:
           xargs -0 perl -i -pe 'if (/^\s*#\s*include\s*"/) { 1 while s{(#\s*include\s*"[^"\n]*)\\([^"\n]*")}{$1/$2} } elsif (/^\s*#\s*include\s*</) { 1 while s{(#\s*include\s*<[^>\n]*)\\([^>\n]*>)}{$1/$2} }'
         # Prepare object directories
         for dir in shared plugin_sa safetyhook; do
-          find "$dir" -type d -exec mkdir -p "obj/{}" \;
+          if [ -d "$dir" ]; then
+            find "$dir" -type d -exec mkdir -p "obj/{}" \;
+          fi
         done
 
         # Common flags
@@ -60,11 +62,15 @@ jobs:
         CFLAGS="-fcommon -O2"
 
         # Parallel build
-        find shared plugin_sa safetyhook -name '*.cpp' -print0 | \
+        CXX_DIRS="shared plugin_sa"
+        if [ -d safetyhook ]; then CXX_DIRS="$CXX_DIRS safetyhook"; fi
+        find $CXX_DIRS -name '*.cpp' -print0 | \
           xargs -0 -P$(nproc) -I{} i686-w64-mingw32-g++ $CXXFLAGS $FLAGS -c {} -o obj/{}.o
 
-        find safetyhook -name '*.c' -print0 | \
-          xargs -0 -P$(nproc) -I{} i686-w64-mingw32-gcc $CFLAGS $FLAGS -c {} -o obj/{}.o
+        if [ -d safetyhook ]; then
+          find safetyhook -name '*.c' -print0 | \
+            xargs -0 -P$(nproc) -I{} i686-w64-mingw32-gcc $CFLAGS $FLAGS -c {} -o obj/{}.o
+        fi
 
         find obj -name '*.o' | xargs i686-w64-mingw32-ar rcs output/lib/libplugin.a
         cp output/lib/libplugin.a output/lib/libplugin_d.a
