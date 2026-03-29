@@ -405,10 +405,10 @@ void Lights::Init()
 		bool isLeftFrontOk = !Util::IsLightDamaged(pControlVeh, eLights::LIGHT_FRONT_LEFT);
 		bool isRightFrontOk = !Util::IsLightDamaged(pControlVeh, eLights::LIGHT_FRONT_RIGHT);
 		bool isLeftRearOk = !(Util::IsLightDamaged(pTowedVeh, eLights::LIGHT_REAR_LEFT)
-								|| Util::IsPanelDamaged(pTowedVeh, ePanels::WING_REAR_LEFT) 
+								|| Util::IsPanelDamaged(pTowedVeh, ePanels::WING_FRONT_LEFT) 
 							);
 		bool isRightRearOk = !(Util::IsLightDamaged(pTowedVeh, eLights::LIGHT_REAR_RIGHT)
-								|| Util::IsPanelDamaged(pTowedVeh, ePanels::WING_REAR_RIGHT) 
+								|| Util::IsPanelDamaged(pTowedVeh, ePanels::WING_FRONT_RIGHT) 
 							);
 		RenderLights(pControlVeh, pTowedVeh, eMaterialType::AllDayLight);
 		RenderLights(pControlVeh, pTowedVeh, eMaterialType::StrobeLight);
