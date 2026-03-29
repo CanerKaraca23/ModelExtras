@@ -2,6 +2,7 @@
 #include "gauge.h"
 #include "utils/datamgr.h"
 #include <CBike.h>
+#include <CGeneral.h>
 #include "utils/modelinfomgr.h"
 
 using namespace plugin;
@@ -9,7 +10,7 @@ using namespace plugin;
 static inline float ClampRotation(float value, float maxRot)
 {
     float limit = std::abs(maxRot);
-    return Clamp(value, -limit, limit);
+    return std::clamp(value, -limit, limit);
 }
 
 void GearIndicator::Init()
@@ -149,7 +150,7 @@ void RPMGauge::Init()
                   rpm = (speed / abs((float)pVeh->m_nCurrentGear)) * 100.0f;
                 }
 
-                if (pVeh->bEngineOn) {
+                if (pVeh->m_nVehicleFlags.bEngineOn) {
                   rpm = std::max(rpm, 0.1f * e.second.iMaxRPM);
                 }
 
@@ -282,6 +283,6 @@ void FixedGauge::Init()
                 minAngle = jsonData["gauges"][name]["minangle"];
                 maxAngle = jsonData["gauges"][name]["maxangle"];
             }
-            FrameUtil::SetRotationY(pFrame, RandomNumberInRange(minAngle, maxAngle));
+            FrameUtil::SetRotationY(pFrame, CGeneral::GetRandomNumberInRange(minAngle, maxAngle));
         } });
 }
