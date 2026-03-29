@@ -2,6 +2,7 @@
 #include "remap.h"
 #include <TxdDef.h>
 #include <CTxdStore.h>
+#include <CGeneral.h>
 #include "utils/texmgr.h"
 #include <rw/rwcore.h>
 #include <rw/rpworld.h>
@@ -90,7 +91,7 @@ void Remap::BeforeRender(CVehicle* vehicle)
     }
 
     data.pCurPtr = vehicle;
-    RpClumpForAllAtomics(pModelInfo->m_pRwClump, [](RpAtomic *atomic, void *data)
+    RpClumpForAllAtomics(vehicle->m_pRwClump, [](RpAtomic *atomic, void *data)
     {
         if (atomic->geometry) {
             RpGeometryForAllMaterials(atomic->geometry, [](RpMaterial *mat, void *data) {
@@ -107,7 +108,7 @@ void Remap::BeforeRender(CVehicle* vehicle)
                 
                 int sz = pData->pTextures[name].size();
                 if (pRandom.find(pData->pCurPtr) == pRandom.end() || pRandom[pData->pCurPtr] >= sz) {
-                    pRandom[pData->pCurPtr] = RandomNumberInRange(0, sz-1);
+                    pRandom[pData->pCurPtr] = CGeneral::GetRandomNumberInRange(0, sz);
                 }
 
                 pOriginalTextures.push_back({reinterpret_cast<unsigned int*>(&mat->texture), *reinterpret_cast<unsigned int *>(&mat->texture)});
