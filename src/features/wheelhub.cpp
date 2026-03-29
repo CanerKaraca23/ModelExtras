@@ -40,10 +40,16 @@ void WheelHub::Init()
             if (ori == nullptr) return;
 
             RwV3d rightVec = ori->modelling.right;
-            if (isLeft) RwV3dNegate(&rightVec, &rightVec);
+            if (isLeft) {
+                rightVec.x = -rightVec.x;
+                rightVec.y = -rightVec.y;
+                rightVec.z = -rightVec.z;
+            }
 
             MatrixUtil::ForceRightVector(&tar->modelling, rightVec);
-            RwV3dNegate(&tar->modelling.up, &tar->modelling.up);
+            tar->modelling.up.x = -tar->modelling.up.x;
+            tar->modelling.up.y = -tar->modelling.up.y;
+            tar->modelling.up.z = -tar->modelling.up.z;
 
             tar->modelling.pos.z = ori->modelling.pos.z;
 
