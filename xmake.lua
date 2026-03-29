@@ -74,9 +74,16 @@ target("ModelExtras")
         "-lpthread", 
         "-Wl,-Bdynamic", 
         "-Wl,--allow-multiple-definition",
-        "-Wl,--unresolved-symbols=ignore-all",
-        "-Wl,--allow-shlib-undefined",
         "-Wl,--build-id",
+        {force = true}
+    )
+
+    add_ldflags(
+        "-Wl,--allow-multiple-definition",
+        "-Wl,--allow-undefined",
+        "-Wl,--unresolved-symbols=ignore-all",
+        "-Wl,--unresolved-symbols=ignore-in-object-files",
+        "-Wl,--allow-shlib-undefined",
         {force = true}
     )
     
