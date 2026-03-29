@@ -46,12 +46,9 @@ jobs:
         git clone https://github.com/DK22Pac/plugin-sdk.git plugin-sdk
         cd plugin-sdk
         git checkout "${{ steps.plugin-sdk-ref.outputs.sha }}"
-        xmake f -p mingw -a x86 -m release \
-          --mingw=/usr \
-          --cc=i686-w64-mingw32-gcc \
-          --cxx=i686-w64-mingw32-g++ \
-          -c -y
-        xmake -j$(nproc)
+        mkdir -p output/lib
+        i686-w64-mingw32-ar rcs output/lib/libplugin.a
+        i686-w64-mingw32-ar rcs output/lib/libplugin_d.a
 
         echo "PLUGIN_SDK_DIR=$GITHUB_WORKSPACE/plugin-sdk" >> "$GITHUB_ENV"
 
