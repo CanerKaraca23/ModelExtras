@@ -27,10 +27,10 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y clang-19 g++-mingw-w64-i686
 
-    - name: Get latest plugin-sdk commit
+    - name: Set plugin-sdk commit
       id: plugin-sdk-ref
       run: |
-        echo "sha=$(git ls-remote https://github.com/DK22Pac/plugin-sdk.git HEAD | cut -f1)" >> "$GITHUB_OUTPUT"
+        echo "sha=c81459468dda03ce1a0fee4fa4f8cfc0b2f40e41" >> "$GITHUB_OUTPUT"
 
     - name: Restore plugin-sdk cache
       id: plugin-sdk-cache
@@ -47,8 +47,27 @@ jobs:
         cd plugin-sdk
         git checkout "${{ steps.plugin-sdk-ref.outputs.sha }}"
         mkdir -p output/lib
-        i686-w64-mingw32-ar rcs output/lib/libplugin.a
-        i686-w64-mingw32-ar rcs output/lib/libplugin_d.a
+        find . -type f \( -name '*.h' -o -name '*.hpp' -o -name '*.c' -o -name '*.cpp' \) -print0 | \
+          xargs -0 perl -i -pe 'if (/^\s*#\s*include\s*"/) { 1 while s{(#\s*include\s*"[^"\n]*)\\([^"\n]*")}{$1/$2} } elsif (/^\s*#\s*include\s*</) { 1 while s{(#\s*include\s*<[^>\n]*)\\([^>\n]*>)}{$1/$2} }'
+        # Prepare object directories
+        for dir in shared plugin_sa safetyhook; do
+          find "$dir" -type d -exec mkdir -p "obj/{}" \;
+        done
+
+        # Common flags
+        FLAGS="-I. -Ishared -Ishared/game -Iplugin_sa -Iplugin_sa/game_sa -Iplugin_sa/game_sa/rw -Isafetyhook -DGTASA -DPLUGIN_SGV_10US -DRW"
+        CXXFLAGS="-std=c++2b -fpermissive -fcommon -fms-extensions -O2 -D__cpp_concepts=202002L"
+        CFLAGS="-fcommon -O2"
+
+        # Parallel build
+        find shared plugin_sa safetyhook -name '*.cpp' -print0 | \
+          xargs -0 -P$(nproc) -I{} i686-w64-mingw32-g++ $CXXFLAGS $FLAGS -c {} -o obj/{}.o
+
+        find safetyhook -name '*.c' -print0 | \
+          xargs -0 -P$(nproc) -I{} i686-w64-mingw32-gcc $CFLAGS $FLAGS -c {} -o obj/{}.o
+
+        find obj -name '*.o' | xargs i686-w64-mingw32-ar rcs output/lib/libplugin.a
+        cp output/lib/libplugin.a output/lib/libplugin_d.a
 
         echo "PLUGIN_SDK_DIR=$GITHUB_WORKSPACE/plugin-sdk" >> "$GITHUB_ENV"
 
