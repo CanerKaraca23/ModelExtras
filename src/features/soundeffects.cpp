@@ -45,14 +45,14 @@ void SoundEffects::Init()
                             (animGroup == ANIMGROUP_TRUCK || animGroup == ANIMGROUP_BUS || animGroup == ANIMGROUP_COACH);
             bool isBigVeh = isAllowed || std::find(ValidForReverseSound.begin(), ValidForReverseSound.end(), pVeh->m_nModelIndex) != ValidForReverseSound.end();
 
-            if (bEngineSounds && pVeh == FindPlayerVehicle())
+            if (bEngineSounds && pVeh == FindPlayerVehicle(-1, false))
             {
                 bool isValid = !CModelInfo::IsPlaneModel(model) && !CModelInfo::IsBmxModel(model) && !CModelInfo::IsHeliModel(model) && !CModelInfo::IsBoatModel(model);
-                if (isValid && data.m_bEngineState != pVeh->bEngineOn)
+                if (isValid && data.m_bEngineState != pVeh->m_nVehicleFlags.bEngineOn)
                 {
                     static std::string carPath = MOD_DATA_PATH("audio/engine_start.wav");
                     static std::string bikePath = MOD_DATA_PATH("audio/bike_engine_start.wav");
-                    if (pVeh->bEngineOn)
+                    if (pVeh->m_nVehicleFlags.bEngineOn)
                     {
                         if (CModelInfo::IsBikeModel(model) || CModelInfo::IsQuadBikeModel(model))
                         {
@@ -63,7 +63,7 @@ void SoundEffects::Init()
                             AudioMgr::PlayFileSound(carPath, pVeh, 1.0f, true);
                         }
                     }
-                    data.m_bEngineState = pVeh->bEngineOn;
+                    data.m_bEngineState = pVeh->m_nVehicleFlags.bEngineOn;
                 }
             }
 
@@ -87,7 +87,7 @@ void SoundEffects::Init()
                 }
             }
 
-            data.m_bEngineState = pVeh->bEngineOn;
+            data.m_bEngineState = pVeh->m_nVehicleFlags.bEngineOn;
 
             CVector vehPos = pVeh->GetPosition();
             CVector camPos = TheCamera.GetPosition();
@@ -120,7 +120,7 @@ void SoundEffects::Init()
             {
                 static std::string path = MOD_DATA_PATH("audio/reverse.wav");
 
-                if (isBigVeh && pVeh->m_nCurrentGear == 0 && pVeh->bEngineOn && !pVeh->bEngineBroken && speed >= 3.0f)
+                if (isBigVeh && pVeh->m_nCurrentGear == 0 && pVeh->m_nVehicleFlags.bEngineOn && !pVeh->m_nVehicleFlags.bEngineBroken && speed >= 3.0f)
                 {
                     AudioMgr::PlayFileSound(path, pVeh, 0.5f, true);
                 }
