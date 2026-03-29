@@ -47,7 +47,7 @@ jobs:
         cd plugin-sdk
         git checkout "${{ steps.plugin-sdk-ref.outputs.sha }}"
         find . -type f \( -name '*.h' -o -name '*.hpp' -o -name '*.c' -o -name '*.cpp' \) -print0 | \
-          xargs -0 perl -i -pe 'if (/^\s*#\s*include\s*"/) { s{\\}{/}g }'
+          xargs -0 perl -i -pe 'if (/^\s*#\s*include\s*"/) { s{(#\s*include\s*"[^"\n]*)\\([^"\n]*")}{$1/$2}g }'
         mkdir -p output/lib
         # Prepare object directories
         for dir in shared plugin_sa safetyhook; do
