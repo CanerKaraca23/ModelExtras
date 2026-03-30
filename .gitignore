@@ -1,6 +1,7 @@
 /archive/
 /archive_staging/
 /build/
+/compile_commands.json
 /.xmake/
 /.vscode/.cache/
 .cache/clangd/index/AixLog.hpp.6C976E4DA867A8FD.idx
