@@ -60,7 +60,7 @@ target("ModelExtras")
         "-fcommon", 
         "-fms-extensions", 
         "-fno-finite-math-only",
-        "-Wno-microsoft-include",
+        "-Wno-invalid-offsetof",
         "-Wno-builtin-macro-redefined",
         "-g",               
         "-gdwarf-4",         
