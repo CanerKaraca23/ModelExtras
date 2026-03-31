@@ -70,7 +70,7 @@ void BackFireEffect::BackFireSingle(CVehicle *pVeh)
     {
         for (int i = 0; i < count; i++)
         {
-            const ME_ExhaustInfo &info = ME_GetExhaustData(pVeh, i);
+            const ME_ExhaustInfo info = ME_GetExhaustData(pVeh, i);
             if (info.pFrame)
             {
                 CVector f = info.pFrame->modelling.up; // Up is Forward
