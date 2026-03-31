@@ -389,7 +389,7 @@ extern "C"
 
     bool ME_TryGetExhaustData(CVehicle *pVeh, int index, ME_ExhaustInfo *outData)
     {
-        if (!outData)
+        if (!pVeh || !outData)
             return false;
 
         *outData = ME_GetExhaustData(pVeh, index);
