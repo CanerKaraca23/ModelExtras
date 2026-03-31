@@ -38,6 +38,7 @@ CVector2D GetCarPathLinkPosition(CCarPathLinkAddress &address)
 	if (address.m_nAreaId >= 0
 		&& address.m_nAreaId < static_cast<int>(std::size(ThePaths.m_pNaviNodes))
 		&& address.m_nCarPathLinkId >= 0
+		&& address.m_nCarPathLinkId < ThePaths.m_nNumNaviNodes[address.m_nAreaId]
 		&& ThePaths.m_pNaviNodes[address.m_nAreaId])
 	{
 		return CVector2D(static_cast<float>(ThePaths.m_pNaviNodes[address.m_nAreaId][address.m_nCarPathLinkId].m_vecPosn.x) / 8.0f,
