@@ -387,15 +387,6 @@ extern "C"
         return info;
     }
 
-    bool ME_TryGetExhaustData(CVehicle *pVeh, int index, ME_ExhaustInfo *outData)
-    {
-        if (!pVeh || !outData)
-            return false;
-
-        *outData = ME_GetExhaustData(pVeh, index);
-        return outData->pFrame != nullptr;
-    }
-
     void ME_SetExhaustData(CVehicle *pVeh, int index, ME_ExhaustInfo &data)
     {
         if (!pVeh)

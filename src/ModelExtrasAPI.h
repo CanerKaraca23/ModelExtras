@@ -119,7 +119,6 @@ extern "C"
 
     // Vehicle
     ME_WRAPPER unsigned int ME_GetExhaustCount(CVehicle *pVeh);
-    ME_WRAPPER bool ME_TryGetExhaustData(CVehicle *pVeh, int index, ME_ExhaustInfo *outData);
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type-c-linkage"
