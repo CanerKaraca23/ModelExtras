@@ -104,3 +104,10 @@ target("ModelExtras")
         set_optimize("aggressive")
         set_symbols('hidden')
     end
+
+target("Tests")
+    set_kind("binary")
+    set_languages("c++23")
+    add_files("tests/*.cpp")
+    add_includedirs("src", "include", "tests/mocks")
+    add_defines("MODELEXTRAS_TESTS")
