@@ -63,7 +63,7 @@ jobs:
         done
 
         FLAGS="-I. -Ishared -Ishared/game -Iplugin_sa -Iplugin_sa/game_sa -Iplugin_sa/game_sa/rw -Isafetyhook -DGTASA -DPLUGIN_SGV_10US -DRW"
-        CLANG_FLAGS="--target=i686-w64-mingw32 -fpermissive -fcommon -fms-extensions -Wno-microsoft-include -Wno-invalid-offsetof -Wno-builtin-macro-redefined -O2 -D__cpp_concepts=202202L"
+        CLANG_FLAGS="--target=i686-w64-mingw32 -fpermissive -fcommon -fms-extensions -Wno-microsoft-include -Wno-invalid-offsetof -Wno-builtin-macro-redefined -Wno-macro-redefined -Wno-comment -Wno-new-returns-null -Wno-deprecated-enum-enum-conversion -Wno-pragma-once-outside-header -O2 -D__cpp_concepts=202202L"
 
         find shared plugin_sa safetyhook -name '*.cpp' -print0 | \
           xargs -0 -P$(nproc) -I{} clang++-23 $CLANG_FLAGS -std=c++2b $FLAGS -c {} -o obj/{}.o
