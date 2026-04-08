@@ -61,7 +61,6 @@ target("ModelExtras")
         "-fms-extensions", 
         "-fno-finite-math-only",
         "-Wno-invalid-offsetof",
-        "-Wno-builtin-macro-redefined",
         "-Wno-return-type-c-linkage",
         "-g",               
         "-gdwarf-2",         
