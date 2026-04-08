@@ -85,7 +85,7 @@ jobs:
           --mingw=/usr \
           --cc=clang-23 \
           --cxx=clang++-23 \
-          --cxflags="-D__cpp_concepts=202002L" \
+          --cxflags="-D__cpp_concepts=202002L -fno-finite-math-only" \
           -c -y
         xmake -j$(nproc)
 

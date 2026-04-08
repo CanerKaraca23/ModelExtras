@@ -59,9 +59,8 @@ target("ModelExtras")
         "-fpermissive", 
         "-fcommon", 
         "-fms-extensions", 
-        "-fno-finite-math-only",
         "-Wno-invalid-offsetof",
-        "-Wno-builtin-macro-redefined",
+        "-Wno-microsoft-include",
         "-g",               
         "-gdwarf-2",         
         "-fdebug-macro"        
