@@ -59,11 +59,12 @@ target("ModelExtras")
         "-fpermissive", 
         "-fcommon", 
         "-fms-extensions", 
+        "-fno-finite-math-only",
         "-Wno-invalid-offsetof",
-        "-Wno-microsoft-include",
+        "-Wno-builtin-macro-redefined",
         "-g",               
         "-gdwarf-2",         
-        "-fdebug-macro"        
+        "-fdebug-macro"
     )
     
     add_shflags(
