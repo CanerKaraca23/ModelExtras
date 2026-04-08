@@ -62,6 +62,7 @@ target("ModelExtras")
         "-fno-finite-math-only",
         "-Wno-invalid-offsetof",
         "-Wno-builtin-macro-redefined",
+        "-Wno-return-type-c-linkage",
         "-g",               
         "-gdwarf-2",         
         "-fdebug-macro"

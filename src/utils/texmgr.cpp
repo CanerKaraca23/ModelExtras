@@ -17,7 +17,8 @@ RwTexture *LoadPNGFromFile(const char *filename, RwUInt8 alpha)
     }
 
     RwInt32 width, height, depth, flags;
-    RwImageFindRasterFormat(image, rwRASTERTYPETEXTURE | rwRASTERFORMAT888, &width, &height, &depth, &flags);
+    const auto rasterFormat = static_cast<RwInt32>(rwRASTERTYPETEXTURE) | static_cast<RwInt32>(rwRASTERFORMAT888);
+    RwImageFindRasterFormat(image, rasterFormat, &width, &height, &depth, &flags);
 
     RwRaster *raster = RwRasterCreate(width, height, depth, flags);
     if (!raster)
@@ -142,7 +143,8 @@ void TextureMgr::SetAlpha(RwTexture *texture, RwUInt8 alpha)
     }
 
     RwRasterDestroy(oldRaster);
-    RwRaster *newRaster = RwRasterCreate(width, height, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
+    const auto newRasterFlags = static_cast<int>(rwRASTERTYPETEXTURE) | static_cast<int>(rwRASTERFORMAT8888);
+    RwRaster *newRaster = RwRasterCreate(width, height, 32, newRasterFlags);
     RwRasterSetFromImage(newRaster, image);
     texture->raster = newRaster;
     RwImageDestroy(image);
