@@ -59,6 +59,7 @@ target("ModelExtras")
         "-fpermissive", 
         "-fcommon", 
         "-fms-extensions", 
+        "-D__cpp_concepts=202002L",
         "-fno-finite-math-only",
         "-Wno-invalid-offsetof",
         "-g",               
