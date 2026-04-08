@@ -63,7 +63,7 @@ target("ModelExtras")
         "-Wno-invalid-offsetof",
         "-Wno-builtin-macro-redefined",
         "-g",               
-        "-gdwarf-4",         
+        "-gdwarf-2",         
         "-fdebug-macro"        
     )
     
