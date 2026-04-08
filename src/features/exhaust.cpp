@@ -357,15 +357,16 @@ extern "C"
         return static_cast<unsigned int>(data.m_pDummies.size());
     }
 
-    ME_ExhaustInfo ME_GetExhaustData(CVehicle *pVeh, int index)
+    bool ME_GetExhaustData(CVehicle *pVeh, int index, ME_ExhaustInfo *outData)
     {
-        ME_ExhaustInfo info{};
-        if (!pVeh)
-            return info;
+        if (!outData || !pVeh)
+            return false;
+
+        *outData = {};
 
         ExhaustVehData &data = ExhaustFx::m_VehData.Get(pVeh);
         if (!data.isUsed || index < 0 || index >= static_cast<int>(data.m_pDummies.size()))
-            return info;
+            return false;
 
         int i = 0;
         for (const auto &pair : data.m_pDummies)
@@ -373,28 +374,28 @@ extern "C"
             if (i == index)
             {
                 const ExhaustData &e = pair.second;
-                info.pFrame = e.pFrame;
-                info.Color = e.Color;
-                info.fSpeedMul = e.fSpeedMul;
-                info.fLifeTime = e.fLifeTime;
-                info.fSizeMul = e.fSizeMul;
-                info.bNitroEffect = e.bNitroEffect;
-                break;
+                outData->pFrame = e.pFrame;
+                outData->Color = e.Color;
+                outData->fSpeedMul = e.fSpeedMul;
+                outData->fLifeTime = e.fLifeTime;
+                outData->fSizeMul = e.fSizeMul;
+                outData->bNitroEffect = e.bNitroEffect;
+                return true;
             }
             ++i;
         }
 
-        return info;
+        return false;
     }
 
-    void ME_SetExhaustData(CVehicle *pVeh, int index, ME_ExhaustInfo &data)
+    bool ME_SetExhaustData(CVehicle *pVeh, int index, const ME_ExhaustInfo *data)
     {
-        if (!pVeh)
-            return;
+        if (!data || !pVeh)
+            return false;
 
         ExhaustVehData &vData = ExhaustFx::m_VehData.Get(pVeh);
         if (!vData.isUsed || index < 0 || index >= static_cast<int>(vData.m_pDummies.size()))
-            return;
+            return false;
 
         int i = 0;
         for (auto &pair : vData.m_pDummies)
@@ -402,16 +403,18 @@ extern "C"
             if (i == index)
             {
                 ExhaustData &e = pair.second;
-                data.pFrame = e.pFrame;
-                data.Color = e.Color;
-                data.fSpeedMul = e.fSpeedMul;
-                data.fLifeTime = e.fLifeTime;
-                data.fSizeMul = e.fSizeMul;
-                data.bNitroEffect = e.bNitroEffect;
-                break;
+                e.pFrame = data->pFrame;
+                e.Color = data->Color;
+                e.fSpeedMul = data->fSpeedMul;
+                e.fLifeTime = data->fLifeTime;
+                e.fSizeMul = data->fSizeMul;
+                e.bNitroEffect = data->bNitroEffect;
+                return true;
             }
             ++i;
         }
+
+        return false;
     }
 
     // Dummy function to show on crash logs
