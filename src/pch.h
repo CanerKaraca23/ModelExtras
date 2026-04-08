@@ -1,4 +1,9 @@
 #pragma once
+
+#ifndef __cpp_concepts
+#define __cpp_concepts 202002L
+#endif
+
 #include <CTimer.h>
 #include <NodeName.h>
 #include <CModelInfo.h>
