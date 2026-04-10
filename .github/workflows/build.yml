@@ -44,12 +44,16 @@ jobs:
 
     - name: Validate MinGW toolchain
       run: |
-        PREFIX="${{ steps.setup-mingw.outputs.prefix }}"
-        echo "mingw prefix: $PREFIX"
-        "$PREFIX-gcc" --version
-        "$PREFIX-g++" --version
-        "$PREFIX-ar" --version
-        "$PREFIX-gcc" -dumpmachine
+        MINGW_GCC="${{ steps.setup-mingw.outputs.gcc }}"
+        MINGW_GXX="${{ steps.setup-mingw.outputs.gxx }}"
+        MINGW_PREFIX="${MINGW_GCC%-gcc}"
+        echo "mingw gcc: $MINGW_GCC"
+        echo "mingw g++: $MINGW_GXX"
+        echo "mingw prefix: $MINGW_PREFIX"
+        "$MINGW_GCC" --version
+        "$MINGW_GXX" --version
+        "$MINGW_PREFIX-ar" --version
+        "$MINGW_GCC" -dumpmachine
 
     - name: Get latest plugin-sdk commit
       id: plugin-sdk-ref
@@ -83,7 +87,9 @@ jobs:
         find safetyhook -name '*.c' -print0 | \
           xargs -0 -P$(nproc) -I{} ${{ steps.setup-clang.outputs.clang }} $CLANG_FLAGS $FLAGS -c {} -o obj/{}.o
 
-        find obj -name '*.o' | xargs ${{ steps.setup-mingw.outputs.prefix }}-ar rcs output/lib/libplugin.a
+        MINGW_AR="${{ steps.setup-mingw.outputs.gcc }}"
+        MINGW_AR="${MINGW_AR%-gcc}-ar"
+        find obj -name '*.o' | xargs "$MINGW_AR" rcs output/lib/libplugin.a
 
         echo "PLUGIN_SDK_DIR=$GITHUB_WORKSPACE/plugin-sdk" >> "$GITHUB_ENV"
 
