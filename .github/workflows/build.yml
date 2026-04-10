@@ -27,34 +27,13 @@ jobs:
       uses: egor-tensin/setup-clang@v2
       with:
         platform: x86
-        version: 22
+        version: 22 # Typing "latest" is broken
 
     - name: Set up MinGW
       id: setup-mingw
       uses: egor-tensin/setup-mingw@v3
       with:
         platform: x86
-        version: 14.0.0
-
-    - name: Validate Clang toolchain
-      run: |
-        echo "clang path: ${{ steps.setup-clang.outputs.clang }}"
-        echo "clang++ path: ${{ steps.setup-clang.outputs.clangxx }}"
-        "${{ steps.setup-clang.outputs.clang }}" --version
-        "${{ steps.setup-clang.outputs.clangxx }}" --version
-
-    - name: Validate MinGW toolchain
-      run: |
-        MINGW_GCC="${{ steps.setup-mingw.outputs.gcc }}"
-        MINGW_GXX="${{ steps.setup-mingw.outputs.gxx }}"
-        MINGW_PREFIX="${MINGW_GCC%-gcc}"
-        echo "mingw gcc: $MINGW_GCC"
-        echo "mingw g++: $MINGW_GXX"
-        echo "mingw prefix: $MINGW_PREFIX"
-        "$MINGW_GCC" --version
-        "$MINGW_GXX" --version
-        "$MINGW_PREFIX-ar" --version
-        "$MINGW_GCC" -dumpmachine
 
     - name: Get latest plugin-sdk commit
       id: plugin-sdk-ref
