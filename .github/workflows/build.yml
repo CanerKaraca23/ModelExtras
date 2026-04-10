@@ -1,4 +1,4 @@
-# Based on CanerKaraca23 build script
+# Based on CanerKaraca20 build script
 name: Build ModelExtras
 
 on:
@@ -22,12 +22,33 @@ jobs:
         xmake-version: latest
         actions-cache-folder: .xmake-cache
 
-    - name: Set up Clang
-      id: setup-clang
-      uses: egor-tensin/setup-clang@v2
-      with:
-        platform: x86
-        version: 22 # Typing "latest" is broken
+    - name: Install Core Dependencies
+      run: |
+        sudo apt-get update
+        # MinGW'yi buradan kurmuyoruz (eski sürüm gelmesin diye)
+        sudo apt-get install -y wget gnupg software-properties-common lsb-release
+
+    - name: Install MinGW 15.2.0 (xPack)
+      run: |
+        # xPack MinGW 15.2.0-2 indiriliyor
+        wget https://github.com/xpack-dev-tools/mingw-w64-gcc-xpack/releases/download/v15.2.0-2/xpack-mingw-w64-gcc-15.2.0-2-linux-x64.tar.gz
+        mkdir -p $GITHUB_WORKSPACE/mingw15
+        tar -xzf xpack-mingw-w64-gcc-15.2.0-2-linux-x64.tar.gz -C $GITHUB_WORKSPACE/mingw15 --strip-components=1
+        
+        # Binary'leri PATH'e ekle
+        echo "$GITHUB_WORKSPACE/mingw15/bin" >> $GITHUB_PATH
+        # xmake ve diğer adımlar için ana dizini ENV olarak sakla
+        echo "MINGW_PATH=$GITHUB_WORKSPACE/mingw15" >> $GITHUB_ENV
+
+    - name: Install Clang 23
+      run: |
+        wget https://apt.llvm.org/llvm.sh
+        chmod +x llvm.sh
+        sudo ./llvm.sh 23
+        sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-23 230
+        sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-23 230
+        sudo update-alternatives --set clang /usr/bin/clang-23
+        sudo update-alternatives --set clang++ /usr/bin/clang++-23
 
     - name: Get latest plugin-sdk commit
       id: plugin-sdk-ref
@@ -55,15 +76,14 @@ jobs:
         FLAGS="-I. -Ishared -Ishared/game -Iplugin_sa -Iplugin_sa/game_sa -Iplugin_sa/game_sa/rw -Isafetyhook -DGTASA -DPLUGIN_SGV_10US -DRW"
         CLANG_FLAGS="--target=i686-w64-mingw32 -fpermissive -fcommon -fms-extensions -Wno-microsoft-include -Wno-builtin-macro-redefined -Wno-macro-redefined -Wno-comment -Wno-new-returns-null -Wno-deprecated-enum-enum-conversion -Wno-pragma-once-outside-header -Wno-invalid-offsetof -O2 -D__cpp_concepts=202202L"
 
+        # Yeni MinGW bin dizini PATH'de olduğu için i686-w64-mingw32-ar doğrudan çalışacaktır
         find shared plugin_sa safetyhook -name '*.cpp' -print0 | \
-          xargs -0 -P$(nproc) -I{} ${{ steps.setup-clang.outputs.clangxx }} $CLANG_FLAGS -std=c++2b $FLAGS -c {} -o obj/{}.o
+          xargs -0 -P$(nproc) -I{} clang++-23 $CLANG_FLAGS -std=c++2b $FLAGS -c {} -o obj/{}.o
 
         find safetyhook -name '*.c' -print0 | \
-          xargs -0 -P$(nproc) -I{} ${{ steps.setup-clang.outputs.clang }} $CLANG_FLAGS $FLAGS -c {} -o obj/{}.o
+          xargs -0 -P$(nproc) -I{} clang-23 $CLANG_FLAGS $FLAGS -c {} -o obj/{}.o
 
-        MINGW_AR="${{ steps.setup-mingw.outputs.gcc }}"
-        MINGW_AR="${MINGW_AR%-gcc}-ar"
-        find obj -name '*.o' | xargs "$MINGW_AR" rcs output/lib/libplugin.a
+        find obj -name '*.o' | xargs i686-w64-mingw32-ar rcs output/lib/libplugin.a
 
         echo "PLUGIN_SDK_DIR=$GITHUB_WORKSPACE/plugin-sdk" >> "$GITHUB_ENV"
 
@@ -73,10 +93,11 @@ jobs:
 
     - name: Build ModelExtras with xmake
       run: |
+        # --mingw parametresini yeni indirdiğimiz klasöre yönlendirdik
         xmake f -m release \
-          --mingw=/usr \
-          --cc=${{ steps.setup-clang.outputs.clang }} \
-          --cxx=${{ steps.setup-clang.outputs.clangxx }} \
+          --mingw=${{ env.MINGW_PATH }} \
+          --cc=clang-23 \
+          --cxx=clang++-23 \
           -c -y
         xmake -j$(nproc)
 
