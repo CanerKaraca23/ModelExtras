@@ -8,7 +8,7 @@ void InitLog()
     auto sink_file = std::make_shared<AixLog::SinkFile>(AixLog::Severity::debug, std::string(MOD_NAME) + ".log");
     AixLog::Log::init({sink_cout, sink_file});
 
-    std::string header = "Starting " + std::string(MOD_TITLE) + "\n"
+    std::string header = "Starting " + std::string(MOD_TITLE) + " (" + __DATE__ + ")\n"
                          "Author: Grinch_\n"
                          "Discord: " + DISCORD_INVITE + "\n"
                          "Patreon: " + PATREON_LINK + "\n"

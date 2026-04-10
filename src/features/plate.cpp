@@ -298,8 +298,7 @@ RwTexture *LicensePlate::CCustomCarPlateMgr_CreatePlateTexture(char *text, uint8
     assert(text);
 
     // Create a new raster for the plate with mipmap support
-    const auto plateRasterFlags = static_cast<int>(rwRASTERFORMAT8888) | static_cast<int>(rwRASTERPIXELLOCKEDWRITE);
-    const auto plateRaster = RwRasterCreate(256, 64, 32, plateRasterFlags);
+    const auto plateRaster = RwRasterCreate(256, 64, 32, rwRASTERFORMAT8888 | rwRASTERPIXELLOCKEDWRITE);
     if (!plateRaster)
     {
         return nullptr;
