@@ -27,6 +27,7 @@ jobs:
       uses: egor-tensin/setup-clang@v2
       with:
         platform: x86
+        version: 23
 
     - name: Set up MinGW
       id: setup-mingw
