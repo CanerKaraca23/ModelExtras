@@ -107,6 +107,6 @@ target("ModelExtras")
         set_symbols('debug')
     else
         add_links("plugin")
-        set_optimize("aggressive")
+        set_optimize("fastest")
         set_symbols('hidden')
     end
