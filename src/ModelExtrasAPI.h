@@ -119,21 +119,9 @@ extern "C"
 
     // Vehicle
     ME_WRAPPER unsigned int ME_GetExhaustCount(CVehicle *pVeh);
-    ME_WRAPPER bool ME_GetExhaustData(CVehicle *pVeh, int index, ME_ExhaustInfo *outData);
-    ME_WRAPPER bool ME_SetExhaustData(CVehicle *pVeh, int index, const ME_ExhaustInfo *data);
+    ME_WRAPPER ME_ExhaustInfo ME_GetExhaustData(CVehicle *pVeh, int index);
+    ME_WRAPPER void ME_SetExhaustData(CVehicle *pVeh, int index, ME_ExhaustInfo &data);
 
 #ifdef __cplusplus
-}
-
-inline ME_ExhaustInfo ME_GetExhaustData(CVehicle *pVeh, int index)
-{
-    ME_ExhaustInfo info{};
-    ME_GetExhaustData(pVeh, index, &info);
-    return info;
-}
-
-inline void ME_SetExhaustData(CVehicle *pVeh, int index, const ME_ExhaustInfo &data)
-{
-    ME_SetExhaustData(pVeh, index, &data);
 }
 #endif
