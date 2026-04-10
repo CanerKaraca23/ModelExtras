@@ -55,18 +55,23 @@ target("ModelExtras")
     )
 
     add_cxflags(
-        "--target=i686-w64-mingw32", 
-        "-fpermissive", 
-        "-fcommon", 
-        "-fms-extensions", 
+        "--target=i686-w64-mingw32",
+        "-fpermissive",
+        "-fcommon",
+        "-fms-extensions",
         "-fno-finite-math-only",
         "-Wno-invalid-offsetof",
         "-Wno-return-type-c-linkage",
-        "-g",               
-        "-gdwarf-2",         
+        "-D__cpp_concepts=202002L",
+        "-Wbuiltin-macro-redefined",
+        "-Wdeprecated-enum-enum-conversion",
+        "-Wpointer-bool-conversion",
+        "-Wmissing-declarations",
+        "-g",
+        "-gdwarf-2",
         "-fdebug-macro"
     )
-    
+
     add_shflags(
         "-static", 
         "-static-libgcc", 
