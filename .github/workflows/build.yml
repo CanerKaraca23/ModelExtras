@@ -29,12 +29,6 @@ jobs:
         platform: x86
         version: 22 # Typing "latest" is broken
 
-    - name: Set up MinGW
-      id: setup-mingw
-      uses: egor-tensin/setup-mingw@v3
-      with:
-        platform: x86
-
     - name: Get latest plugin-sdk commit
       id: plugin-sdk-ref
       run: |
