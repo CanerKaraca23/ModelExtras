@@ -48,7 +48,6 @@ runs:
         mapfile -t PREBUILT_META < <(python3 - <<'PY'
         import json
         import os
-        import sys
         import urllib.request
         import re
 
@@ -67,12 +66,12 @@ runs:
                 name = asset.get("name", "")
                 if not lib_url and re.search(r'libplugin\.a$', name):
                     lib_url = asset.get("browser_download_url", "")
-                if not checksum_url and re.search(r'libplugin\.a\.sha256$', name):
+                if not checksum_url and re.search(r'libplugin\.a(\.sha256|\.sha256sum)$', name):
                     checksum_url = asset.get("browser_download_url", "")
             print(lib_url)
             print(checksum_url)
-        except Exception as e:
-            print(f"::warning::Failed to query plugin-sdk release metadata: {e}", file=sys.stderr)
+        except Exception:
+            pass
         PY
         )
         PREBUILT_URL="${PREBUILT_META[0]:-}"
@@ -83,7 +82,7 @@ runs:
             EXPECTED_SHA="$(awk '{print $1}' /tmp/libplugin.a.sha256 | tr -d '\r\n')"
             ACTUAL_SHA="$(sha256sum output/lib/libplugin.a | awk '{print $1}')"
             if [ "${EXPECTED_SHA}" != "${ACTUAL_SHA}" ]; then
-              echo "::warning::Checksum verification failed for prebuilt libplugin.a (expected=${EXPECTED_SHA}, actual=${ACTUAL_SHA}); falling back to source build."
+              echo "::warning::Checksum verification failed for prebuilt libplugin.a; falling back to source build."
               rm -f output/lib/libplugin.a
             fi
           else
