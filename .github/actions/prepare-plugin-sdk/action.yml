@@ -1,0 +1,94 @@
+name: Prepare plugin-sdk
+description: Resolve, cache, and prepare plugin-sdk with prebuilt fallback
+
+inputs:
+  clang:
+    description: Clang compiler path
+    required: true
+  clangxx:
+    description: Clang++ compiler path
+    required: true
+  mingw-gcc:
+    description: MinGW GCC compiler path
+    required: true
+
+outputs:
+  sha:
+    description: plugin-sdk HEAD SHA
+    value: ${{ steps.plugin-sdk-ref.outputs.sha }}
+
+runs:
+  using: composite
+  steps:
+    - name: Get latest plugin-sdk commit
+      id: plugin-sdk-ref
+      shell: bash
+      run: |
+        echo "sha=$(git ls-remote https://github.com/user-grinch/plugin-sdk-mingw.git HEAD | cut -f1)" >> "$GITHUB_OUTPUT"
+
+    - name: Restore plugin-sdk cache
+      id: plugin-sdk-cache
+      uses: actions/cache@v5
+      with:
+        path: plugin-sdk
+        key: plugin-sdk-${{ steps.plugin-sdk-ref.outputs.sha }}-i686-w64-mingw32
+
+    - name: Build plugin-sdk
+      if: steps.plugin-sdk-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        git clone https://github.com/user-grinch/plugin-sdk-mingw.git plugin-sdk
+        cd plugin-sdk
+        git checkout "${{ steps.plugin-sdk-ref.outputs.sha }}"
+        mkdir -p output/lib
+
+        PREBUILT_URL="$(python3 - <<'PY'
+        import json
+        import urllib.request
+        import re
+
+        url = "https://api.github.com/repos/user-grinch/plugin-sdk-mingw/releases/latest"
+        try:
+            with urllib.request.urlopen(url, timeout=20) as r:
+                data = json.load(r)
+            for asset in data.get("assets", []):
+                name = asset.get("name", "")
+                if re.search(r'libplugin\.a$', name):
+                    print(asset.get("browser_download_url", ""))
+                    break
+        except Exception:
+            pass
+        PY
+        )"
+
+        if [ -n "${PREBUILT_URL}" ]; then
+          curl -fL "${PREBUILT_URL}" -o output/lib/libplugin.a || true
+        fi
+
+        if [ ! -f output/lib/libplugin.a ]; then
+          for dir in shared plugin_sa safetyhook; do
+            find "$dir" -type d -exec mkdir -p "obj/{}" \;
+          done
+
+          FLAGS="-I. -Ishared -Ishared/game -Iplugin_sa -Iplugin_sa/game_sa -Iplugin_sa/game_sa/rw -Isafetyhook -DGTASA -DPLUGIN_SGV_10US -DRW"
+          CLANG_FLAGS="--target=i686-w64-mingw32 -fpermissive -fcommon -fms-extensions -Wno-microsoft-include -Wno-builtin-macro-redefined -Wno-macro-redefined -Wno-comment -Wno-new-returns-null -Wno-deprecated-enum-enum-conversion -Wno-pragma-once-outside-header -Wno-invalid-offsetof -O2 -D__cpp_concepts=202202L"
+          CXX="${{ inputs.clangxx }}"
+          CC="${{ inputs.clang }}"
+          GCC_PATH="${{ inputs.mingw-gcc }}"
+          PREFIX="${GCC_PATH%gcc}"
+          AR="${PREFIX}ar"
+
+          find shared plugin_sa safetyhook -name '*.cpp' -print0 | \
+            xargs -0 -P"$(nproc)" -I{} "$CXX" $CLANG_FLAGS -std=c++2b $FLAGS -c {} -o obj/{}.o
+
+          find safetyhook -name '*.c' -print0 | \
+            xargs -0 -P"$(nproc)" -I{} "$CC" $CLANG_FLAGS $FLAGS -c {} -o obj/{}.o
+
+          find obj -name '*.o' | xargs "$AR" rcs output/lib/libplugin.a
+        fi
+
+    - name: Export plugin-sdk path
+      shell: bash
+      run: |
+        echo "PLUGIN_SDK_DIR=$GITHUB_WORKSPACE/plugin-sdk" >> "$GITHUB_ENV"
