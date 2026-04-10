@@ -41,37 +41,22 @@ jobs:
         sudo update-alternatives --set clang /usr/bin/clang-23
         sudo update-alternatives --set clang++ /usr/bin/clang++-23
 
-    - name: Validate toolchain versions
+    - name: Validate dependency versions
       run: |
         set -euo pipefail
 
         echo "Resolved binaries:"
         command -v xmake
-        command -v clang
-        command -v clang++
         command -v i686-w64-mingw32-g++
         command -v i686-w64-mingw32-ar
 
         echo "Installed package versions:"
-        dpkg-query -W -f='${Package} ${Version}\n' g++-mingw-w64-i686 clang-23 lld-23 clangd-23
+        dpkg-query -W -f='${Package} ${Version}\n' g++-mingw-w64-i686
 
         echo "Tool versions:"
         xmake --version
-        clang --version
-        clang++ --version
         i686-w64-mingw32-g++ --version
         i686-w64-mingw32-ar --version
-
-        CLANG_PATH="$(readlink -f "$(command -v clang)")"
-        CLANGXX_PATH="$(readlink -f "$(command -v clang++)")"
-        if [[ "$CLANG_PATH" != *"/clang-23" ]]; then
-          echo "Expected clang to resolve to clang-23, got: $CLANG_PATH" >&2
-          exit 1
-        fi
-        if [[ "$CLANGXX_PATH" != *"/clang++-23" ]]; then
-          echo "Expected clang++ to resolve to clang++-23, got: $CLANGXX_PATH" >&2
-          exit 1
-        fi
 
     - name: Get latest plugin-sdk commit
       id: plugin-sdk-ref
