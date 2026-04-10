@@ -61,7 +61,6 @@ target("ModelExtras")
         "-fms-extensions", 
         "-D__cpp_concepts=202002L",
         "-fno-finite-math-only",
-        "-Wno-builtin-macro-redefined",
         "-Wno-invalid-offsetof",
         "-g",               
         "-gdwarf-2",         
