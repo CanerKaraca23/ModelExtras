@@ -25,10 +25,10 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y wget gnupg software-properties-common lsb-release g++-mingw-w64-i686
+        sudo apt-get install -y gnupg software-properties-common lsb-release g++-mingw-w64-i686
 
         # Download LLVM installer script
-        wget https://apt.llvm.org/llvm.sh
+        curl -fsSL https://apt.llvm.org/llvm.sh -o llvm.sh
         chmod +x llvm.sh
 
         # Install Clang 23
