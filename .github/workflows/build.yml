@@ -24,11 +24,20 @@ jobs:
 
     - name: Install dependencies
       run: |
+        set -euo pipefail
+
         sudo apt-get update
-        sudo apt-get install -y wget gnupg software-properties-common lsb-release g++-mingw-w64-i686
+        packages=(g++-mingw-w64-i686)
+        if ! command -v gpg >/dev/null && ! command -v gpg2 >/dev/null; then
+          packages+=(gnupg)
+        fi
+        command -v lsb_release >/dev/null || packages+=(lsb-release)
+        command -v add-apt-repository >/dev/null || packages+=(software-properties-common)
+        command -v curl >/dev/null || packages+=(curl)
+        sudo apt-get install -y "${packages[@]}"
 
         # Download LLVM installer script
-        wget https://apt.llvm.org/llvm.sh
+        curl -fsSL https://apt.llvm.org/llvm.sh -o llvm.sh
         chmod +x llvm.sh
 
         # Install Clang 23
