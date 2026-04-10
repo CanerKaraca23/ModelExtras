@@ -1,9 +1,8 @@
 #pragma once
 
-#ifdef __cpp_concepts
-#undef __cpp_concepts
-#endif
+#ifndef __cpp_concepts
 #define __cpp_concepts 202002L
+#endif
 
 #include <CTimer.h>
 #include <NodeName.h>
