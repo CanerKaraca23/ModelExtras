@@ -34,7 +34,7 @@ jobs:
       uses: egor-tensin/setup-mingw@v3
       with:
         platform: x86
-        version: 22
+        version: 14
 
     - name: Validate Clang toolchain
       run: |
