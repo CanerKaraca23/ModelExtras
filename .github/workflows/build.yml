@@ -34,7 +34,6 @@ jobs:
       uses: egor-tensin/setup-mingw@v3
       with:
         platform: x86
-        version: latest
 
     - name: Get latest plugin-sdk commit
       id: plugin-sdk-ref
