@@ -35,6 +35,7 @@ jobs:
         sudo ./llvm.sh 23
 
         # Make clang/clang++ point to Clang 23
+        # Priority 230 is version-aligned so clang-23 wins over lower installed versions.
         sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-23 230
         sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-23 230
         sudo update-alternatives --set clang /usr/bin/clang-23
