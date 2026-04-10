@@ -37,6 +37,15 @@ jobs:
         # Prefer LLVM 23 binaries (clang/clang++) without changing system alternatives
         echo "/usr/lib/llvm-23/bin" >> "$GITHUB_PATH"
 
+    - name: Validate Clang toolchain
+      run: |
+        which clang
+        which clang++
+        clang --version
+        clang++ --version
+        clang --version | grep -qE '^clang version 23\.'
+        clang++ --version | grep -qE '^clang version 23\.'
+
     - name: Get latest plugin-sdk commit
       id: plugin-sdk-ref
       run: |
