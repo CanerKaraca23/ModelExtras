@@ -34,6 +34,9 @@ jobs:
         # Install Clang 23
         sudo ./llvm.sh 23
 
+        # Prefer LLVM 23 binaries (clang/clang++) without changing system alternatives
+        echo "/usr/lib/llvm-23/bin" >> "$GITHUB_PATH"
+
     - name: Get latest plugin-sdk commit
       id: plugin-sdk-ref
       run: |
