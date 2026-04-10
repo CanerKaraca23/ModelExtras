@@ -34,6 +34,22 @@ jobs:
       with:
         platform: x86
 
+    - name: Validate Clang toolchain
+      run: |
+        echo "clang path: ${{ steps.setup-clang.outputs.clang }}"
+        echo "clang++ path: ${{ steps.setup-clang.outputs.clangxx }}"
+        "${{ steps.setup-clang.outputs.clang }}" --version
+        "${{ steps.setup-clang.outputs.clangxx }}" --version
+
+    - name: Validate MinGW toolchain
+      run: |
+        PREFIX="${{ steps.setup-mingw.outputs.prefix }}"
+        echo "mingw prefix: $PREFIX"
+        "$PREFIX-gcc" --version
+        "$PREFIX-g++" --version
+        "$PREFIX-ar" --version
+        "$PREFIX-gcc" -dumpmachine
+
     - name: Get latest plugin-sdk commit
       id: plugin-sdk-ref
       run: |
