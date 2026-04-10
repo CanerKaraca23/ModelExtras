@@ -1,4 +1,4 @@
-# Based on CanerKaraca20 build script
+# Based on CanerKaraca23 build script
 name: Build ModelExtras
 
 on:
@@ -26,8 +26,7 @@ jobs:
       id: setup-clang
       uses: egor-tensin/setup-clang@v2
       with:
-        version: latest
-        platform: x64
+        platform: x86
 
     - name: Set up MinGW
       id: setup-mingw
