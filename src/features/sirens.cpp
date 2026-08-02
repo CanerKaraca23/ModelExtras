@@ -166,8 +166,6 @@ VehicleSirenMaterial::VehicleSirenMaterial(std::string state, int material, nloh
 			LOG_VERBOSE("Model {} siren configuration exception! State '{}' material {}, size property is not an acceptable number!", Sirens::CurrentModel, state, material);
 	}
 
-	Shadow.Size = Size;
-
 	if (json.contains("diffuse"))
 	{
 		if (json["diffuse"].is_boolean())
@@ -360,6 +358,8 @@ VehicleSirenMaterial::VehicleSirenMaterial(std::string state, int material, nloh
 			LOG_VERBOSE("Model {} siren configuration exception! State '{}' material {}, type property is not a string!", Sirens::CurrentModel, state, material);
 	}
 
+	Shadow.Size = Size;
+
 	if (json.contains("shadow"))
 	{
 		if (json["shadow"].is_object())
@@ -410,7 +410,7 @@ VehicleSirenMaterial::VehicleSirenMaterial(std::string state, int material, nloh
 		}
 		else if (json["shadow"].is_boolean())
 		{
-			if (!json["shadow"]) Shadow.Size = 0.0f;
+			if (!((bool)json["shadow"])) Shadow.Size = 0.0f;
 		}
 		else
 		{
