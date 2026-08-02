@@ -55,7 +55,7 @@ void MileageIndicator::Init()
 
             FrameUtil::StoreChilds(pFrame, indicator.vecFrameList);
 
-            indicator.dCurrentDistance = static_cast<double>(rand() % 999999);
+            indicator.dCurrentDistance = static_cast<double>(RandomNumberInRange(0, 999999));
             indicator.pFrame = pFrame;
 
             auto &jsonData = DataMgr::Get(pVeh->m_nModelIndex);
