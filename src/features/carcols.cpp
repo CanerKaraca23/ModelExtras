@@ -27,7 +27,7 @@ bool Carcols::GetColor(CVehicle *pVeh, RpMaterial *pMat, CRGBA &col)
         auto &data = m_VehData.Get(pVeh);
         if (data.randId == -1)
         {
-            data.randId = RandomNumberInRange(0, variations[model].size() - 1);
+            data.randId = RandomNumberInRange<int>(0, variations[model].size() - 1);
         }
         auto storeCol = variations[model][data.randId];
 
