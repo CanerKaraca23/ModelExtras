@@ -228,7 +228,6 @@ RwFrame * FrameUtil::Clone(RwFrame *frame, RpClump *clump, RwFrame *parent, bool
 		RwFrameAddChild(parent, newFrame);
 
 		if (RwFrame * nextFrame = frame->child) Clone(nextFrame, clump, newFrame, false);
-		// if (RwFrame * nextFrame = frame->next)  CloneNode(nextFrame, clump, parent, false);
 	}
 	return newFrame;
 }
