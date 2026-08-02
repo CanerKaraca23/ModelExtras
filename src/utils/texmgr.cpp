@@ -66,23 +66,12 @@ RwTexture *TextureMgr::Get(std::string name, RwUInt8 alpha)
     }
 
     Textures[name][alpha] = pTex;
-    // int index = CTxdStore::FindTxdSlot("ME_TEXDB");
-    // if (index == -1)
-    // {
-    //     index = CTxdStore::AddTxdSlot("ME_TEXDB");
-    //     CTxdStore::LoadTxd(index, MOD_DATA_PATH("ME_TEXDB.TXD"));
-    //     CTxdStore::AddRef(index);
-    // }
-    // CTxdStore::PushCurrentTxd();
-    // CTxdStore::SetCurrentTxd(index);
-
-    // Textures[name][alpha] = RwReadTexture(name.c_str());
 
     if (alpha != 255)
     {
         SetAlpha(Textures[name][alpha], alpha);
     }
-    // CTxdStore::PopCurrentTxd();
+
     return Textures[name][alpha];
 }
 
