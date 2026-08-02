@@ -97,13 +97,6 @@ void SpotLights::OnVehicleRender(CVehicle *pVeh)
 	RwV3dTransformPoint(&src, &offset, &data.pFrame->modelling);
 	RwV3dTransformPoint(&target, &offset, (RwMatrix *)&matrix);
 
-	// target.x += vehPos.x;
-	// target.y += vehPos.y;
-	// target.z += vehPos.z;
-	// src.x += vehPos.x;
-	// src.y += vehPos.y;
-	// src.z += vehPos.z;
-
 	bool flag;
 	CEntity *pEnt;
 	target.z = CWorld::FindGroundZFor3DCoord(target.x, target.y, target.z + 20, &flag, &pEnt);
