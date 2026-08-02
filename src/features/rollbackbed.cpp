@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "rollbackbed.h"
 #include "utils/modelinfomgr.h"
+#include "utils/frameextention.h"
 #include "utils/datamgr.h"
 #include "utils/audiomgr.h"
 
@@ -11,8 +12,6 @@ bool RollbackBed::UpdateRotation(CVehicle *pVeh, RwFrame *pFrame, float targetRo
     RollbackBedData &data = m_VehData.Get(pVeh);
     if (data.bInit && pFrame)
     {
-        // TODO FIX
-        // MatrixUtil::SetRotationX(&pFrame->modelling, curRot);
         float target = data.bExpanded ? targetRot : 0.0f;
         float delta = target - curRot;
         float step = CTimer::ms_fTimeStep * std::abs(targetRot) / 360.0f * speed;
@@ -24,6 +23,13 @@ bool RollbackBed::UpdateRotation(CVehicle *pVeh, RwFrame *pFrame, float targetRo
         else
         {
             curRot = target;
+        }
+
+        MatrixUtil::RestoreBackup(&pFrame->modelling, RwFrameExtension::Get(pFrame)->pOrigMatrix);
+        MatrixUtil::SetRotationXAbsolute(&pFrame->modelling, curRot);
+
+        if (curRot == target)
+        {
             return true;
         }
     }
@@ -84,11 +90,13 @@ void RollbackBed::Init()
         if (name == "x_rb_bed")
         {
             data.pBedFrame = pFrame;
+            MatrixUtil::CreateBackup(pFrame);
         }
 
         if (name == "x_rb_hydraulics")
         {
             data.pHydralicsShellFrame = pFrame;
+            MatrixUtil::CreateBackup(pFrame);
         }
 
         if (name.starts_with("x_rb_hydraulic_"))
