@@ -661,7 +661,12 @@ void Sirens::Init()
 			RwMatrix *ltm = RwFrameGetLTM(frame);
 			CVector pos = *(CVector*)&ltm->pos;
 			CVector objPos;
-			RwV3dTransformPoints((RwV3d*)&objPos, (RwV3d*)&pos, 1, RwMatrixGetInvertedMatrix(vehicle->m_matrix));
+			CMatrix &vehMatrix = *(CMatrix *)vehicle->m_matrix;
+			CVector worldOffset = pos - vehMatrix.pos;
+
+			objPos.x = DotProduct(worldOffset, vehMatrix.right);
+			objPos.y = DotProduct(worldOffset, vehMatrix.up);
+			objPos.z = DotProduct(worldOffset, vehMatrix.at);
 
 			if (objPos.y > 0.0f) {
 				config.dummyPos = eDummyPos::Front;
@@ -669,7 +674,7 @@ void Sirens::Init()
 				config.dummyPos = eDummyPos::Rear;
 			}
 
-			if (std::abs(objPos.x) > std::abs(objPos.y) || std::abs(objPos.x) > 0.1f) {
+			if (std::abs(objPos.x) > 0.1f) {
 				config.dummyPos = objPos.x > 0.0f ? eDummyPos::Left : eDummyPos::Right;
 			}
 
