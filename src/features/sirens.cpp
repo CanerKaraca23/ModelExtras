@@ -158,6 +158,8 @@ VehicleSirenMaterial::VehicleSirenMaterial(std::string state, int material, nloh
 		}
 	}
 
+	Shadow.Size = Size;
+
 	if (json.contains("size"))
 	{
 		if (json["size"].is_number())
@@ -357,8 +359,6 @@ VehicleSirenMaterial::VehicleSirenMaterial(std::string state, int material, nloh
 		else
 			LOG_VERBOSE("Model {} siren configuration exception! State '{}' material {}, type property is not a string!", Sirens::CurrentModel, state, material);
 	}
-
-	Shadow.Size = Size;
 
 	if (json.contains("shadow"))
 	{
@@ -657,6 +657,22 @@ void Sirens::Init()
 			DummyConfig config;
 			config.pVeh = vehicle;
 			config.frame = frame;
+
+			RwMatrix *ltm = RwFrameGetLTM(frame);
+			CVector pos = *(CVector*)&ltm->pos;
+			CVector objPos;
+			RwV3dTransformPoints((RwV3d*)&objPos, (RwV3d*)&pos, 1, RwMatrixGetInvertedMatrix(vehicle->m_matrix));
+
+			if (objPos.y > 0.0f) {
+				config.dummyPos = eDummyPos::Front;
+			} else {
+				config.dummyPos = eDummyPos::Rear;
+			}
+
+			if (std::abs(objPos.x) > std::abs(objPos.y) || std::abs(objPos.x) > 0.1f) {
+				config.dummyPos = objPos.x > 0.0f ? eDummyPos::Left : eDummyPos::Right;
+			}
+
 			vehicleData[vehicle]->Dummies[id].push_back(new VehicleDummy(config));
 		} });
 
