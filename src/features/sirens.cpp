@@ -158,8 +158,6 @@ VehicleSirenMaterial::VehicleSirenMaterial(std::string state, int material, nloh
 		}
 	}
 
-	Shadow.Size = Size;
-
 	if (json.contains("size"))
 	{
 		if (json["size"].is_number())
@@ -407,10 +405,6 @@ VehicleSirenMaterial::VehicleSirenMaterial(std::string state, int material, nloh
 				else
 					LOG_VERBOSE("Model {} siren configuration exception! State '{}' material {}, shadow object property offset is not an acceptable number!", Sirens::CurrentModel, state, material);
 			}
-		}
-		else if (json["shadow"].is_boolean())
-		{
-			if (!((bool)json["shadow"])) Shadow.Size = 0.0f;
 		}
 		else
 		{
@@ -661,12 +655,7 @@ void Sirens::Init()
 			RwMatrix *ltm = RwFrameGetLTM(frame);
 			CVector pos = *(CVector*)&ltm->pos;
 			CVector objPos;
-			CMatrix &vehMatrix = *(CMatrix *)vehicle->m_matrix;
-			CVector worldOffset = pos - vehMatrix.pos;
-
-			objPos.x = DotProduct(worldOffset, vehMatrix.right);
-			objPos.y = DotProduct(worldOffset, vehMatrix.up);
-			objPos.z = DotProduct(worldOffset, vehMatrix.at);
+			RwV3dTransformPoints((RwV3d*)&objPos, (RwV3d*)&pos, 1, &vehicle->m_matrix->m_matrix);
 
 			if (objPos.y > 0.0f) {
 				config.dummyPos = eDummyPos::Front;

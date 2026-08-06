@@ -155,14 +155,4 @@ void VehicleDummy::Update() {
         data.position.x *= -1;
         data.shadow.position.x *= -1;
     }
-
-    if (data.position.y > 0.0f) {
-        data.dummyPos = eDummyPos::Front;
-    } else {
-        data.dummyPos = eDummyPos::Rear;
-    }
-
-    if (std::abs(data.position.x) > std::abs(data.position.y) || std::abs(data.position.x) > 0.1f) {
-        data.dummyPos = data.position.x > 0.0f ? eDummyPos::Left : eDummyPos::Right;
-    }
 }
