@@ -196,6 +196,7 @@ protected:
 public:
     Sirens() : CBaseFeature("SirenLights", "FEATURES", eFeatureMatrix::SirenLights) {}
     static inline int CurrentModel = -1;
+    static inline bool IsCurrentModelIVF = false;
 
     static void Parse(const nlohmann::json &data, int model);
     void Reload(CVehicle* pVeh) override;

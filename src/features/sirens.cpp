@@ -166,6 +166,10 @@ VehicleSirenMaterial::VehicleSirenMaterial(std::string state, int material, nloh
 			LOG_VERBOSE("Model {} siren configuration exception! State '{}' material {}, size property is not an acceptable number!", Sirens::CurrentModel, state, material);
 	}
 
+		if (!Sirens::IsCurrentModelIVF) {
+			Shadow.Size = Size;
+		}
+
 	if (json.contains("diffuse"))
 	{
 		if (json["diffuse"].is_boolean())
@@ -654,17 +658,25 @@ void Sirens::Init()
 
 			RwMatrix *ltm = RwFrameGetLTM(frame);
 			CVector pos = *(CVector*)&ltm->pos;
-			CVector objPos;
-			RwV3dTransformPoints((RwV3d*)&objPos, (RwV3d*)&pos, 1, &vehicle->m_matrix->m_matrix);
 
-			if (objPos.y > 0.0f) {
-				config.dummyPos = eDummyPos::Front;
-			} else {
-				config.dummyPos = eDummyPos::Rear;
-			}
+			CMatrix *vehMat = (CMatrix *)vehicle->m_matrix;
+			if (vehMat) {
+				CVector worldOffset = pos - vehMat->pos;
 
-			if (std::abs(objPos.x) > 0.1f) {
-				config.dummyPos = objPos.x > 0.0f ? eDummyPos::Left : eDummyPos::Right;
+				CVector dummyOffset;
+				dummyOffset.x = DotProduct(worldOffset, vehMat->right);
+				dummyOffset.y = DotProduct(worldOffset, vehMat->up);
+				dummyOffset.z = DotProduct(worldOffset, vehMat->at);
+
+				if (dummyOffset.y > 0.0f) {
+					config.dummyPos = eDummyPos::Front;
+				} else {
+					config.dummyPos = eDummyPos::Rear;
+				}
+
+				if (std::abs(dummyOffset.x) > 0.1f) {
+					config.dummyPos = dummyOffset.x > 0.0f ? eDummyPos::Right : eDummyPos::Left;
+				}
 			}
 
 			vehicleData[vehicle]->Dummies[id].push_back(new VehicleDummy(config));
