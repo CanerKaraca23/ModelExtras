@@ -18,6 +18,8 @@
 #include "defines.h"
 #include "utils/meevents.h"
 #include "utils/texmgr.h"
+#include <CAutomobile.h>
+#include <CVisibilityPlugins.h>
 
 using namespace plugin;
 
@@ -30,18 +32,42 @@ RwSurfaceProperties gLightSurfPropsOff = {0.45f, 0.0f, 0.0f};
 
 static constexpr uint32_t RwFrameForAllObjectsAddr = 0x7F1200;
 static constexpr uint32_t RwFrameAddChildAddr = 0x7F0B00;
+static constexpr uint32_t RwFrameForAllChildrenAddr = 0x7F0DC0;
 static constexpr uint32_t GetCurrentAtomicObjectCBAddr = 0x6D33B0;
 
-static void LogSkippedUpgradePart() {
-  static int count = 0;
-  if (count < 10) {
-    ++count;
-    LOG_VERBOSE("Skipped an upgrade part, the vehicle model has no frame for "
-                "that slot");
-    if (count == 10) {
-      LOG_VERBOSE("Silencing further upgrade slot messages");
+static RwFrame *FindFrameById(RwFrame *frame, int id) {
+  if (!frame) {
+    return nullptr;
+  }
+  if (CVisibilityPlugins::GetFrameHierarchyId(frame) == id) {
+    return frame;
+  }
+  if (RwFrame *child = frame->child) {
+    if (RwFrame *found = FindFrameById(child, id)) {
+      return found;
     }
   }
+  if (RwFrame *next = frame->next) {
+    if (RwFrame *found = FindFrameById(next, id)) {
+      return found;
+    }
+  }
+  return nullptr;
+}
+
+static int __fastcall hkAddReplacementUpgrade(CVehicle *pVeh, void *edx, int nodeId, int modelId) {
+  if (!pVeh || !pVeh->m_pRwClump || nodeId < 0) {
+    return -1;
+  }
+  RwFrame *pRoot = reinterpret_cast<RwFrame *>(pVeh->m_pRwClump->object.parent);
+  if (!pRoot) {
+    return -1;
+  }
+  RwFrame *pFrame = FindFrameById(pRoot, nodeId);
+  if (!pFrame) {
+    return -1;
+  }
+  return reinterpret_cast<int(__thiscall *)(CVehicle *, int, int)>(0x6D3830)(pVeh, nodeId, modelId);
 }
 
 static RwFrame *UpgradeFrameForAllObjects(RwFrame *frame,
@@ -52,7 +78,6 @@ static RwFrame *UpgradeFrameForAllObjects(RwFrame *frame,
                                 GetCurrentAtomicObjectCBAddr)) {
       *reinterpret_cast<void **>(data) = nullptr;
     }
-    LogSkippedUpgradePart();
     return frame;
   }
   return RwFrameForAllObjects(frame, callback, data);
@@ -60,10 +85,18 @@ static RwFrame *UpgradeFrameForAllObjects(RwFrame *frame,
 
 static RwFrame *UpgradeFrameAddChild(RwFrame *parent, RwFrame *child) {
   if (!parent) {
-    LogSkippedUpgradePart();
     return parent;
   }
   return RwFrameAddChild(parent, child);
+}
+
+static RwFrame *UpgradeFrameForAllChildren(RwFrame *frame,
+                                           RwFrameCallBack callback,
+                                           void *data) {
+  if (!frame) {
+    return frame;
+  }
+  return RwFrameForAllChildren(frame, callback, data);
 }
 
 static size_t GuardUpgradeFrameCalls(uint32_t start, uint32_t end) {
@@ -81,6 +114,26 @@ static size_t GuardUpgradeFrameCalls(uint32_t start, uint32_t end) {
     } else if (target == RwFrameAddChildAddr) {
       patch::ReplaceFunctionCall(
           addr, reinterpret_cast<void *>(UpgradeFrameAddChild));
+      ++patched;
+    } else if (target == RwFrameForAllChildrenAddr) {
+      patch::ReplaceFunctionCall(
+          addr, reinterpret_cast<void *>(UpgradeFrameForAllChildren));
+      ++patched;
+    }
+  }
+  return patched;
+}
+
+static size_t GuardAddReplacementUpgradeCalls(uint32_t start, uint32_t end) {
+  size_t patched = 0;
+  for (uint32_t addr = start; addr < end; ++addr) {
+    if (*reinterpret_cast<uint8_t *>(addr) != 0xE8) {
+      continue;
+    }
+    uint32_t target = addr + 5 + *reinterpret_cast<int32_t *>(addr + 1);
+    if (target == 0x6D3830) {
+      patch::ReplaceFunctionCall(
+          addr, reinterpret_cast<void *>(hkAddReplacementUpgrade));
       ++patched;
     }
   }
@@ -102,14 +155,11 @@ void ModelInfoMgr::Init() {
   patch::Nop(0x4C8E53, 5);
   patch::Nop(0x4C8F6E, 5);
 
-  size_t guarded = GuardUpgradeFrameCalls(0x6D3300, 0x6D3C00);
-  guarded += GuardUpgradeFrameCalls(0x6DF900, 0x6DFC00);
-  if (guarded > 0) {
-    LOG_VERBOSE("Guarded {} vehicle upgrade frame calls", guarded);
-  } else {
-    LOG(ERROR) << "Found no vehicle upgrade frame calls to guard, the "
-                  "addresses may have moved";
-  }
+  GuardAddReplacementUpgradeCalls(0x6E3200, 0x6E3400);
+  GuardAddReplacementUpgradeCalls(0x6DF900, 0x6DFC00);
+
+  GuardUpgradeFrameCalls(0x6D3300, 0x6D3C00);
+  GuardUpgradeFrameCalls(0x6DF900, 0x6DFC00);
 
   patch::ReplaceFunctionCall(
       0x5532A9, reinterpret_cast<void *>(ModelInfoMgr::SetupRender));
