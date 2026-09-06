@@ -20,7 +20,20 @@ eMaterialType HeadlightComponent::GetMatType(CRGBA matCol) {
     return eMaterialType::UnknownMaterial;
 }
 
+static bool CanVehicleHaveHeadlights(CVehicle* pVeh) {
+    if (!pVeh) return false;
+    int model = pVeh->m_nModelIndex;
+    if (CModelInfo::IsBmxModel(model) || CModelInfo::IsBoatModel(model) || CModelInfo::IsTrailerModel(model) || CModelInfo::IsHeliModel(model) || CModelInfo::IsPlaneModel(model)) {
+        return false;
+    }
+    if (pVeh->m_nVehicleSubClass == VEHICLE_BMX || pVeh->m_nVehicleSubClass == VEHICLE_BOAT || pVeh->m_nVehicleSubClass == VEHICLE_TRAILER || pVeh->m_nVehicleSubClass == VEHICLE_HELI || pVeh->m_nVehicleSubClass == VEHICLE_PLANE) {
+        return false;
+    }
+    return true;
+}
+
 bool HeadlightComponent::TryRegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const std::string_view name, VehLightData& data) {
+    if (!CanVehicleHaveHeadlights(pVeh)) return false;
     if (name == "headlights" || name == "headlights2") {
         DummyConfig c = LightManager::CreateBaseConfig(pVeh, pFrame);
         c.dummyPos = eDummyPos::Front;
@@ -50,6 +63,8 @@ bool HeadlightComponent::TryRegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const
 }
 
 void HeadlightComponent::Process(CVehicle* pVeh, VehLightData& data) {
+    if (!CanVehicleHaveHeadlights(pVeh)) return;
+
     if (pVeh->IsDriver(FindPlayerPed())) {
         static size_t prev = 0;
         bool isHeadlightsActive = (pVeh->bLightsOn || CarUtil::IsLightsForcedOn(pVeh) || Util::IsNightTime()) && !CarUtil::IsLightsForcedOff(pVeh);
@@ -62,7 +77,7 @@ void HeadlightComponent::Process(CVehicle* pVeh, VehLightData& data) {
             data.bLongLightsOn = !data.bLongLightsOn;
             AudioMgr::PlaySwitchSound(pVeh);
         }
-    } else if (pVeh->m_nVehicleSubClass != VEHICLE_BMX && pVeh->m_nVehicleSubClass != VEHICLE_BOAT && pVeh->m_nVehicleSubClass != VEHICLE_TRAILER && pVeh->m_fHealth > 0.0f) {
+    } else if (pVeh->m_fHealth > 0.0f) {
         if (CarUtil::IsLightsForcedOff(pVeh) || (Util::IsEngineOff(pVeh) && !CarUtil::IsLightsForcedOn(pVeh) && !pVeh->bLightsOn)) {
             return;
         }
@@ -92,8 +107,7 @@ void HeadlightComponent::Process(CVehicle* pVeh, VehLightData& data) {
 }
 
 void HeadlightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehLightData& data) {
-    int model = pControlVeh->m_nModelIndex;
-    if (CModelInfo::IsTrailerModel(model) || CarUtil::IsLightsForcedOff(pControlVeh) || CModelInfo::IsBmxModel(model) || CModelInfo::IsBoatModel(model) || CModelInfo::IsHeliModel(model) || CModelInfo::IsPlaneModel(model) || !CarUtil::AreHeadlightsPopUpOpen(pControlVeh)) {
+    if (!CanVehicleHaveHeadlights(pControlVeh) || CarUtil::IsLightsForcedOff(pControlVeh) || !CarUtil::AreHeadlightsPopUpOpen(pControlVeh)) {
         return;
     }
 
@@ -127,7 +141,8 @@ void HeadlightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehL
 }
 
 void HeadlightComponent::ProcessPointLights(CVehicle* pVeh, VehLightData& data) {
-    bool isHeadlightsOn = (pVeh->bLightsOn || CarUtil::IsLightsForcedOn(pVeh) || (Util::IsNightTime() && !Util::IsEngineOff(pVeh)) || (pVeh->m_nVehicleSubClass == VEHICLE_BIKE && !Util::IsEngineOff(pVeh))) && !CarUtil::IsLightsForcedOff(pVeh);
+    if (!CanVehicleHaveHeadlights(pVeh)) return;
+    bool isHeadlightsOn = (pVeh->bLightsOn || CarUtil::IsLightsForcedOn(pVeh) || (Util::IsNightTime() && !Util::IsEngineOff(pVeh))) && !CarUtil::IsLightsForcedOff(pVeh);
 
     if (data.bLongLightsOn && isHeadlightsOn && CarUtil::AreHeadlightsPopUpOpen(pVeh)) {
         float highBeamMul = LightsConfig::Get().fHighBeamPointLightMul;

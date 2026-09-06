@@ -16,6 +16,9 @@ eMaterialType FogLightComponent::GetMatType(CRGBA matCol) {
 }
 
 bool FogLightComponent::TryRegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const std::string_view name, VehLightData& data) {
+    if (pVeh->m_nVehicleSubClass == VEHICLE_BMX || pVeh->m_nVehicleSubClass == VEHICLE_BOAT || pVeh->m_nVehicleSubClass == VEHICLE_TRAILER) {
+        return false;
+    }
     if ((name.starts_with("fogl") || name.starts_with("fog_")) && (STR_FOUND(name, "_l") || STR_FOUND(name, "_r"))) {
         DummyConfig c = LightManager::CreateBaseConfig(pVeh, pFrame);
         c.dummyPos = eDummyPos::Front;
@@ -31,12 +34,16 @@ bool FogLightComponent::TryRegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const 
 }
 
 void FogLightComponent::Process(CVehicle* pVeh, VehLightData& data) {
+    if (pVeh->m_nVehicleSubClass == VEHICLE_BMX || pVeh->m_nVehicleSubClass == VEHICLE_BOAT || pVeh->m_nVehicleSubClass == VEHICLE_TRAILER) {
+        return;
+    }
+
     if (pVeh->IsDriver(FindPlayerPed())) {
         static size_t prev = 0;
         bool isHeadlightsActive = (pVeh->bLightsOn || CarUtil::IsLightsForcedOn(pVeh) || Util::IsNightTime()) && !CarUtil::IsLightsForcedOff(pVeh);
         bool canToggleFogLight = !LightsConfig::Get().bFoglightTiedToHeadlight || isHeadlightsActive;
 
-        if (InputMgr::IsKeyJustDown(LightsConfig::Get().nFogLightKey) && LightManager::IsMaterialAvailable(pVeh, {eMaterialType::FogLightLeft, eMaterialType::FogLightRight}) && canToggleFogLight) {
+        if (InputMgr::IsKeyJustDown(LightsConfig::Get().nFogLightKey) && (LightManager::IsMaterialAvailable(pVeh, {eMaterialType::FogLightLeft, eMaterialType::FogLightRight}) || LightManager::IsDummyAvailable(data, {eMaterialType::FogLightLeft, eMaterialType::FogLightRight})) && canToggleFogLight) {
             data.bFogLightsOn = !data.bFogLightsOn;
             AudioMgr::PlaySwitchSound(pVeh);
         }
@@ -56,7 +63,7 @@ void FogLightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehLi
 }
 
 void FogLightComponent::ProcessPointLights(CVehicle* pVeh, VehLightData& data) {
-    bool isHeadlightsOn = (pVeh->bLightsOn || CarUtil::IsLightsForcedOn(pVeh) || (Util::IsNightTime() && !Util::IsEngineOff(pVeh)) || (pVeh->m_nVehicleSubClass == VEHICLE_BIKE && !Util::IsEngineOff(pVeh))) && !CarUtil::IsLightsForcedOff(pVeh);
+    bool isHeadlightsOn = (pVeh->bLightsOn || CarUtil::IsLightsForcedOn(pVeh) || (Util::IsNightTime() && !Util::IsEngineOff(pVeh))) && !CarUtil::IsLightsForcedOff(pVeh);
     bool isFoggy = Util::IsFoggy();
     bool shouldRenderFog = isFoggy || !LightsConfig::Get().bFoglightTiedToHeadlight || isHeadlightsOn;
     bool isFogLightOn = (data.bFogLightsOn || isFoggy) && !CarUtil::IsLightsForcedOff(pVeh);
