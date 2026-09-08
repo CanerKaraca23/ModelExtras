@@ -48,6 +48,20 @@ void Lights::Init() {
         LightManager::RegisterDummy(pVeh, pFrame, nodeName);
     });
 
+    ModelInfoMgr::RegisterMaterialColProvider([](CVehicle *pVeh, RpMaterial *pMat, eMaterialType type) -> MatStateColor {
+        if (!m_bEnabled || !pVeh || type < 0 || type >= eMaterialType::TotalMaterial) {
+            return MatStateColor{DEFAULT_MAT_COL, DEFAULT_MAT_COL};
+        }
+        VehLightData &data = LightManager::m_VehData.Get(pVeh);
+        if (LightManager::IsDummyAvailable(data, type)) {
+            const DummyConfig &c = data.dummies[type][0]->GetRef();
+            if (c.hasCustomColor) {
+                return MatStateColor{c.corona.color, DEFAULT_MAT_COL};
+            }
+        }
+        return MatStateColor{DEFAULT_MAT_COL, DEFAULT_MAT_COL};
+    });
+
 	MEEvents::vehPreRenderEvent.before += [](CVehicle *pVeh)
 	{
 		if (!m_bEnabled) return;

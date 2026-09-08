@@ -84,6 +84,7 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
                 auto &coronaSec = lights["corona"];
                 if (coronaSec.contains("color"))
                 {
+                    data.hasCustomColor = true;
                     data.corona.color.r = coronaSec["color"].value("red", data.corona.color.r);
                     data.corona.color.g = coronaSec["color"].value("green", data.corona.color.g);
                     data.corona.color.b = coronaSec["color"].value("blue", data.corona.color.b);
@@ -109,6 +110,11 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
 
                 // shadows will be force enabled if there is JSON data for it.
                 data.shadow.render = true;
+            }
+
+            if (lights.contains("inertia"))
+            {
+                data.inertia = lights.value("inertia", 0.0f);
             }
 
             // Only for StrobeLights

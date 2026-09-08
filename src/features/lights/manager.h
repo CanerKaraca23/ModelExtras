@@ -29,7 +29,7 @@ public:
     static bool IsDummyAvailable(VehLightData& data, std::initializer_list<eMaterialType> types);
     static bool IsMaterialAvailable(CVehicle* pVeh, eMaterialType type);
     static bool IsMaterialAvailable(CVehicle* pVeh, std::initializer_list<eMaterialType> types);
-    static void EnableDummy(int id, VehicleDummy *dummy, CVehicle *pVeh, float szMul);
+    static void EnableDummy(int id, VehicleDummy *dummy, CVehicle *pVeh, float szMul, float alphaMul = 1.0f);
     static void Reload(CVehicle* pVeh);
     static bool GetLightState(CVehicle* pVeh, eMaterialType lightId) { return m_VehData.Get(pVeh).bLightStates[lightId]; }
     static void SetLightState(CVehicle* pVeh, eMaterialType lightId, bool state) { m_VehData.Get(pVeh).bLightStates[lightId] = state; }

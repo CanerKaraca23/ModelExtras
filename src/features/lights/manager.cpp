@@ -103,6 +103,11 @@ void LightManager::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh) {
     VehLightData& data = m_VehData.Get(pControlVeh);
     eIndicatorState indState = data.nIndicatorState;
 
+    data.bLightRenderedThisFrame.fill(false);
+    if (pControlVeh != pTowedVeh) {
+        m_VehData.Get(pTowedVeh).bLightRenderedThisFrame.fill(false);
+    }
+
     // Fix for UIF SAMP server https://github.com/user-grinch/ModelExtras/issues/112
     // Don't clear light state when lights are forced on/already on via SAMP
     if (((Util::IsEngineOff(pControlVeh) && indState == eIndicatorState::Off) && !CarUtil::IsLightsForcedOn(pControlVeh) && !pControlVeh->bLightsOn) || CarUtil::IsLightsForcedOff(pControlVeh)) {
@@ -122,25 +127,63 @@ void LightManager::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh) {
     for (const auto& comp : m_Components) {
         comp->Render(pControlVeh, pTowedVeh, data);
     }
+
+    for (int t = 0; t < eMaterialType::TotalMaterial; ++t) {
+        eMaterialType type = static_cast<eMaterialType>(t);
+        if (!data.bLightRenderedThisFrame[type] && data.fLightFactor[type] > 0.001f) {
+            float inertia = 0.0f;
+            if (!data.dummies[type].empty()) {
+                inertia = data.dummies[type][0]->GetRef().inertia;
+            }
+            if (inertia > 0.01f) {
+                float step = (CTimer::ms_fTimeStep / 50.0f) / inertia;
+                data.fLightFactor[type] = std::max(0.0f, data.fLightFactor[type] - step);
+            } else {
+                data.fLightFactor[type] = 0.0f;
+            }
+
+            if (data.fLightFactor[type] > 0.01f) {
+                std::string tex = (type == eMaterialType::HeadLightLeft || type == eMaterialType::HeadLightRight) ? "headlight_short" : "";
+                RenderLight(pControlVeh, data, type, true, tex, 1.0f, false, true);
+            }
+        }
+    }
 }
 
-void LightManager::EnableDummy(int id, VehicleDummy *dummy, CVehicle *pVeh, float szMul) {
-    if (LightsConfig::Get().gbLightCoronasFeature) {
-        const DummyConfig &c = dummy->GetRef();
+void LightManager::EnableDummy(int id, VehicleDummy *dummy, CVehicle *pVeh, float szMul, float alphaMul) {
+    if (LightsConfig::Get().gbLightCoronasFeature && alphaMul > 0.01f) {
+        DummyConfig &c = dummy->Get();
+        CRGBA origColor = c.corona.color;
+        c.corona.color.a = static_cast<unsigned char>(std::clamp(static_cast<float>(origColor.a) * alphaMul, 0.0f, 255.0f));
         if (c.corona.lightingType == eLightingMode::NonDirectional) {
             RenderUtil::RegisterCorona(pVeh, (reinterpret_cast<unsigned int>(pVeh) * 255) + 255 + id, c.position, c.corona.color, c.corona.size * szMul);
         } else {
             RenderUtil::RegisterCoronaDirectional(&dummy->Get(), c.rotation.angle, 180.0f, szMul, c.corona.lightingType == eLightingMode::Inversed, false);
         }
+        c.corona.color = origColor;
     }
 }
 
 void LightManager::RenderLight(CVehicle* pVeh, VehLightData& data, eMaterialType type, bool isOn, const std::string& texture, float sz, bool highlight, bool isDummyOk, bool materialsOnly) {
     if (!isOn || !data.bLightStates[type]) return;
 
+    data.bLightRenderedThisFrame[type] = true;
+    bool isAvailable = IsDummyAvailable(data, type);
+    float inertia = 0.0f;
+    if (isAvailable && !data.dummies[type].empty()) {
+        inertia = data.dummies[type][0]->GetRef().inertia;
+    }
+
+    if (inertia > 0.01f) {
+        float step = (CTimer::ms_fTimeStep / 50.0f) / inertia;
+        data.fLightFactor[type] = std::min(1.0f, data.fLightFactor[type] + step);
+    } else {
+        data.fLightFactor[type] = 1.0f;
+    }
+
+    float factor = data.fLightFactor[type];
     int id = static_cast<int>(type) * 1000;
     bool hasActiveDummy = false;
-    bool isAvailable = IsDummyAvailable(data, type);
 
     if (isAvailable) {
         for (auto& dummy : data.dummies[type]) {
@@ -187,17 +230,24 @@ void LightManager::RenderLight(CVehicle* pVeh, VehLightData& data, eMaterialType
             if (highlight) {
                 szMul = (type == eMaterialType::TailLightLeft || type == eMaterialType::TailLightRight) ? 1.50f : 3.00f;
             }
-            EnableDummy((int)pVeh + 42 + id++, &dummy, pVeh, szMul);
+            EnableDummy((int)pVeh + 42 + id++, &dummy, pVeh, szMul, factor);
 
             // Skip front shadows on bike wheelie
             if (c.dummyPos == eDummyPos::Front && Util::IsVehicleDoingWheelie(pVeh)) {
                 continue;
             }
 
-            if (c.shadow.render) {
-                const std::string &tex = c.shadow.texture.empty() ? texture : c.shadow.texture;
+            if (c.shadow.render && factor > 0.01f) {
+                std::string tex = c.shadow.texture.empty() ? texture : c.shadow.texture;
+                if (data.bLongLightsOn && (type == eMaterialType::HeadLightLeft || type == eMaterialType::HeadLightRight)) {
+                    tex = "headlight_long";
+                }
                 if (!tex.empty()) {
+                    DummyConfig &cNonConst = dummy->Get();
+                    CRGBA origShadowCol = cNonConst.shadow.color;
+                    cNonConst.shadow.color.a = static_cast<unsigned char>(std::clamp(static_cast<float>(origShadowCol.a) * factor, 0.0f, 255.0f));
                     RenderUtil::RegisterShadowDirectional(&dummy->Get(), tex, sz * c.shadow.size);
+                    cNonConst.shadow.color = origShadowCol;
                 }
             }
         }

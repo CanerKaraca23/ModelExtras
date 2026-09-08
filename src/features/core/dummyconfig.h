@@ -24,6 +24,8 @@ struct DummyConfig {
     bool leanAffected = false;
     int8_t damagePanel = -1;
     int8_t damageDoor = -1;
+    bool hasCustomColor = false;
+    float inertia = 0.0f;
     
     struct {
         float angle = 0.0f;

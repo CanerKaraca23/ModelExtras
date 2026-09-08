@@ -15,6 +15,7 @@
 #include "features/dirtfx.h"
 #include "features/plate.h"
 #include "features/remap.h"
+#include "features/lights/manager.h"
 #include "defines.h"
 #include "utils/meevents.h"
 #include "utils/texmgr.h"
@@ -337,11 +338,13 @@ RpMaterial *ModelInfoMgr::SetEditableMaterialsCB(RpMaterial *material,
     RwRGBA *pColor = RpMaterialGetColor(material);
     m_RestoreEntries.push_back({pColor, *reinterpret_cast<void **>(pColor)});
 
-    pColor->red = matCol.on.r;
-    pColor->green = matCol.on.g;
-    pColor->blue = matCol.on.b;
-
     if (lightOn) {
+      VehLightData &lData = LightManager::m_VehData.Get(pCurVeh);
+      float factor = (iLightIndex >= 0 && iLightIndex < eMaterialType::TotalMaterial) ? lData.fLightFactor[iLightIndex] : 1.0f;
+      if (factor <= 0.001f) factor = 1.0f;
+      pColor->red = static_cast<unsigned char>(std::clamp(static_cast<float>(matCol.off.r) + (static_cast<float>(matCol.on.r) - static_cast<float>(matCol.off.r)) * factor, 0.0f, 255.0f));
+      pColor->green = static_cast<unsigned char>(std::clamp(static_cast<float>(matCol.off.g) + (static_cast<float>(matCol.on.g) - static_cast<float>(matCol.off.g)) * factor, 0.0f, 255.0f));
+      pColor->blue = static_cast<unsigned char>(std::clamp(static_cast<float>(matCol.off.b) + (static_cast<float>(matCol.on.b) - static_cast<float>(matCol.off.b)) * factor, 0.0f, 255.0f));
       m_RestoreEntries.push_back({&material->texture, material->texture});
 
       if (material->texture) {
