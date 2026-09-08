@@ -480,22 +480,14 @@ void ExhaustFx::Reload(CVehicle* pVeh)
                 e.second.pFxSysem = nullptr;
             }
         }
+        data.bNodesSearched = false;
+        data.isUsed = false;
+        data.m_pDummies.clear();
     }
     nReloadCount++;
 }
 
 #ifdef __cplusplus
-void ExhaustFx::Reload(CVehicle* pVeh)
-{
-    if (pVeh)
-    {
-        auto &data = m_VehData.Get(pVeh);
-        data.bNodesSearched = false;
-        data.isUsed = false;
-        data.m_pDummies.clear();
-    }
-}
-
 extern "C"
 {
 #endif
