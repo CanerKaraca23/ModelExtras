@@ -59,9 +59,10 @@ void SoundEffects::ProcessVehicle(CVehicle *pVeh)
     }
     CVector playerPos = pPlayer->GetPosition();
 
-			if (CVector::Distance(pVeh->GetPosition(), playerPos) > 75.0f ) {
-				return;
-			}
+    CVector toPlayer = pVeh->GetPosition() - playerPos;
+    if (toPlayer.SquaredMagnitude() > (75.0f * 75.0f)) {
+        return;
+    }
 
             if (bOnlyPlayerVehicle && pVeh->m_pDriver != FindPlayerPed()) {
                 return;

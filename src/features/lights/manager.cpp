@@ -148,7 +148,15 @@ void LightManager::RenderLight(CVehicle* pVeh, VehLightData& data, eMaterialType
             dummy->Update();
             RwFrame *parent = RwFrameGetParent(dummy->Get().frame);
             bool isBike = pVeh->m_nVehicleSubClass == VEHICLE_BIKE;
-            bool isDamaged = Util::IsFrameDamaged(pVeh, parent) || !FrameUtil::IsOkAtomicVisible(parent);
+            bool isDamaged = false;
+            if (c.damagePanel != -1 || c.damageDoor != -1) {
+                isDamaged = CarUtil::IsDummyDamaged(pVeh, c);
+            } else if (parent) {
+                isDamaged = Util::IsFrameDamaged(pVeh, parent);
+            }
+            if (!isDamaged && parent) {
+                isDamaged = !FrameUtil::IsOkAtomicVisible(parent);
+            }
             bool atomicCheck = !isBike && pVeh->GetIsOnScreen() && type != eMaterialType::HeadLightLeft && type != eMaterialType::HeadLightRight && isDamaged;
 
             if (atomicCheck || (c.dummyPos == eDummyPos::Rear && pVeh->m_pTrailer) || !isDummyOk) {
@@ -187,7 +195,7 @@ void LightManager::RenderLight(CVehicle* pVeh, VehLightData& data, eMaterialType
             }
 
             if (c.shadow.render) {
-                std::string tex = (c.shadow.texture == "") ? texture : c.shadow.texture;
+                const std::string &tex = c.shadow.texture.empty() ? texture : c.shadow.texture;
                 if (!tex.empty()) {
                     RenderUtil::RegisterShadowDirectional(&dummy->Get(), tex, sz * c.shadow.size);
                 }
@@ -255,7 +263,8 @@ void LightManager::ProcessPointLights(CVehicle *pVeh) {
         return;
     }
 
-    if (CVector::Distance(pVeh->GetPosition(), TheCamera.GetPosition()) > 75.0f) {
+    CVector toCam = pVeh->GetPosition() - TheCamera.GetPosition();
+    if (toCam.SquaredMagnitude() > (75.0f * 75.0f)) {
         return;
     }
 

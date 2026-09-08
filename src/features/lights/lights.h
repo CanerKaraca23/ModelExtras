@@ -12,6 +12,10 @@ public:
     void ReloadConfig() override;
     void Reload(CVehicle* pVeh) override;
 
+    bool HasProcessTick() const override { return true; }
+    bool HasProcessVehicle() const override { return true; }
+    bool HasProcessBikePointLights() const override { return true; }
+
     void ProcessTick() override;
     void ProcessVehicle(CVehicle* pVeh) override;
     void ProcessBikePointLights(CVehicle* pVeh) override;

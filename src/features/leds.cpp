@@ -33,32 +33,8 @@ void DashboardLEDs::Init()
 		}
 
 		CRGBA matCol = *reinterpret_cast<CRGBA *>(RpMaterialGetColor(pMat));
-		matCol.a = 255;
-
-		if (matCol == VEHCOL_LED_ENGINE_ON) {
-			return eMaterialType::EngineOnLed;
-		} else if (matCol == VEHCOL_LED_ENGINE_BROKEN) {
-			return eMaterialType::EngineBrokenLed;
-		} else if (matCol == VEHCOL_LED_FOG_LIGHT) {
-			return eMaterialType::FogLightLed;
-		} else if (matCol == VEHCOL_LED_HIGH_BEAM) {
-			return eMaterialType::HighBeamLed;
-		} else if (matCol == VEHCOL_LED_LOW_BEAM) {
-			return eMaterialType::LowBeamLed;
-		} else if (matCol == VEHCOL_LED_INDICATOR_LEFT) {
-			return eMaterialType::IndicatorLeftLed;
-		} else if (matCol == VEHCOL_LED_INDICATOR_RIGHT) {
-			return eMaterialType::IndicatorRightLed;
-		} else if (matCol == VEHCOL_LED_SIREN_LIGHTS) {
-			return eMaterialType::SirenLed;
-		} else if (matCol == VEHCOL_LED_BOOT_OPEN) {
-			return eMaterialType::BootOpenLed;
-		} else if (matCol == VEHCOL_LED_BONNET_OPEN) {
-			return eMaterialType::BonnetOpenLed;
-		} else if (matCol == VEHCOL_LED_DOOR_OPEN) {
-			return eMaterialType::DoorOpenLed;
-		} else if (matCol == VEHCOL_LED_ROOF_OPEN) {
-			return eMaterialType::RoofOpenLed;
+		if (matCol.r == 255 && matCol.g == 200 && matCol.b >= 100 && matCol.b <= 111) {
+			return static_cast<eMaterialType>(static_cast<int>(eMaterialType::EngineOnLed) + (matCol.b - 100));
 		}
 		
 		return eMaterialType::UnknownMaterial;

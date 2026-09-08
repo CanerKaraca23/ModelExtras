@@ -72,12 +72,17 @@ private:
 
 public:
   static inline float gfMaterialAmbientMul = 1.0f;
+  static inline RwSurfaceProperties ms_LightSurfaceProps;
   static void ReloadConfig();
   static float GetMaterialAmbientMul() { return gfMaterialAmbientMul; }
-  static RwSurfaceProperties GetLightSurfaceProps(float ambientScale = 1.0f) {
-    RwSurfaceProperties props = *reinterpret_cast<RwSurfaceProperties *>(0x8A645C);
-    props.ambient = std::max(0.0f, props.ambient * gfMaterialAmbientMul * ambientScale);
-    return props;
+  static const RwSurfaceProperties &GetLightSurfaceProps(float ambientScale = 1.0f) {
+    if (ambientScale == 1.0f) {
+      return ms_LightSurfaceProps;
+    }
+    static thread_local RwSurfaceProperties scaledProps;
+    scaledProps = ms_LightSurfaceProps;
+    scaledProps.ambient = std::max(0.0f, scaledProps.ambient * ambientScale);
+    return scaledProps;
   }
 
   static void EnableMaterial(CVehicle *pVeh, eMaterialType type);

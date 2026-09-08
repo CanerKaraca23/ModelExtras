@@ -180,11 +180,13 @@ void AudioMgr::Play3DSound(const std::string &path, const CVector &worldPos, CEn
     }
 
     CVector listenerPos = TheCamera.GetPosition();
-    float dist = CVector::Distance(worldPos, listenerPos);
-    if (dist > maxDistance)
+    CVector toSound = worldPos - listenerPos;
+    float distSq = toSound.SquaredMagnitude();
+    if (distSq > (maxDistance * maxDistance))
     {
         return; // Beyond maximum audible range: cull
     }
+    float dist = std::sqrt(distSq);
 
     // Natural smooth distance attenuation
     // Full volume within near radius (5m), then linear acoustic decay up to maxDistance
@@ -200,14 +202,14 @@ void AudioMgr::Play3DSound(const std::string &path, const CVector &worldPos, CEn
     float pan = 0.0f;
     if (dist > 0.1f)
     {
-        CVector toSound = worldPos - listenerPos;
         CVector camRight = TheCamera.m_mCameraMatrix.right;
         float rightDot = (toSound.x * camRight.x + toSound.y * camRight.y + toSound.z * camRight.z) / dist;
         pan = std::clamp(rightDot, -1.0f, 1.0f);
     }
 
     // Calibrated volume scaling with in-game SFX master volume (0xBA6797)
-    float masterSfxVol = *(BYTE *)0xBA6797 / 64.0f;
+    constexpr float INV_64 = 1.0f / 64.0f;
+    float masterSfxVol = *(BYTE *)0xBA6797 * INV_64;
     float finalVolume = baseVolume * distFactor * gfSoundMult * masterSfxVol;
     if (finalVolume < 0.005f)
     {
@@ -241,7 +243,8 @@ void AudioMgr::PlayFileSound(const std::string &path, float volume)
         return;
     }
 
-    float masterSfxVol = *(BYTE *)0xBA6797 / 64.0f;
+    constexpr float INV_64 = 1.0f / 64.0f;
+    float masterSfxVol = *(BYTE *)0xBA6797 * INV_64;
     float finalVolume = volume * gfSoundMult * masterSfxVol;
     if (finalVolume < 0.005f)
     {

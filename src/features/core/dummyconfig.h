@@ -22,6 +22,8 @@ struct DummyConfig {
     bool isParentDummy = false;
     // Set when the frame hangs off the chassis, so it is rolled by the bike lean
     bool leanAffected = false;
+    int8_t damagePanel = -1;
+    int8_t damageDoor = -1;
     
     struct {
         float angle = 0.0f;
