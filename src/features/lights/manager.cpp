@@ -263,8 +263,7 @@ void LightManager::ProcessPointLights(CVehicle *pVeh) {
         return;
     }
 
-    CVector toCam = pVeh->GetPosition() - TheCamera.GetPosition();
-    if (toCam.SquaredMagnitude() > (75.0f * 75.0f)) {
+    if (MathUtil::DistanceSquared(pVeh->GetPosition(), TheCamera.GetPosition()) > (75.0f * 75.0f)) {
         return;
     }
 

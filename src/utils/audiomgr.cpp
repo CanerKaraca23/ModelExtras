@@ -179,9 +179,7 @@ void AudioMgr::Play3DSound(const std::string &path, const CVector &worldPos, CEn
         return;
     }
 
-    CVector listenerPos = TheCamera.GetPosition();
-    CVector toSound = worldPos - listenerPos;
-    float distSq = toSound.SquaredMagnitude();
+    float distSq = MathUtil::DistanceSquared(worldPos, TheCamera.GetPosition());
     if (distSq > (maxDistance * maxDistance))
     {
         return; // Beyond maximum audible range: cull

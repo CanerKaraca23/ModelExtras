@@ -927,8 +927,7 @@ void Sirens::Init()
 			}
 		}
 
-		CVector distance = vehicle->GetPosition() - TheCamera.GetPosition();
-		eCoronaFlareType type = (distance.SquaredMagnitude() > (30.0f * 30.0f)) ? FLARETYPE_HEADLIGHTS : FLARETYPE_NONE;
+		eCoronaFlareType type = (MathUtil::DistanceSquared(vehicle->GetPosition(), TheCamera.GetPosition()) > (30.0f * 30.0f)) ? FLARETYPE_HEADLIGHTS : FLARETYPE_NONE;
 
 		for (auto& mat : state->Materials) {
 			if (!mat.second->State) {

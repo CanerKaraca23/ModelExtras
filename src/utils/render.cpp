@@ -114,7 +114,7 @@ void RenderUtil::RegisterCorona(CEntity *pEntity, int coronaID, CVector pos, CRG
     if (Util::IsNightTime() && gfCoronaDistanceMul != 0.0f) {
         // pEntity is null for unattached coronas, pos is already in world space then
         CVector refPos = pEntity ? pEntity->GetPosition() : pos;
-        float distSq = (TheCamera.GetPosition() - refPos).SquaredMagnitude();
+        float distSq = MathUtil::DistanceSquared(TheCamera.GetPosition(), refPos);
         float dist = std::sqrt(distSq);
         coronaSz = std::max(size, size * dist * gfCoronaDistanceMul);
     }
@@ -198,8 +198,7 @@ void RenderUtil::RegisterPointLight(const DummyConfig *pConfig, CRGBA col, float
         return;
     }
 
-    CVector toCam = pConfig->pVeh->GetPosition() - TheCamera.GetPosition();
-    if (toCam.SquaredMagnitude() > (75.0f * 75.0f))
+    if (MathUtil::DistanceSquared(pConfig->pVeh->GetPosition(), TheCamera.GetPosition()) > (75.0f * 75.0f))
     {
         return;
     }
@@ -454,8 +453,7 @@ void RenderUtil::RegisterShadowDirectional(const DummyConfig *pConfig, const std
     }
 
     // Cull first, the shadow isn't visible past this range anyway
-    CVector toCam = pConfig->pVeh->GetPosition() - TheCamera.GetPosition();
-    float distSq = toCam.SquaredMagnitude();
+    float distSq = MathUtil::DistanceSquared(pConfig->pVeh->GetPosition(), TheCamera.GetPosition());
     if (distSq > (SHDW_MAX_DIST * SHDW_MAX_DIST))
     {
         return;
