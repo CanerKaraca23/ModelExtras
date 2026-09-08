@@ -6,6 +6,8 @@
 #include <optional>
 #include "enums/dummypos.h"
 
+struct DummyConfig;
+
 class CarUtil
 {
 public:

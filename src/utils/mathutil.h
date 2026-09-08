@@ -2,15 +2,12 @@
 
 #include <cmath>
 
-#ifndef PI
-#define PI 3.14159265358979323846
-#endif
-
 class MathUtil
 {
 private:
-    static constexpr double RAD_TO_DEG = 180.0 / PI;
-    static constexpr double DEG_TO_RAD = PI / 180.0;
+    static constexpr double PI_VAL = 3.14159265358979323846;
+    static constexpr double RAD_TO_DEG = 180.0 / PI_VAL;
+    static constexpr double DEG_TO_RAD = PI_VAL / 180.0;
 
 public:
     static inline float NormalizeAngle(float angle)
