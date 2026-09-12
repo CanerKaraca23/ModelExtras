@@ -57,19 +57,19 @@ void DashboardLEDs::Init()
 	ModelInfoMgr::RegisterRender([](CVehicle *pControlVeh) {
 		int model = pControlVeh->m_nModelIndex;
 
-		if (pControlVeh->bEngineOn) {
+		if (pControlVeh->m_nVehicleFlags.bEngineOn) {
 			EnableLED(pControlVeh, eMaterialType::EngineOnLed);
 		}
 
-		if (pControlVeh->bEngineBroken) {
+		if (pControlVeh->m_nVehicleFlags.bEngineBroken) {
 			EnableLED(pControlVeh, eMaterialType::EngineBrokenLed);
 		}
 
-		if (pControlVeh->bSirenOrAlarm) {
+		if (pControlVeh->m_nVehicleFlags.bSirenOrAlarm) {
 			EnableLED(pControlVeh, eMaterialType::SirenLed);
 		}
 
-		if (pControlVeh->m_nVehicleSubClass == VEHICLE_AUTOMOBILE) {
+		if (CarUtil::IsAutomobile(pControlVeh)) {
 			CAutomobile *pAutomobile = static_cast<CAutomobile*>(pControlVeh);
 			bool isAnyDoorOpen = false;
 
@@ -94,14 +94,14 @@ void DashboardLEDs::Init()
 		}
 
 		const auto& data = Lights::GetVehicleData(pControlVeh);
-		bool isHeadlightsActive = (pControlVeh->bLightsOn || CarUtil::IsLightsForcedOn(pControlVeh) || (Util::IsNightTime() && !Util::IsEngineOff(pControlVeh))) && !CarUtil::IsLightsForcedOff(pControlVeh);
+		bool isHeadlightsActive = (pControlVeh->m_nVehicleFlags.bLightsOn || CarUtil::IsLightsForcedOn(pControlVeh) || (Util::IsNightTime() && !CarUtil::IsEngineOff(pControlVeh))) && !CarUtil::IsLightsForcedOff(pControlVeh);
 		bool isFoggy = Util::IsFoggy();
 		bool shouldShowFog = isFoggy || !LightsConfig::Get().bFoglightTiedToHeadlight || isHeadlightsActive;
 		bool isFogLightOn = (data.bFogLightsOn || isFoggy) && (!LightsConfig::Get().bFoglightTiedToHeadlight || !CarUtil::IsLightsForcedOff(pControlVeh));
 		if (isFogLightOn && shouldShowFog) {
 			EnableLED(pControlVeh, eMaterialType::FogLightLed);
 		}
-		bool headlightsOn = (pControlVeh->bLightsOn || CarUtil::IsLightsForcedOn(pControlVeh) || (Util::IsNightTime() && !Util::IsEngineOff(pControlVeh))) && !CarUtil::IsLightsForcedOff(pControlVeh);
+		bool headlightsOn = isHeadlightsActive;
 		if (headlightsOn) {
 			if (data.bLongLightsOn) {
 				EnableLED(pControlVeh, eMaterialType::HighBeamLed);

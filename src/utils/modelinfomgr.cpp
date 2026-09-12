@@ -12,8 +12,6 @@
 #include <winuser.h>
 
 #include "features/carcols.h"
-#include "features/dirtfx.h"
-#include "features/plate.h"
 #include "features/remap.h"
 #include "features/lights/manager.h"
 #include "defines.h"
@@ -26,65 +24,6 @@ extern int GetSirenIndex(CVehicle *pVeh, RpMaterial *pMat);
 extern int GetStrobeIndex(CVehicle *pVeh, RpMaterial *pMat);
 
 static CVehicle *pCurVeh = nullptr;
-
-static constexpr uint32_t RwFrameForAllObjectsAddr = 0x7F1200;
-static constexpr uint32_t RwFrameAddChildAddr = 0x7F0B00;
-static constexpr uint32_t GetCurrentAtomicObjectCBAddr = 0x6D33B0;
-
-static void LogSkippedUpgradePart() {
-  static int count = 0;
-  if (count < 10) {
-    ++count;
-    LOG_VERBOSE("Skipped an upgrade part, the vehicle model has no frame for "
-                "that slot");
-    if (count == 10) {
-      LOG_VERBOSE("Silencing further upgrade slot messages");
-    }
-  }
-}
-
-static RwFrame *UpgradeFrameForAllObjects(RwFrame *frame,
-                                          RwObjectCallBack callback,
-                                          void *data) {
-  if (!frame) {
-    if (data && callback == reinterpret_cast<RwObjectCallBack>(
-                                GetCurrentAtomicObjectCBAddr)) {
-      *reinterpret_cast<void **>(data) = nullptr;
-    }
-    LogSkippedUpgradePart();
-    return frame;
-  }
-  return RwFrameForAllObjects(frame, callback, data);
-}
-
-static RwFrame *UpgradeFrameAddChild(RwFrame *parent, RwFrame *child) {
-  if (!parent) {
-    LogSkippedUpgradePart();
-    return parent;
-  }
-  return RwFrameAddChild(parent, child);
-}
-
-static size_t GuardUpgradeFrameCalls(uint32_t start, uint32_t end) {
-  size_t patched = 0;
-  for (uint32_t addr = start; addr < end; ++addr) {
-    if (*reinterpret_cast<uint8_t *>(addr) != 0xE8) {
-      continue;
-    }
-
-    uint32_t target = addr + 5 + *reinterpret_cast<int32_t *>(addr + 1);
-    if (target == RwFrameForAllObjectsAddr) {
-      patch::ReplaceFunctionCall(
-          addr, reinterpret_cast<void *>(UpgradeFrameForAllObjects));
-      ++patched;
-    } else if (target == RwFrameAddChildAddr) {
-      patch::ReplaceFunctionCall(
-          addr, reinterpret_cast<void *>(UpgradeFrameAddChild));
-      ++patched;
-    }
-  }
-  return patched;
-}
 
 void ModelInfoMgr::ResetEditableMaterials() {
   for (auto it = m_RestoreEntries.rbegin(); it != m_RestoreEntries.rend(); ++it) {
@@ -104,7 +43,7 @@ void ModelInfoMgr::ResetEditableMaterials() {
 
 void ModelInfoMgr::ReloadConfig() {
   gfMaterialAmbientMul = std::max(0.0f, gConfig.ReadFloat("LIGHTS", "MaterialAmbientMul", 1.0f));
-  RwSurfaceProperties baseProps = *reinterpret_cast<RwSurfaceProperties *>(0x8A645C);
+  RwSurfaceProperties baseProps{1.0f, 1.0f, 1.0f};
   baseProps.ambient = std::max(0.0f, baseProps.ambient * gfMaterialAmbientMul);
   ms_LightSurfaceProps = baseProps;
 }
@@ -115,26 +54,14 @@ void ModelInfoMgr::Init() {
 
   ReloadConfig();
 
-  patch::Nop(0x4C8E53, 5);
-  patch::Nop(0x4C8F6E, 5);
-
-  size_t guarded = GuardUpgradeFrameCalls(0x6D3300, 0x6D3C00);
-  guarded += GuardUpgradeFrameCalls(0x6DF900, 0x6DFC00);
-  if (guarded > 0) {
-    LOG_VERBOSE("Guarded {} vehicle upgrade frame calls", guarded);
-  } else {
-    LOG(ERROR) << "Found no vehicle upgrade frame calls to guard, the "
-                  "addresses may have moved";
-  }
-
-  patch::ReplaceFunctionCall(
-      0x5532A9, reinterpret_cast<void *>(ModelInfoMgr::SetupRender));
+  // Hook VC 1.0 CVehicleModelInfo::SetEditableMaterialsCB (0x579AE0) and ResetEditableMaterials (0x5799D0)
   patch::ReplaceFunction(
-      0x4C8220, reinterpret_cast<void *>(ModelInfoMgr::SetEditableMaterialsCB));
+      0x579AE0, reinterpret_cast<void *>(ModelInfoMgr::SetEditableMaterialsCB));
   patch::ReplaceFunction(
-      0x4C8460, reinterpret_cast<void *>(ModelInfoMgr::ResetEditableMaterials));
+      0x5799D0, reinterpret_cast<void *>(ModelInfoMgr::ResetEditableMaterials));
+
   MEEvents::vehRenderEvent.before += [](CVehicle *pVeh) {
-    if (!pVeh || pVeh->m_nType != ENTITY_TYPE_VEHICLE || !pVeh->m_pRwClump) {
+    if (!pVeh || !pVeh->m_pRwClump) {
       return;
     }
 
@@ -151,15 +78,11 @@ void ModelInfoMgr::Init() {
   };
 
   MEEvents::heliRenderEvent.after += [](CVehicle *pVeh) {
-    if (!pVeh || pVeh->m_nType != ENTITY_TYPE_VEHICLE) {
+    if (!pVeh || !pVeh->m_pRwClump) {
       return;
     }
 
-    uint16_t modelIndex = static_cast<uint16_t>(pVeh->m_nModelIndex);
-    if (CModelInfo::IsHeliModel(modelIndex)) {
-      if (!pVeh->m_pRwClump) {
-        return;
-      }
+    if (CModelInfo::IsHeliModel(pVeh->m_nModelIndex)) {
       auto &data = m_VehData.Get(pVeh);
       if (data.nFrameCount > 10) {
         ModelInfoMgr::OnRender(pVeh);
@@ -301,8 +224,6 @@ RpMaterial *ModelInfoMgr::SetEditableMaterialsCB(RpMaterial *material,
       }
     } else if (pCurVeh) {
       Remap::ProcessTextures(pCurVeh, material);
-      DirtFx::ProcessTextures(pCurVeh, material);
-      LicensePlate::ProcessTextures(pCurVeh, material);
     }
   }
 

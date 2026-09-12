@@ -1,13 +1,12 @@
 #include "pch.h"
 #include "inputmgr.h"
-#include "samp.h"
 #include "util.h"
 #include <CTimer.h>
 
 void InputMgr::Update() {
     m_PreviousKeys = m_CurrentKeys;
 
-    if (!Util::IsWindowFocused() || SAMP::IsInputActive()) {
+    if (!Util::IsWindowFocused()) {
         m_CurrentKeys.reset();
         return;
     }

@@ -9,7 +9,7 @@ if not PLUGIN_SDK_DIR or not os.isdir(PLUGIN_SDK_DIR) then
         PLUGIN_SDK_DIR = "D:/Dev/plugin-sdk"
     end
 end
-local GAME_DIR = os.getenv("GTASA_DIR") or "D:/Games/GTA San Andreas"
+local GAME_DIR = os.getenv("GTAVC_DIR") or "C:/Users/caner/OneDrive/Documents/GTA Vice City"
 
 target("ModelExtras")
     set_kind("shared")
@@ -22,9 +22,9 @@ target("ModelExtras")
     set_pcxxheader("src/pch.h")
 
     add_defines(
-        "PLUGIN_SGV_10US", 
+        "PLUGIN_SGV_10EN", 
         "MODELEXTRAS_DEV", 
-        "GTASA", 
+        "GTAVC", 
         "RW",
         "NOMINMAX",
         "WIN32_LEAN_AND_MEAN",
@@ -34,11 +34,11 @@ target("ModelExtras")
     if PLUGIN_SDK_DIR then
         add_includedirs(
             PLUGIN_SDK_DIR,
-            path.join(PLUGIN_SDK_DIR, "plugin_sa"),
-            path.join(PLUGIN_SDK_DIR, "plugin_sa", "game_sa"),
-            path.join(PLUGIN_SDK_DIR, "plugin_sa", "game_sa", "enums"),
-            path.join(PLUGIN_SDK_DIR, "plugin_sa", "game_sa", "meta"),
-            path.join(PLUGIN_SDK_DIR, "plugin_sa", "game_sa", "rw"),
+            path.join(PLUGIN_SDK_DIR, "plugin_vc"),
+            path.join(PLUGIN_SDK_DIR, "plugin_vc", "game_vc"),
+            path.join(PLUGIN_SDK_DIR, "plugin_vc", "game_vc", "enums"),
+            path.join(PLUGIN_SDK_DIR, "plugin_vc", "game_vc", "meta"),
+            path.join(PLUGIN_SDK_DIR, "plugin_vc", "game_vc", "rw"),
             path.join(PLUGIN_SDK_DIR, "shared"),
             path.join(PLUGIN_SDK_DIR, "shared", "game"),
             path.join(PLUGIN_SDK_DIR, "injector"),
@@ -104,12 +104,12 @@ target("ModelExtras")
     )
 
     if is_mode("debug") then
-        add_links("plugin_d")
+        add_links("plugin_vc_d", "plugin_d")
         set_runtimes("MTd")
         set_optimize("none")
         set_symbols("debug")
     else
-        add_links("plugin")
+        add_links("plugin_vc", "plugin")
         set_runtimes("MT")
         set_optimize("fastest")
         set_symbols("hidden")

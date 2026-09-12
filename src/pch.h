@@ -1,11 +1,11 @@
 #pragma once
 #include <CTimer.h>
 #include <NodeName.h>
-#include <game_sa/CModelInfo.h>
+#include <game_vc/CModelInfo.h>
 
 #include <RenderWare.h>
 #include <plugin.h>
-#include <game_sa/common.h>
+#include <game_vc/common.h>
 
 #include "nlohmann/json.hpp"
 #include "ini/ini.hpp"
@@ -29,12 +29,9 @@ extern bool gVerboseLogging;
     }                                     \
   } while (0)
 
-
 inline std::string_view GetSafeFrameNodeName(RwFrame *pFrame)
 {
     if (!pFrame) return {};
     const char *name = GetFrameNodeName(pFrame);
     return name ? std::string_view(name) : std::string_view{};
 }
-
-static inline CBaseModelInfo **CModelInfo__ms_modelInfoPtrs = reinterpret_cast<CBaseModelInfo **>(patch::GetPointer(0x403DA7));

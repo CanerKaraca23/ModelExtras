@@ -27,7 +27,8 @@ void Carcols::Init()
 
 bool Carcols::GetColor(CVehicle *pVeh, RpMaterial *pMat, CRGBA &col)
 {
-    CRGBA *colorTable = *reinterpret_cast<CRGBA **>(0x4C8390);
+    // VC 1.0 CVehicleModelInfo::ms_colourPalette (array of RwRGBA)
+    RwRGBA *colorTable = reinterpret_cast<RwRGBA *>(0x68D648);
     CRGBA type = *reinterpret_cast<CRGBA *>(RpMaterialGetColor(pMat));
     type.a = 255;
 
@@ -86,7 +87,7 @@ bool Carcols::GetColor(CVehicle *pVeh, RpMaterial *pMat, CRGBA &col)
     {
         int idx = 0;
         if (type.r == VEHCOL_PRIMARY.r && type.g == VEHCOL_PRIMARY.g)
-        { // blue can be anything
+        {
             idx = CVehicleModelInfo::ms_currentCol[0];
         }
         else if (IS_SAME_COLOR(type, VEHCOL_SECONDARY))
@@ -95,17 +96,18 @@ bool Carcols::GetColor(CVehicle *pVeh, RpMaterial *pMat, CRGBA &col)
         }
         else if (IS_SAME_COLOR(type, VEHCOL_TERTIARY))
         {
-            idx = CVehicleModelInfo::ms_currentCol[2];
+            idx = CVehicleModelInfo::ms_currentCol[0];
         }
         else if (IS_SAME_COLOR(type, VEHCOL_QUATARNARY))
         {
-            idx = CVehicleModelInfo::ms_currentCol[3];
+            idx = CVehicleModelInfo::ms_currentCol[1];
         }
         else
         {
             return false;
         }
-        col = colorTable[idx];
+        RwRGBA entry = colorTable[idx & 0x7F];
+        col = CRGBA(entry.red, entry.green, entry.blue, 255);
     }
 
     return true;

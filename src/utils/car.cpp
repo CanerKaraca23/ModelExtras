@@ -12,6 +12,36 @@
 #include <cmath>
 #include <algorithm>
 
+bool CarUtil::IsBike(CVehicle *pVeh)
+{
+    if (!pVeh) return false;
+    return CModelInfo::IsBikeModel(pVeh->m_nModelIndex);
+}
+
+bool CarUtil::IsAutomobile(CVehicle *pVeh)
+{
+    if (!pVeh) return false;
+    return CModelInfo::IsCarModel(pVeh->m_nModelIndex);
+}
+
+bool CarUtil::IsBoat(CVehicle *pVeh)
+{
+    if (!pVeh) return false;
+    return CModelInfo::IsBoatModel(pVeh->m_nModelIndex);
+}
+
+bool CarUtil::IsHeli(CVehicle *pVeh)
+{
+    if (!pVeh) return false;
+    return CModelInfo::IsHeliModel(pVeh->m_nModelIndex);
+}
+
+bool CarUtil::IsPlane(CVehicle *pVeh)
+{
+    if (!pVeh) return false;
+    return CModelInfo::IsPlaneModel(pVeh->m_nModelIndex);
+}
+
 bool CarUtil::IsLightsForcedOn(CVehicle *pVeh)
 {
     return pVeh->m_nOverrideLights == eLightOverride::ForceLightsOn;
@@ -19,25 +49,26 @@ bool CarUtil::IsLightsForcedOn(CVehicle *pVeh)
 
 bool CarUtil::IsLightsForcedOff(CVehicle *pVeh)
 {
-    return CVehicle::ms_forceVehicleLightsOff || pVeh->m_nOverrideLights == eLightOverride::ForceLightsOff;
+    return pVeh->m_nOverrideLights == eLightOverride::ForceLightsOff;
 }
 
 bool CarUtil::AreHeadlightsPopUpOpen(CVehicle *pVeh)
 {
-    if (pVeh && pVeh->m_nVehicleSubClass == VEHICLE_AUTOMOBILE)
+    if (pVeh && IsAutomobile(pVeh))
     {
         CAutomobile *pAuto = static_cast<CAutomobile *>(pVeh);
         if (!pAuto->m_aCarNodes[CAR_MISC_A])
         {
             return true;
         }
-        return pAuto->m_renderLights.m_bLeftFront || pAuto->m_renderLights.m_bRightFront || pAuto->m_fPropRotate >= 0.68f;
+        return pAuto->m_renderLights.m_bLeftFront || pAuto->m_renderLights.m_bRightFront;
     }
     return true;
 }
 
 bool CarUtil::IsEngineOff(CVehicle *pVeh) {
-    return !pVeh->bEngineOn || pVeh->bEngineBroken;
+    if (!pVeh) return true;
+    return !pVeh->m_nVehicleFlags.bEngineOn || pVeh->m_nVehicleFlags.bEngineBroken;
 }
 
 float CarUtil::GetVehicleSpeed(CVehicle *pVeh)
@@ -47,21 +78,21 @@ float CarUtil::GetVehicleSpeed(CVehicle *pVeh)
 
 float CarUtil::GetVehicleSpeedRealistic(CVehicle *vehicle)
 {
+    if (!vehicle) return 0.0f;
     float wheelSpeed = 0.0;
     CVehicleModelInfo *vehicleModelInfo = (CVehicleModelInfo *)CModelInfo::GetModelInfo(vehicle->m_nModelIndex);
-    if (vehicle->m_nVehicleSubClass == VEHICLE_BIKE || vehicle->m_nVehicleSubClass == VEHICLE_BMX)
+    if (IsBike(vehicle))
     {
         CBike *bike = (CBike *)vehicle;
-        wheelSpeed = ((bike->m_aWheelAngularVelocity[0] * vehicleModelInfo->m_fWheelSizeFront) +
-                      (bike->m_aWheelAngularVelocity[1] * vehicleModelInfo->m_fWheelSizeRear)) /
-                     2.0f;
+        float wheelSize = vehicleModelInfo ? vehicleModelInfo->m_fWheelSize : 0.35f;
+        wheelSpeed = (bike->m_fWheelSpeed[0] + bike->m_fWheelSpeed[1]) * 0.5f * wheelSize;
     }
-    else if (vehicle->m_nVehicleSubClass == VEHICLE_AUTOMOBILE || vehicle->m_nVehicleSubClass == VEHICLE_MTRUCK || vehicle->m_nVehicleSubClass == VEHICLE_QUAD)
+    else if (IsAutomobile(vehicle))
     {
         CAutomobile *automobile = (CAutomobile *)vehicle;
-        wheelSpeed = ((automobile->m_fWheelSpeed[0] + automobile->m_fWheelSpeed[1] * vehicleModelInfo->m_fWheelSizeFront) +
-                      (automobile->m_fWheelSpeed[2] + automobile->m_fWheelSpeed[3] * vehicleModelInfo->m_fWheelSizeRear)) /
-                     4.0f;
+        float wheelSize = vehicleModelInfo ? vehicleModelInfo->m_fWheelSize : 0.35f;
+        wheelSpeed = ((automobile->m_fWheelSpeed[0] + automobile->m_fWheelSpeed[1] +
+                       automobile->m_fWheelSpeed[2] + automobile->m_fWheelSpeed[3]) * 0.25f) * wheelSize;
     }
     else
     {
@@ -74,7 +105,7 @@ float CarUtil::GetVehicleSpeedRealistic(CVehicle *vehicle)
 }
 
 bool CarUtil::IsLightDamaged(CVehicle *pVeh, eLights light) {
-    if (!pVeh || pVeh->m_nVehicleSubClass != VEHICLE_AUTOMOBILE) {
+    if (!pVeh || !IsAutomobile(pVeh)) {
         return false;
     }
     CAutomobile *pAutoMobile = static_cast<CAutomobile*>(pVeh);
@@ -86,7 +117,7 @@ bool CarUtil::IsLightDamaged(CVehicle *pVeh, eLights light) {
 }
 
 bool CarUtil::IsDoorDamaged(CVehicle *pVeh, eDoors door) {
-    if (!pVeh || pVeh->m_nVehicleSubClass != VEHICLE_AUTOMOBILE) {
+    if (!pVeh || !IsAutomobile(pVeh)) {
         return false;
     }
     CAutomobile *pAutoMobile = static_cast<CAutomobile*>(pVeh);
@@ -98,7 +129,7 @@ bool CarUtil::IsDoorDamaged(CVehicle *pVeh, eDoors door) {
 }
 
 bool CarUtil::IsPanelDamaged(CVehicle *pVeh, ePanels panel) {
-    if (!pVeh || pVeh->m_nVehicleSubClass != VEHICLE_AUTOMOBILE) {
+    if (!pVeh || !IsAutomobile(pVeh)) {
         return false;
     }
     CAutomobile *pAutoMobile = static_cast<CAutomobile*>(pVeh);
@@ -110,7 +141,7 @@ bool CarUtil::IsPanelDamaged(CVehicle *pVeh, ePanels panel) {
 }
 
 bool CarUtil::IsFrameDamaged(CVehicle *pVeh, RwFrame *frame) {
-    if (!pVeh || !frame || pVeh->m_nVehicleSubClass != VEHICLE_AUTOMOBILE) {
+    if (!pVeh || !frame || !IsAutomobile(pVeh)) {
         return false;
     }
 
@@ -168,7 +199,7 @@ bool CarUtil::IsFrameDamaged(CVehicle *pVeh, RwFrame *frame) {
 }
 
 bool CarUtil::IsDummyDamaged(CVehicle *pVeh, const DummyConfig &c) {
-    if (!pVeh || pVeh->m_nVehicleSubClass != VEHICLE_AUTOMOBILE) {
+    if (!pVeh || !IsAutomobile(pVeh)) {
         return false;
     }
     if (c.damagePanel != -1) {
@@ -193,7 +224,7 @@ float CarUtil::GetVehiclePitch(CVehicle *pVeh) {
 }
 
 bool CarUtil::IsVehicleDoingWheelie(CVehicle *pVeh) {
-    return pVeh && pVeh->m_nVehicleSubClass == VEHICLE_BIKE && CarUtil::GetVehiclePitch(pVeh) > 45.0f;
+    return pVeh && IsBike(pVeh) && CarUtil::GetVehiclePitch(pVeh) > 45.0f;
 }
 
 static float mx1, my1, mz1;

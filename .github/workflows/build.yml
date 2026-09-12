@@ -3,9 +3,9 @@ name: Build ModelExtras
 
 on:
   push:
-    branches: [main, test]
+    branches: [main, test, feat/vice-city-port]
   pull_request:
-    branches: [main, test]
+    branches: [main, test, feat/vice-city-port]
   workflow_dispatch:
     inputs:
       build_type:
@@ -50,7 +50,7 @@ jobs:
       uses: actions/cache@v6
       with:
         path: plugin-sdk
-        key: plugin-sdk-win32-msvc-vs2026-${{ steps.plugin-sdk-ref.outputs.sha }}
+        key: plugin-sdk-vc-win32-msvc-vs2026-${{ steps.plugin-sdk-ref.outputs.sha }}
 
     - name: Build plugin-sdk
       if: steps.plugin-sdk-cache.outputs.cache-hit != 'true'
@@ -69,27 +69,29 @@ jobs:
         premake5.exe vs2026
         cd ..\..
         if exist plugin.slnx (
-          msbuild plugin.slnx /t:plugin_sa /p:Configuration=Release /m
-          msbuild plugin.slnx /t:plugin_sa /p:Configuration=zDebug /m
+          msbuild plugin.slnx /t:plugin_vc /p:Configuration=Release /m
+          msbuild plugin.slnx /t:plugin_vc /p:Configuration=zDebug /m
         ) else if exist plugin.sln (
-          msbuild plugin.sln /t:plugin_sa /p:Configuration=Release /m
-          msbuild plugin.sln /t:plugin_sa /p:Configuration=zDebug /m
+          msbuild plugin.sln /t:plugin_vc /p:Configuration=Release /m
+          msbuild plugin.sln /t:plugin_vc /p:Configuration=zDebug /m
         ) else if exist tools\premake\plugin.sln (
-          msbuild tools\premake\plugin.sln /t:plugin_sa /p:Configuration=Release /m
-          msbuild tools\premake\plugin.sln /t:plugin_sa /p:Configuration=zDebug /m
+          msbuild tools\premake\plugin.sln /t:plugin_vc /p:Configuration=Release /m
+          msbuild tools\premake\plugin.sln /t:plugin_vc /p:Configuration=zDebug /m
         ) else (
-          for /r %%f in (*plugin_sa.vcxproj) do (
+          for /r %%f in (*plugin_vc.vcxproj) do (
             msbuild "%%f" /p:Configuration=Release /m
             msbuild "%%f" /p:Configuration=zDebug /m
           )
         )
 
         if not exist output\lib mkdir output\lib
-        for /r %%f in (*plugin*d*.lib *plugin_sa*d*.lib) do (
+        for /r %%f in (*plugin_vc*d*.lib *plugin*d*.lib) do (
           if not exist output\lib\plugin_d.lib copy /y "%%f" output\lib\plugin_d.lib
+          if not exist output\lib\plugin_vc_d.lib copy /y "%%f" output\lib\plugin_vc_d.lib
         )
-        for /r %%f in (*plugin.lib *plugin_sa.lib) do (
+        for /r %%f in (*plugin_vc*.lib *plugin*.lib) do (
           if not exist output\lib\plugin.lib copy /y "%%f" output\lib\plugin.lib
+          if not exist output\lib\plugin_vc.lib copy /y "%%f" output\lib\plugin_vc.lib
         )
         dir output\lib
 

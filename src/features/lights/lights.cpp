@@ -5,7 +5,6 @@
 #include "utils/meevents.h"
 #include "utils/datamgr.h"
 #include "ModelExtrasAPI.h"
-#include "utils/samp.h"
 
 float gfGlobalCoronaSize = 0.3f;
 int gGlobalCoronaIntensity = 80;
@@ -21,28 +20,13 @@ void Lights::Init() {
 
     LightManager::Init();
 
-    patch::Nop(0x6E2722, 19);	  // CVehicle::DoHeadLightReflection
-	patch::SetUChar(0x6E1A22, 0); // CVehicle::DoTailLightEffect
-
-	// CVehicle::DoHeadLightEffect
-	patch::SetUChar(0x6E0CF8, 0);
-	patch::SetUChar(0x6E0DEE, 0);
-
-	// CVehicle::DoVehicleLights (native headlight coronas)
-	patch::SetUChar(0x6E2193, 0);
-	patch::SetUChar(0x6E228B, 0);
-	patch::SetUChar(0x6E2532, 0);
-	patch::SetUChar(0x6E2627, 0);
-
-	SAMP::PatchVehicleLights();
-
-	// NOP CVehicle::DoHeadLightBeam
-	if (!gConfig.ReadBoolean("LIGHTS", "HeadLightBeams", gConfig.ReadBoolean("TWEAKS", "HeadLightBeams", true)))
-	{
-		// cmp ax, ax
-		patch::SetRaw(0x6A2EA5, (void *)"\x66\x39\xC0\x90", 4);
-		patch::SetRaw(0x6BDE63, (void *)"\x66\x39\xC0\x90\x90\x90\x90", 7);
-	}
+    // Disable vanilla VC car lights (DoHeadLightEffect: 0x589130, DoTailLightEffect: 0x588E50, DoHeadLightBeam: 0x589360)
+    patch::SetUChar(0x589130, 0xC3); // retn
+    patch::SetUChar(0x588E50, 0xC3); // retn
+    if (!gConfig.ReadBoolean("LIGHTS", "HeadLightBeams", gConfig.ReadBoolean("TWEAKS", "HeadLightBeams", true)))
+    {
+        patch::SetUChar(0x589360, 0xC3); // retn
+    }
 
 	Events::initGameEvent += []()
 	{

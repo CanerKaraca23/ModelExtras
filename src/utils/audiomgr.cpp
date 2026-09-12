@@ -158,7 +158,8 @@ void AudioMgr::PlayClickSound()
     {
         return;
     }
-    AudioEngine.ReportFrontendAudioEvent(AE_FRONTEND_RADIO_CLICK_ON, 10.0, 1.0);
+    static std::string path = MOD_DATA_PATH("audio/indicator_click.wav");
+    PlayFileSound(path, 1.0f);
 }
 
 void AudioMgr::PlaySwitchSound(CEntity *pEntity)
@@ -201,14 +202,12 @@ void AudioMgr::Play3DSound(const std::string &path, const CVector &worldPos, CEn
     if (dist > 0.1f)
     {
         CVector toSound = worldPos - TheCamera.GetPosition();
-        CVector camRight = TheCamera.m_mCameraMatrix.right;
+        CVector camRight = TheCamera.m_matrix.right;
         float rightDot = (toSound.x * camRight.x + toSound.y * camRight.y + toSound.z * camRight.z) / dist;
         pan = std::clamp(rightDot, -1.0f, 1.0f);
     }
 
-    // Calibrated volume scaling with in-game SFX master volume (0xBA6797)
-    constexpr float INV_64 = 1.0f / 64.0f;
-    float masterSfxVol = *(BYTE *)0xBA6797 * INV_64;
+    float masterSfxVol = 1.0f;
     float finalVolume = baseVolume * distFactor * gfSoundMult * masterSfxVol;
     if (finalVolume < 0.005f)
     {

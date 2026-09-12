@@ -4,7 +4,6 @@
 #include <plugin.h>
 #include <CHud.h>
 #include <CMessages.h>
-#include <shared/extensions/ScriptCommands.h>
 
 #include "defines.h"
 #include "loader.h"
@@ -14,14 +13,13 @@
 #include "features/wheelhub.h"
 #include "features/remap.h"
 #include "features/sirens.h"
-#include "features/plate.h"
 #include "features/carcols.h"
 #include "utils/datamgr.h"
 #include "utils/audiomgr.h"
 #include "utils/modelinfomgr.h"
+#include "utils/car.h"
 #include "features/soundeffects.h"
 #include "features/spoiler.h"
-#include "features/dirtfx.h"
 #include "features/backfire.h"
 #include "features/slidedoor.h"
 #include "features/rotatedoor.h"
@@ -34,9 +32,6 @@
 #include "features/rollbackbed.h"
 #include "utils/frameextension.h"
 #include "utils/meevents.h"
-#include "utils/samp.h"
-
-constexpr uint32_t TEST_CHEAT = 0x0ADC;
 
 bool gbProperShadersDetected = false;
 
@@ -55,29 +50,11 @@ void ModelExtras::Init()
             LOG(INFO) << "Proper Shaders detected, enabling compatibility mode for ModelExtras lights.";
         }
 
-        if (SAMP::IsPresent())
+        if (GetModuleHandle("SilentPatchVC.asi") == nullptr && GetModuleHandle("SilentPatchSA.asi") == nullptr)
         {
-            LOG(INFO) << "SAMP detected, disabling Carcols feature.";
-        }
-
-        if (GetModuleHandle("SilentPatchSA.asi") == nullptr)
-        {
-            static std::string text = "ModelExtras requires SilentPatchSA installed!";
-            LOG(WARNING) << text;
+            LOG(WARNING) << "ModelExtras recommends SilentPatch installed!";
         }
     };
-
-    if (gConfig.ReadBoolean("CONFIG", "EnableLiveReload", true))
-    {
-        Events::processScriptsEvent += []()
-        {
-            if (plugin::Command<TEST_CHEAT>("MERELOAD"))
-            {
-                Reload();
-            }
-        };
-    };
-
 
     if (gConfig.ReadBoolean("CONFIG", "ModelVersionCheck", true))
     {
@@ -92,7 +69,7 @@ void ModelExtras::Init()
                 {
                     static std::string text;
                     text = std::format("Model {} requires ModelExtras v{} but v{} is installed.", model, ver, MOD_VERSION_NUMBER);
-                    CMessages::AddMessageWithString(std::remove_const_t<char*>(text.c_str()), 5000, false, nullptr, true);
+                    CMessages::AddMessageWithString(std::remove_const_t<char*>(text.c_str()), 5000, 0);
                     LOG(WARNING) << text;
                 }
             }
@@ -114,19 +91,16 @@ void ModelExtras::Init()
     RegisterFeature<ConvertibleRoof>();
     RegisterFeature<DashboardLEDs>();
     RegisterFeature<DigitalClockFeature>();
-    RegisterFeature<DirtFx>();
     RegisterFeature<ExhaustFx>();
     RegisterFeature<ExtraWheel>();
-    RegisterFeature<LicensePlate>();
-    if (!SAMP::IsPresent()) {
-        RegisterFeature<Carcols>();
-    }
+    RegisterFeature<Carcols>();
     RegisterFeature<RollbackBed>();
     RegisterFeature<WheelHub>();
     RegisterFeature<Lights>();
     RegisterFeature<Sirens>();
     RegisterFeature<SoundEffects>();
     RegisterFeature<SpotLights>();
+
     static std::vector<CBaseFeature *> s_ActiveTickFeatures;
     static std::vector<CBaseFeature *> s_ActiveVehicleFeatures;
     static std::vector<CBaseFeature *> s_ActiveBikePointLightFeatures;
@@ -161,7 +135,7 @@ void ModelExtras::Init()
         {
             if (!pVeh) continue;
 
-            if (pVeh->m_nVehicleSubClass == VEHICLE_BIKE)
+            if (CarUtil::IsBike(pVeh))
             {
                 for (auto *pFeature : s_ActiveBikePointLightFeatures)
                 {
@@ -204,6 +178,6 @@ void ModelExtras::Reload()
         ModelInfoMgr::Reload(pVeh);
     }
     static std::string msg = "~g~ModelExtras:~w~ Config reloaded";
-    CMessages::AddMessageWithString(const_cast<char*>(msg.c_str()), 3000, false, nullptr, true);
+    CMessages::AddMessageWithString(const_cast<char*>(msg.c_str()), 3000, 0);
     LOG(INFO) << "ModelExtras: Configuration reloaded successfully.";
 }

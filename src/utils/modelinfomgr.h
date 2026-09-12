@@ -6,9 +6,9 @@
 #include <vector>
 
 #include <plugin.h>
-#include <game_sa/CVehicle.h>
-#include <game_sa/CPools.h>
-#include <game_sa/CModelInfo.h>
+#include <game_vc/CVehicle.h>
+#include <game_vc/CPools.h>
+#include <game_vc/CModelInfo.h>
 #include <RenderWare.h>
 #include "enums/dummypos.h"
 #include "enums/materialtype.h"

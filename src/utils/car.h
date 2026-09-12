@@ -11,6 +11,12 @@ struct DummyConfig;
 class CarUtil
 {
 public:
+    static bool IsBike(CVehicle *pVeh);
+    static bool IsAutomobile(CVehicle *pVeh);
+    static bool IsBoat(CVehicle *pVeh);
+    static bool IsHeli(CVehicle *pVeh);
+    static bool IsPlane(CVehicle *pVeh);
+
     static bool IsLightsForcedOff(CVehicle *pVeh);
     static bool IsLightsForcedOn(CVehicle *pVeh);
     static bool AreHeadlightsPopUpOpen(CVehicle *pVeh);

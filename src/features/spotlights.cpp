@@ -164,9 +164,8 @@ void SpotLights::OnVehicleRender(CVehicle *pVeh)
 		CRGBA col = {255, 255, 255, static_cast<unsigned char>(220 * alphaMul)};
 		CCoronas::RegisterCorona(
 			reinterpret_cast<unsigned int>(pVeh) + 49,
-			pVeh,
 			col.r, col.g, col.b, col.a,
-			data.pFrame->modelling.pos,
+			lightPos,
 			0.35f,
 			250.0f,
 			CORONATYPE_SHINYSTAR,
@@ -174,13 +173,7 @@ void SpotLights::OnVehicleRender(CVehicle *pVeh)
 			false,
 			false,
 			0,
-			0.0f,
-			false,
-			0.45f,
-			0,
-			30.0f,
-			false,
-			true
+			0.0f
 		);
 	}
 
@@ -223,11 +216,10 @@ void SpotLights::ProcessPointLights(CVehicle *pVeh)
 		18.0f,
 		1.2f, 1.2f, 1.2f,
 		0,
-		false,
-		nullptr
+		false
 	);
 
-	// 2. Ground Shadow: Disabled with ProperShaders (unless PointLights is disabled)
+	// 2. Ground Shadow
 	extern bool gbProperShadersDetected;
 	extern bool gbLightPointLights;
 	if (!gbProperShadersDetected || !gbLightPointLights)
@@ -275,9 +267,7 @@ void SpotLights::ProcessPointLights(CVehicle *pVeh)
 					255, 255, 255,
 					8.0f,
 					false,
-					1.0f,
-					0,
-					true);
+					1.0f);
 			}
 		}
 	}

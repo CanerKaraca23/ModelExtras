@@ -77,15 +77,15 @@ void MileageIndicator::Init()
     for (auto& [name, indicator] : data.vecIndicatorData) {
         if (indicator.vecFrameList.size() < 6) continue;
 
-        float curWheelRot = (pVeh->m_nVehicleSubClass == VEHICLE_BIKE)
-            ? static_cast<CBike *>(pVeh)->m_aWheelPitchAngles[1]
+        float curWheelRot = CarUtil::IsBike(pVeh)
+            ? static_cast<CBike *>(pVeh)->m_fWheelSpeed[1]
             : static_cast<CAutomobile *>(pVeh)->m_fWheelRotation[3];
 
         float diff = curWheelRot - indicator.fLastWheelRot;
         if (abs(diff) > 5.0f) diff = 0.0f;
 
         CVehicleModelInfo *pModelInfo = static_cast<CVehicleModelInfo *>(CModelInfo::GetModelInfo(pVeh->m_nModelIndex));
-        float wheelRadius = (pModelInfo && pModelInfo->m_fWheelSizeRear > 0.0f) ? pModelInfo->m_fWheelSizeRear : 0.35f;
+        float wheelRadius = (pModelInfo && pModelInfo->m_fWheelSize > 0.0f) ? pModelInfo->m_fWheelSize : 0.35f;
         float wheelDivisor = (wheelRadius * 8.17f) * indicator.fMul;
         indicator.dCurrentDistance += (abs(diff) / (wheelDivisor > 0.0f ? wheelDivisor : 2.86f));
         indicator.fLastWheelRot = curWheelRot;
@@ -147,25 +147,16 @@ void RPMGauge::Init()
         VehRPMData &data = m_VehData.Get(pVeh);
         if (data.bInitialized) {
             float delta = CTimer::ms_fTimeStep;
-            float speed = Util::GetVehicleSpeedRealistic(pVeh);
+            float speed = CarUtil::GetVehicleSpeedRealistic(pVeh);
 
             for (auto& e : data.vecGaugeData) {
                 float rpm = 0.0f;
 
                 if (pVeh->m_nCurrentGear != 0) {
-                    if (pVeh->m_pHandlingData && pVeh->m_nCurrentGear > 0 && pVeh->m_nCurrentGear <= pVeh->m_pHandlingData->m_transmissionData.m_nNumberOfGears) {
-                        float maxGearVel = pVeh->m_pHandlingData->m_transmissionData.m_aGears[pVeh->m_nCurrentGear].m_fMaxVelocity;
-                        if (maxGearVel > 0.0f) {
-                            rpm = std::clamp((speed / (maxGearVel * 160.9f)), 0.1f, 1.0f) * e.second.iMaxRPM;
-                        } else {
-                            rpm = (speed / abs((float)pVeh->m_nCurrentGear)) * 100.0f;
-                        }
-                    } else {
-                        rpm = (speed / abs((float)pVeh->m_nCurrentGear)) * 100.0f;
-                    }
+                    rpm = (speed / abs((float)pVeh->m_nCurrentGear)) * 100.0f;
                 }
 
-                if (pVeh->bEngineOn) {
+                if (pVeh->m_nVehicleFlags.bEngineOn) {
                   rpm = std::max(rpm, 0.1f * e.second.iMaxRPM);
                 }
 
