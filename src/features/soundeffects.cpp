@@ -80,8 +80,8 @@ void SoundEffects::ProcessVehicle(CVehicle *pVeh)
             }
 
             bool isAllowed = CarUtil::IsAutomobile(pVeh) &&
-                            (pVeh->bIsBig || pVeh->bIsBus || (pVeh->bIsVan && pVeh->m_pHandlingData && pVeh->m_pHandlingData->m_fMass >= 2500.0f) ||
-                             (pVeh->m_pHandlingData && pVeh->m_pHandlingData->m_fMass >= 3500.0f));
+                            (pVeh->bIsBig || pVeh->bIsBus || (pVeh->bIsVan && pVeh->m_pHandlingData && pVeh->m_pHandlingData->fMass >= 2500.0f) ||
+                             (pVeh->m_pHandlingData && pVeh->m_pHandlingData->fMass >= 3500.0f));
             bool isBigVeh = isAllowed || std::find(ValidForReverseSound.begin(), ValidForReverseSound.end(), pVeh->m_nModelIndex) != ValidForReverseSound.end();
 
             if (bEngineSounds)
@@ -162,7 +162,7 @@ void SoundEffects::ProcessVehicle(CVehicle *pVeh)
             {
                 static std::string path = MOD_DATA_PATH("audio/reverse.wav");
 
-                if (isBigVeh && pVeh->m_nCurrentGear == 0 && pVeh->bEngineOn && !pVeh->bEngineBroken && speed >= 3.0f)
+                if (isBigVeh && pVeh->m_nCurrentGear == 0 && pVeh->bEngineOn && !CarUtil::IsEngineBroken(pVeh) && speed >= 3.0f)
                 {
                     unsigned int curTime = CTimer::m_snTimeInMilliseconds;
                     if (curTime - data.m_nLastReverseSoundTime >= 1000)

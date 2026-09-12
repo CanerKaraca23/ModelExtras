@@ -160,29 +160,16 @@ void ExhaustFx::ProcessPointLights(CVehicle *pVeh)
         CVehicleModelInfo *pInfo = static_cast<CVehicleModelInfo *>(CModelInfo::GetModelInfo(pVeh->m_nModelIndex));
         if (pInfo)
         {
-            CVector pos = pInfo->m_dummyPos[eVehicleDummies::EXHAUST];
+            CVector pos = pInfo->m_avDummyPos[2];
             if (!pos.IsZero())
             {
                 CVector worldPos = pVeh->TransformFromObjectSpace(CVector(pos.x, pos.y - rearOffset, pos.z));
                 CPointLights::AddLight(PLTYPE_POINTLIGHT, worldPos, CVector(0.0f, 0.0f, 0.0f), radius, r, g, b, 0, false);
 
-                if (pVeh->m_pHandlingData && pVeh->m_pHandlingData->m_bDoubleExhaust)
+                if (CarUtil::HasDoubleExhaust(pVeh))
                 {
                     CVector doubleWorldPos = pVeh->TransformFromObjectSpace(CVector(-pos.x, pos.y - rearOffset, pos.z));
                     CPointLights::AddLight(PLTYPE_POINTLIGHT, doubleWorldPos, CVector(0.0f, 0.0f, 0.0f), radius, r, g, b, 0, false);
-                }
-            }
-
-            CVector secPos = pInfo->m_dummyPos[eVehicleDummies::EXHAUST_SECONDARY];
-            if (!secPos.IsZero())
-            {
-                CVector secWorldPos = pVeh->TransformFromObjectSpace(CVector(secPos.x, secPos.y - rearOffset, secPos.z));
-                CPointLights::AddLight(PLTYPE_POINTLIGHT, secWorldPos, CVector(0.0f, 0.0f, 0.0f), radius, r, g, b, 0, false);
-
-                if (pVeh->m_pHandlingData && pVeh->m_pHandlingData->m_bDoubleExhaust)
-                {
-                    CVector doubleSecWorldPos = pVeh->TransformFromObjectSpace(CVector(-secPos.x, secPos.y - rearOffset, secPos.z));
-                    CPointLights::AddLight(PLTYPE_POINTLIGHT, doubleSecWorldPos, CVector(0.0f, 0.0f, 0.0f), radius, r, g, b, 0, false);
                 }
             }
         }

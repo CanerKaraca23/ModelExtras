@@ -16,6 +16,8 @@ public:
     static bool IsBoat(CVehicle *pVeh);
     static bool IsHeli(CVehicle *pVeh);
     static bool IsPlane(CVehicle *pVeh);
+    static bool IsRCVehicle(CVehicle *pVeh);
+    static bool HasDoubleExhaust(CVehicle *pVeh);
 
     static bool IsLightsForcedOff(CVehicle *pVeh);
     static bool IsLightsForcedOn(CVehicle *pVeh);

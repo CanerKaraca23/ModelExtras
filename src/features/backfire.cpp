@@ -32,30 +32,12 @@ void BackFireEffect::BackFireSingle(CVehicle *pVeh)
     {
         CVehicleModelInfo *pInfo = static_cast<CVehicleModelInfo *>(CModelInfo::GetModelInfo(pVeh->m_nModelIndex));
         if (!pInfo) return;
-        float vx = 0;
-        CVector pos = pInfo->m_dummyPos[eVehicleDummies::EXHAUST];
-        if (pVeh->m_pHandlingData && pVeh->m_pHandlingData->m_bDoubleExhaust)
-        {
-            vx = pos.x * -1.0f;
-        }
-
-        if (pVeh->m_pHandlingData && pVeh->m_pHandlingData->m_bDoubleExhaust)
-        {
-            BackFireFX(pVeh, vx, pos.y, pos.z);
-        }
-        BackFireFX(pVeh, pos.x, pos.y, pos.z);
-
-        vx = 0.0f;
-        pos = pInfo->m_dummyPos[eVehicleDummies::EXHAUST_SECONDARY];
+        CVector pos = pInfo->m_avDummyPos[2];
         if (!pos.IsZero())
         {
-            if (pVeh->m_pHandlingData && pVeh->m_pHandlingData->m_bDoubleExhaust)
+            if (CarUtil::HasDoubleExhaust(pVeh))
             {
-                vx = pos.x * -1.0f;
-            }
-
-            if (pVeh->m_pHandlingData && pVeh->m_pHandlingData->m_bDoubleExhaust)
-            {
+                float vx = pos.x * -1.0f;
                 BackFireFX(pVeh, vx, pos.y, pos.z);
             }
             BackFireFX(pVeh, pos.x, pos.y, pos.z);
@@ -126,7 +108,7 @@ void BackFireEffect::Process(CVehicle *pVeh)
         return;
     }
 
-    if (!pVeh->GetIsOnScreen() || pVeh->bEngineBroken || !pVeh->bEngineOn || pVeh->bIsBig || pVeh->bIsVan || pVeh->bIsBus || pVeh->bIsRCVehicle)
+    if (!pVeh->GetIsOnScreen() || CarUtil::IsEngineBroken(pVeh) || !pVeh->bEngineOn || pVeh->bIsBig || pVeh->bIsVan || pVeh->bIsBus || CarUtil::IsRCVehicle(pVeh))
     {
         return;
     }

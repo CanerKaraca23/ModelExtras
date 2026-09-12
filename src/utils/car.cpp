@@ -42,6 +42,19 @@ bool CarUtil::IsPlane(CVehicle *pVeh)
     return CModelInfo::IsPlaneModel(pVeh->m_nModelIndex);
 }
 
+bool CarUtil::IsRCVehicle(CVehicle *pVeh)
+{
+    if (!pVeh) return false;
+    int m = pVeh->m_nModelIndex;
+    return m == 171 || m == 194 || m == 211 || m == 216;
+}
+
+bool CarUtil::HasDoubleExhaust(CVehicle *pVeh)
+{
+    if (!pVeh || !pVeh->m_pHandlingData) return false;
+    return (pVeh->m_pHandlingData->uFlags & VEHICLE_FLAGS_DBL_EXHAUST) != 0;
+}
+
 bool CarUtil::IsLightsForcedOn(CVehicle *pVeh)
 {
     return pVeh->m_nOverrideLights == eLightOverride::ForceLightsOn;
