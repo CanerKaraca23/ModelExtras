@@ -247,11 +247,11 @@ void ExhaustFx::RenderSmokeFx(CVehicle *pVeh, const ExhaustData &info)
     }
     else
     {
-        static float randomFactor = CGeneral::GetRandomNumberInRange(-1.8f, -0.9f);
+        static float randomFactor = MathUtil::GetRandomNumberInRange(-1.8f, -0.9f);
         parVelocity = randomFactor * particleDir;
     }
 
-    float randomFactor = CGeneral::GetRandomNumberInRange(1.0f, 3.0f);
+    float randomFactor = MathUtil::GetRandomNumberInRange(1.0f, 3.0f);
     if (randomFactor * (pVeh->m_fGasPedal + 1.1f) <= 2.5f)
     {
         return;

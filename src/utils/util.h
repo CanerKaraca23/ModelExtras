@@ -30,6 +30,7 @@ public:
   static inline float NormalizeAngle(float angle) { return MathUtil::NormalizeAngle(angle); }
   static inline double RadToDeg(double rad) { return MathUtil::RadToDeg(rad); }
   static inline double DegToRad(double deg) { return MathUtil::DegToRad(deg); }
+  static inline float GetRandomNumberInRange(float min, float max) { return MathUtil::GetRandomNumberInRange(min, max); }
 
   static inline float GetVehiclePitch(CVehicle *pVeh) { return CarUtil::GetVehiclePitch(pVeh); }
   static inline bool IsVehicleDoingWheelie(CVehicle *pVeh) { return CarUtil::IsVehicleDoingWheelie(pVeh); }

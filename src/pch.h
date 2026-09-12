@@ -11,6 +11,7 @@
 #include "ini/ini.hpp"
 #include "AixLog/AixLog.hpp"
 #include <format>
+#include "defines.h"
 #include "utils/util.h"
 #include "vkeys.h"
 
