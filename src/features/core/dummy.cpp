@@ -3,6 +3,7 @@
 #include "defines.h"
 #include "features/lights/manager.h"
 #include "utils/datamgr.h"
+#include "utils/car.h"
 #include "enums/dummypos.h"
 #include <cstdint>
 #include <CWorld.h>
@@ -226,7 +227,7 @@ void VehicleDummy::Update() {
     // and put the flag back so the game still recalculates it when it needs to.
     const CMatrix *pBasis = &data.pVeh->GetMatrix();
     CMatrix leanBasis;
-    if (data.pVeh->m_nVehicleSubClass == VEHICLE_BIKE && data.leanAffected)
+    if (CarUtil::IsBike(data.pVeh) && data.leanAffected)
     {
         CBike *pBike = static_cast<CBike *>(data.pVeh);
         bool wasCalculated = pBike->m_bLeanMatrixCalculated;

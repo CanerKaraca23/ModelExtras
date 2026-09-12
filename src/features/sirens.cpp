@@ -15,7 +15,7 @@
 
 bool VehicleSiren::GetSirenState()
 {
-	return (Mute == false) ? (vehicle ? vehicle->bSirenOrAlarm : false) : (true);
+	return (Mute == false) ? (vehicle ? (vehicle->m_nSirenOrAlarm != 0) : false) : (true);
 }
 
 bool IsValidSirenVehicle(RwFrame *pFrame)
@@ -51,14 +51,12 @@ bool Sirens::hkUsesSiren(std::function<hkUsesSirenFunc> originalCall, CVehicle* 
 
 	if (modelData.contains(ptr->m_nModelIndex) && data.bUsesSiren)
 	{
-		ptr->m_vehicleAudio.m_bModelWithSiren = true;
 		return true;
 	}
 	
-	return originalCall(ptr);
+	return originalCall ? originalCall(ptr) : false;
 }
 
-static ThiscallEvent<AddressList<0x6AAB71, H_CALL>, PRIORITY_BEFORE, ArgPickN<CVehicle*, 0>, void(CVehicle*)> Automobile__PreRenderEvent;
 static CVehicle *pCurrentVeh = nullptr;
 static uint32_t g_nSirenKey = VK_L;
 
@@ -736,7 +734,7 @@ void Sirens::Init()
 				data.Mute = !data.Mute;
 
 				if (data.Mute)
-					vehicle->bSirenOrAlarm = false;
+					vehicle->m_nSirenOrAlarm = 0;
 
 				AudioMgr::PlaySwitchSound(vehicle);
 			}
@@ -966,33 +964,11 @@ void Sirens::Init()
 		}
 	});
 
-	using hkUsesSirenHook = injector::function_hooker_thiscall<injector::scoped_call, 0x6D8492, hkUsesSirenFunc>;
-	injector::make_static_hook<hkUsesSirenHook>(hkUsesSiren);
-
-	Automobile__PreRenderEvent += [](CVehicle* pVeh) {
-		pCurrentVeh = pVeh; // Captured for hkAddPointLights()
-	};
-
-	using hkAddPointLightsHook = injector::function_hooker<injector::scoped_call, 0x6AB80F, hkAddPointLightsFunc>;
-	injector::make_static_hook<hkAddPointLightsHook>(hkAddPointLights);
-
-	Events::initGameEvent += []
-	{
-		injector::MakeCALL((void *)0x6ABA60, hkRegisterCorona, true);
-		injector::MakeCALL((void *)0x6ABB35, hkRegisterCorona, true);
-		injector::MakeCALL((void *)0x6ABC69, hkRegisterCorona, true);
-		injector::MakeCALL((void *)0x6BD4DD, hkRegisterCorona, true);
-		injector::MakeCALL((void *)0x6BD531, hkRegisterCorona, true);
-	};
-
-
 	MEEvents::vehPreRenderEvent.before += [](CVehicle *pVeh)
 	{
 		ProcessPointLights(pVeh);
 	};
-
-
-};
+}
 
 void Sirens::hkRegisterCorona(unsigned int id, CEntity *attachTo, unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha, CVector const &posn, float radius, float farClip, eCoronaType coronaType, eCoronaFlareType flaretype, bool enableReflection, bool checkObstacles, int _param_not_used, float angle, bool longDistance, float nearClip, unsigned char fadeState, float fadeSpeed, bool onlyFromBelow, bool reflectionDelay)
 {
@@ -1017,7 +993,6 @@ void Sirens::EnableDummy(int id, VehicleDummy *dummy, CVehicle *vehicle, Vehicle
 	auto &data = m_VehData.Get(vehicle);
 	data.nLastTickFrame = CTimer::m_FrameCounter;
 	dummy->Update();
-	CVector position = reinterpret_cast<CVehicleModelInfo *>(CModelInfo__ms_modelInfoPtrs[vehicle->m_nModelIndex])->m_pVehicleStruct->m_avDummyPos[0];
 	CRGBA activeColor = material->Color;
 
 	if (material->PatternTotal != 0 && material->Inertia != 0.0f)
@@ -1151,7 +1126,7 @@ void Sirens::ProcessPointLights(CVehicle *pVeh)
 
 				DummyConfig &cfg = e->Get();
 				RwFrame *parent = cfg.frame ? RwFrameGetParent(cfg.frame) : nullptr;
-				bool isBike = pVeh->m_nVehicleSubClass == VEHICLE_BIKE;
+				bool isBike = CarUtil::IsBike(pVeh);
 				if (!isBike && (Util::IsFrameDamaged(pVeh, parent) || !FrameUtil::IsOkAtomicVisible(parent)))
 				{
 					continue;
@@ -1204,11 +1179,11 @@ void Sirens::ProcessPointLights(CVehicle *pVeh)
 				worldDir.Normalize();
 
 				CVector plightPos = pVeh->TransformFromObjectSpace(cfg.shadow.position + localDir * 0.45f);
-				CPointLights::AddLight(PLTYPE_SPOTLIGHT, plightPos, worldDir, sirenRadius, r, g, b, 0, false, nullptr);
+				CPointLights::AddLight(PLTYPE_SPOTLIGHT, plightPos, worldDir, sirenRadius, r, g, b, 0, false);
 			}
 		}
 	}
-	else if (pVeh->m_nVehicleSubClass == VEHICLE_BIKE && pVeh->bSirenOrAlarm)
+	else if (CarUtil::IsBike(pVeh) && (pVeh->m_nSirenOrAlarm != 0))
 	{
 		static bool bSkyGfx = GetModuleHandle("skygfx.asi") != nullptr;
 		if (!bSkyGfx)
@@ -1221,7 +1196,7 @@ void Sirens::ProcessPointLights(CVehicle *pVeh)
 				CVector plightPos = pVeh->TransformFromObjectSpace(localLeft);
 				CVector worldDir = vehMat.up - vehMat.at * 0.25f;
 				worldDir.Normalize();
-				CPointLights::AddLight(PLTYPE_SPOTLIGHT, plightPos, worldDir, 8.5f, 1.0f, 0.1f, 0.1f, 0, false, nullptr);
+				CPointLights::AddLight(PLTYPE_SPOTLIGHT, plightPos, worldDir, 8.5f, 1.0f, 0.1f, 0.1f, 0, false);
 			}
 			else if (step == 2 || step == 3)
 			{
@@ -1229,7 +1204,7 @@ void Sirens::ProcessPointLights(CVehicle *pVeh)
 				CVector plightPos = pVeh->TransformFromObjectSpace(localRight);
 				CVector worldDir = vehMat.up - vehMat.at * 0.25f;
 				worldDir.Normalize();
-				CPointLights::AddLight(PLTYPE_SPOTLIGHT, plightPos, worldDir, 8.5f, 0.1f, 0.1f, 1.0f, 0, false, nullptr);
+				CPointLights::AddLight(PLTYPE_SPOTLIGHT, plightPos, worldDir, 8.5f, 0.1f, 0.1f, 1.0f, 0, false);
 			}
 		}
 	}
@@ -1241,15 +1216,12 @@ VehicleSiren::VehicleSiren(CVehicle *_vehicle)
 	if (!vehicle) return;
 
 	int model = vehicle->m_nModelIndex;
-	CVehicleModelInfo *modelInfo = reinterpret_cast<CVehicleModelInfo *>(CModelInfo__ms_modelInfoPtrs[model]);
+	CVehicleModelInfo *modelInfo = reinterpret_cast<CVehicleModelInfo *>(CModelInfo::GetModelInfo(model));
 	if (modelInfo)
 	{
 		if (modelInfo->m_nVehicleType == eVehicleType::VEHICLE_HELI || modelInfo->m_nVehicleType == eVehicleType::VEHICLE_PLANE)
 			this->Mute = true;
-
-		if (modelInfo->m_nVehicleType == eVehicleType::VEHICLE_TRAILER)
-			Trailer = true;
 	}
 
-	SirenState = _vehicle->bSirenOrAlarm;
+	SirenState = (_vehicle->m_nSirenOrAlarm != 0);
 };

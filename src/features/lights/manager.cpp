@@ -112,10 +112,6 @@ void LightManager::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh) {
     // Don't clear light state when lights are forced on/already on via SAMP
     if (((Util::IsEngineOff(pControlVeh) && indState == eIndicatorState::Off) && !CarUtil::IsLightsForcedOn(pControlVeh) && !pControlVeh->bLightsOn) || CarUtil::IsLightsForcedOff(pControlVeh)) {
         pControlVeh->bLightsOn = false;
-        pControlVeh->m_renderLights.m_bLeftFront = false;
-        pControlVeh->m_renderLights.m_bRightFront = false;
-        pControlVeh->m_renderLights.m_bLeftRear = false;
-        pControlVeh->m_renderLights.m_bRightRear = false;
     }
 
     // Fix for park car alarm lights
@@ -149,7 +145,7 @@ void LightManager::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh) {
                         const DummyConfig& c = dummy->GetRef();
                         dummy->Update();
                         RwFrame *parent = RwFrameGetParent(dummy->Get().frame);
-                        bool isBike = pVeh->m_nVehicleSubClass == VEHICLE_BIKE;
+                        bool isBike = CarUtil::IsBike(pVeh);
                         bool isDamaged = Util::IsFrameDamaged(pVeh, parent) || !FrameUtil::IsOkAtomicVisible(parent);
                         bool atomicCheck = !isBike && pVeh->GetIsOnScreen() && type != eMaterialType::HeadLightLeft && type != eMaterialType::HeadLightRight && isDamaged;
                         if (atomicCheck || (c.dummyPos == eDummyPos::Rear && pVeh->m_pTrailer)) continue;
@@ -235,7 +231,7 @@ void LightManager::RenderLight(CVehicle* pVeh, VehLightData& data, eMaterialType
             const DummyConfig& c = dummy->GetRef();
             dummy->Update();
             RwFrame *parent = RwFrameGetParent(dummy->Get().frame);
-            bool isBike = pVeh->m_nVehicleSubClass == VEHICLE_BIKE;
+            bool isBike = CarUtil::IsBike(pVeh);
             bool isDamaged = false;
             if (c.damagePanel != -1 || c.damageDoor != -1) {
                 isDamaged = CarUtil::IsDummyDamaged(pVeh, c);
@@ -341,7 +337,7 @@ bool LightManager::IsIndicatorOn(CVehicle* pVeh) {
     if (!pVeh || pVeh->m_fHealth <= 0.0f || !BlinkerState::Get().bIndicatorsDelay) {
         return false;
     }
-    if ((pVeh->m_nVehicleSubClass != VEHICLE_AUTOMOBILE && pVeh->m_nVehicleSubClass != VEHICLE_MTRUCK) || CModelInfo::IsBikeModel(pVeh->m_nModelIndex)) {
+    if (!CarUtil::IsAutomobile(pVeh) || CarUtil::IsBike(pVeh)) {
         return false;
     }
     VehLightData& data = m_VehData.Get(pVeh);
@@ -355,7 +351,7 @@ bool LightManager::IsIndicatorOn(CVehicle* pVeh) {
 }
 
 void LightManager::ProcessPointLights(CVehicle *pVeh) {
-    if (!LightsConfig::Get().gbLightPointLights || !pVeh || pVeh->m_fHealth <= 0.0f || pVeh->m_nVehicleSubClass == VEHICLE_BMX || pVeh->m_nVehicleSubClass == VEHICLE_BOAT || pVeh->m_nVehicleSubClass == VEHICLE_TRAILER) {
+    if (!LightsConfig::Get().gbLightPointLights || !pVeh || pVeh->m_fHealth <= 0.0f || CarUtil::IsBoat(pVeh)) {
         return;
     }
 
@@ -391,8 +387,7 @@ bool LightManager::IsBraking(CVehicle* pVeh) {
     if (LightsConfig::Get().bPlayerIdleBrakeLights) {
         CPed* pPlayer = FindPlayerPed();
         if (pPlayer && pVeh->IsDriver(pPlayer)) {
-            if (pVeh->m_nVehicleSubClass == VEHICLE_AUTOMOBILE || pVeh->m_nVehicleSubClass == VEHICLE_MTRUCK || 
-                pVeh->m_nVehicleSubClass == VEHICLE_QUAD || pVeh->m_nVehicleSubClass == VEHICLE_BIKE) 
+            if (CarUtil::IsAutomobile(pVeh) || CarUtil::IsBike(pVeh)) 
             {
                 if (!CarUtil::IsEngineOff(pVeh) && pVeh->m_fHealth > 0.0f) {
                     if (pVeh->m_fGasPedal <= 0.05f && CarUtil::GetVehicleSpeed(pVeh) < 0.5f) {

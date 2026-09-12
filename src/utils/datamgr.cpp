@@ -2,7 +2,7 @@
 #include "defines.h"
 #include "utils/datamgr.h"
 #include <string>
-#include <game_sa/CModelInfo.h>
+#include <CModelInfo.h>
 
 bool is_number(const std::string &s)
 {

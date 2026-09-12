@@ -88,19 +88,19 @@ bool Carcols::GetColor(CVehicle *pVeh, RpMaterial *pMat, CRGBA &col)
         int idx = 0;
         if (type.r == VEHCOL_PRIMARY.r && type.g == VEHCOL_PRIMARY.g)
         {
-            idx = CVehicleModelInfo::ms_currentCol[0];
+            idx = pVeh->m_nPrimaryColor;
         }
         else if (IS_SAME_COLOR(type, VEHCOL_SECONDARY))
         {
-            idx = CVehicleModelInfo::ms_currentCol[1];
+            idx = pVeh->m_nSecondaryColor;
         }
         else if (IS_SAME_COLOR(type, VEHCOL_TERTIARY))
         {
-            idx = CVehicleModelInfo::ms_currentCol[0];
+            idx = pVeh->m_nPrimaryColor;
         }
         else if (IS_SAME_COLOR(type, VEHCOL_QUATARNARY))
         {
-            idx = CVehicleModelInfo::ms_currentCol[1];
+            idx = pVeh->m_nSecondaryColor;
         }
         else
         {

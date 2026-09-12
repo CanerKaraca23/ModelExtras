@@ -156,7 +156,7 @@ void RPMGauge::Init()
                     rpm = (speed / abs((float)pVeh->m_nCurrentGear)) * 100.0f;
                 }
 
-                if (pVeh->m_nVehicleFlags.bEngineOn) {
+                if (pVeh->bEngineOn) {
                   rpm = std::max(rpm, 0.1f * e.second.iMaxRPM);
                 }
 

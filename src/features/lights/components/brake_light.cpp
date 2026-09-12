@@ -37,9 +37,7 @@ void BrakeLightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, Veh
     std::string shdwName = (isBike ? "taillight_bike" : "taillight");
     float shdwSz = 2.0f;
 
-    if (pControlVeh->m_nVehicleSubClass == VEHICLE_AUTOMOBILE || pControlVeh->m_nVehicleSubClass == VEHICLE_MTRUCK
-        || pControlVeh->m_nVehicleSubClass == VEHICLE_QUAD || pControlVeh->m_nVehicleSubClass == VEHICLE_BIKE
-        || pControlVeh->m_nVehicleSubClass == VEHICLE_TRAILER) 
+    if (CarUtil::IsAutomobile(pControlVeh) || CarUtil::IsBike(pControlVeh)) 
     {
         bool brakeOn = LightManager::IsBraking(pControlVeh);
         if (brakeOn) {

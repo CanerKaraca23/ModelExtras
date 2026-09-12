@@ -37,9 +37,7 @@ void STTLightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehLi
     std::string shdwName = (isBike ? "taillight_bike" : "taillight");
     float shdwSz = 2.0f;
 
-    if (pControlVeh->m_nVehicleSubClass == VEHICLE_AUTOMOBILE || pControlVeh->m_nVehicleSubClass == VEHICLE_MTRUCK
-        || pControlVeh->m_nVehicleSubClass == VEHICLE_QUAD || pControlVeh->m_nVehicleSubClass == VEHICLE_BIKE
-        || pControlVeh->m_nVehicleSubClass == VEHICLE_TRAILER) 
+    if (CarUtil::IsAutomobile(pControlVeh) || CarUtil::IsBike(pControlVeh)) 
     {
         auto damage = LightDamageState::Get(pControlVeh, pTowedVeh);
         bool isLeftRearOk = damage.isRearLeftOk;

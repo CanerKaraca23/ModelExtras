@@ -57,15 +57,15 @@ void DashboardLEDs::Init()
 	ModelInfoMgr::RegisterRender([](CVehicle *pControlVeh) {
 		int model = pControlVeh->m_nModelIndex;
 
-		if (pControlVeh->m_nVehicleFlags.bEngineOn) {
+		if (pControlVeh->bEngineOn) {
 			EnableLED(pControlVeh, eMaterialType::EngineOnLed);
 		}
 
-		if (pControlVeh->m_nVehicleFlags.bEngineBroken) {
+		if (CarUtil::IsEngineBroken(pControlVeh)) {
 			EnableLED(pControlVeh, eMaterialType::EngineBrokenLed);
 		}
 
-		if (pControlVeh->m_nVehicleFlags.bSirenOrAlarm) {
+		if (pControlVeh->m_nSirenOrAlarm != 0) {
 			EnableLED(pControlVeh, eMaterialType::SirenLed);
 		}
 
@@ -73,8 +73,8 @@ void DashboardLEDs::Init()
 			CAutomobile *pAutomobile = static_cast<CAutomobile*>(pControlVeh);
 			bool isAnyDoorOpen = false;
 
-			for (int i= eDoors::DOOR_FRONT_LEFT; i <= eDoors::DOOR_REAR_RIGHT; i++) {
-				if (!pAutomobile->m_doors[i].IsClosed()) {
+			for (int i = eDoors::DOOR_FRONT_LEFT; i <= eDoors::DOOR_REAR_RIGHT; i++) {
+				if (!pAutomobile->IsDoorClosed(static_cast<eDoors>(i))) {
 					isAnyDoorOpen = true;
 					break;
 				}
@@ -84,17 +84,17 @@ void DashboardLEDs::Init()
 				EnableLED(pControlVeh, eMaterialType::DoorOpenLed);
 			}
 
-			if (!pAutomobile->m_doors[eDoors::BONNET].IsClosed()) {
+			if (!pAutomobile->IsDoorClosed(eDoors::BONNET)) {
 				EnableLED(pControlVeh, eMaterialType::BonnetOpenLed);
 			}
 
-			if (!pAutomobile->m_doors[eDoors::BOOT].IsClosed()) {
+			if (!pAutomobile->IsDoorClosed(eDoors::BOOT)) {
 				EnableLED(pControlVeh, eMaterialType::BootOpenLed);
 			}
 		}
 
 		const auto& data = Lights::GetVehicleData(pControlVeh);
-		bool isHeadlightsActive = (pControlVeh->m_nVehicleFlags.bLightsOn || CarUtil::IsLightsForcedOn(pControlVeh) || (Util::IsNightTime() && !CarUtil::IsEngineOff(pControlVeh))) && !CarUtil::IsLightsForcedOff(pControlVeh);
+		bool isHeadlightsActive = (pControlVeh->bLightsOn || CarUtil::IsLightsForcedOn(pControlVeh) || (Util::IsNightTime() && !CarUtil::IsEngineOff(pControlVeh))) && !CarUtil::IsLightsForcedOff(pControlVeh);
 		bool isFoggy = Util::IsFoggy();
 		bool shouldShowFog = isFoggy || !LightsConfig::Get().bFoglightTiedToHeadlight || isHeadlightsActive;
 		bool isFogLightOn = (data.bFogLightsOn || isFoggy) && (!LightsConfig::Get().bFoglightTiedToHeadlight || !CarUtil::IsLightsForcedOff(pControlVeh));

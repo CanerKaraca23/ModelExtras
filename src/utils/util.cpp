@@ -5,7 +5,7 @@
 #include <cctype>
 
 bool Util::IsWindowFocused() {
-    HWND hGameWnd = *(HWND*)0xC97C1C;
+    HWND hGameWnd = RsGlobal.ps ? RsGlobal.ps->window : *(HWND*)0x7897A4;
     if (hGameWnd && GetForegroundWindow() != hGameWnd) {
         return false;
     }

@@ -2,12 +2,13 @@
 #include "rotatedoor.h"
 #include "utils/datamgr.h"
 #include "utils/modelinfomgr.h"
+#include "utils/car.h"
 
 void RotateDoor::UpdateSingleFrame(CVehicle* pVeh, RotateDoorConfig& config, eDoors doorID, bool isBootBonnet)
 {
     if (!config.frame) return;
 
-    float ratio = pVeh->GetDooorAngleOpenRatio(doorID);
+    float ratio = CarUtil::GetDoorAngleOpenRatio(pVeh, doorID);
     float popFactor = std::min(1.0f, ratio * 5.0f);
 
     if (isBootBonnet) {

@@ -2,6 +2,7 @@
 #include "worldutil.h"
 #include <CClock.h>
 #include <CWeather.h>
+#include <game_vc/enums/eWeather.h>
 
 bool WorldUtil::IsNightTime()
 {
@@ -10,5 +11,11 @@ bool WorldUtil::IsNightTime()
 
 bool WorldUtil::IsFoggy()
 {
-    return (CWeather::Foggyness > 0.1f) || (CWeather::NewWeatherType == WEATHER_FOGGY_SF || CWeather::NewWeatherType == WEATHER_SANDSTORM_DESERT || CWeather::OldWeatherType == WEATHER_FOGGY_SF || CWeather::OldWeatherType == WEATHER_SANDSTORM_DESERT);
+    return CWeather::NewWeatherType == WEATHER_FOGGY || CWeather::OldWeatherType == WEATHER_FOGGY;
+}
+
+bool WorldUtil::IsRainy()
+{
+    return CWeather::NewWeatherType == WEATHER_RAINY || CWeather::OldWeatherType == WEATHER_RAINY ||
+           CWeather::NewWeatherType == WEATHER_HURRICANE || CWeather::OldWeatherType == WEATHER_HURRICANE;
 }

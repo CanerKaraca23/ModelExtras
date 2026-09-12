@@ -2,15 +2,11 @@
 #include "plugin.h"
 #include "core/base.h"
 #include <unordered_map>
-#include <Fx_c.h>
+#include <CParticles.h>
 
 using namespace plugin;
 
 struct ME_ExhaustInfo;
-
-
-
-
 
 // Function types
 using ExhaustFn_t = void (__fastcall *)(CVehicle *);
@@ -25,7 +21,6 @@ struct ExhaustData
     float fSpeedMul = 1.0f;             // Speed multiplier
     float fSizeMul = 1.0f;
     bool bNitroEffect = true;
-    FxSystem_c *pFxSysem = nullptr;
 };
 
 struct ExhaustVehData {
@@ -37,12 +32,7 @@ struct ExhaustVehData {
     ExhaustVehData(CVehicle *pVeh) { isUsed = false; bNodesSearched = false; }
 
     ~ExhaustVehData() {
-        for (auto &e : m_pDummies) {
-            if (e.second.pFxSysem) {
-                e.second.pFxSysem->Kill();
-                e.second.pFxSysem = nullptr;
-            }
-        }
+        m_pDummies.clear();
     }
 };
 

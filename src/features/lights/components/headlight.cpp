@@ -23,27 +23,17 @@ eMaterialType HeadlightComponent::GetMatType(CRGBA matCol) {
 static bool CanVehicleHaveHeadlights(CVehicle* pVeh) {
     if (!pVeh) return false;
     int model = pVeh->m_nModelIndex;
-    if (CModelInfo::IsBmxModel(model) || CModelInfo::IsBoatModel(model) || CModelInfo::IsTrailerModel(model) || CModelInfo::IsHeliModel(model) || CModelInfo::IsPlaneModel(model)) {
+    if (CModelInfo::IsBoatModel(model) || CModelInfo::IsTrailerModel(model) || CModelInfo::IsHeliModel(model) || CModelInfo::IsPlaneModel(model)) {
         return false;
     }
-    if (pVeh->m_nVehicleSubClass == VEHICLE_BMX || pVeh->m_nVehicleSubClass == VEHICLE_BOAT || pVeh->m_nVehicleSubClass == VEHICLE_TRAILER || pVeh->m_nVehicleSubClass == VEHICLE_HELI || pVeh->m_nVehicleSubClass == VEHICLE_PLANE) {
+    if (CarUtil::IsBoat(pVeh) || CarUtil::IsHeli(pVeh) || CarUtil::IsPlane(pVeh)) {
         return false;
     }
     return true;
 }
 
 bool HeadlightComponent::AreHeadlightsOpen(CVehicle* pVeh, const VehLightData& data) {
-    if (!pVeh || pVeh->m_nVehicleSubClass != VEHICLE_AUTOMOBILE) {
-        return true;
-    }
-
-    CAutomobile* pAuto = static_cast<CAutomobile*>(pVeh);
-    bool hasPopUp = (pAuto->m_aCarNodes[CAR_MISC_A] != nullptr) || data.bHasVehFuncsPopUp;
-    if (!hasPopUp) {
-        return true;
-    }
-
-    return pAuto->m_renderLights.m_bLeftFront || pAuto->m_renderLights.m_bRightFront || pAuto->m_fPropRotate >= 0.68f;
+    return true;
 }
 
 bool HeadlightComponent::TryRegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const std::string_view name, VehLightData& data) {
@@ -65,7 +55,7 @@ bool HeadlightComponent::TryRegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const
         c.mirroredX = true;
         data.dummies[eMaterialType::HeadLightLeft].push_back(VehicleDummy(c));
         
-        if (pVeh->m_nVehicleSubClass != VEHICLE_BIKE || std::abs(c.frame->modelling.pos.x) > 0.05f) {
+        if (!CarUtil::IsBike(pVeh) || std::abs(c.frame->modelling.pos.x) > 0.05f) {
             c.mirroredX = false;
             c.lightType = eMaterialType::HeadLightRight;
             data.dummies[eMaterialType::HeadLightRight].push_back(VehicleDummy(c));
@@ -142,8 +132,6 @@ void HeadlightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehL
     bool highlight = isFoggy || data.bLongLightsOn;
 
     if (isHeadlightLeftOk || isHeadlightRightOk) {
-        pControlVeh->m_renderLights.m_bLeftFront = isHeadlightLeftOk;
-        pControlVeh->m_renderLights.m_bRightFront = isHeadlightRightOk;
         if (isHeadlightLeftOk) {
             LightManager::RenderLights(pControlVeh, pTowedVeh, data, eMaterialType::HeadLightLeft, true, shadow ? texName : "", LightsConfig::Get().headlightSz, highlight, true, bTickRegistered);
         }

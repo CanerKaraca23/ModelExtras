@@ -233,7 +233,7 @@ public:
     void Reload(CVehicle* pVeh) override;
     bool HasProcessBikePointLights() const override { return true; }
     void ProcessBikePointLights(CVehicle* pVeh) override {
-        if (pVeh && pVeh->bSirenOrAlarm) {
+        if (pVeh && (pVeh->m_nSirenOrAlarm != 0)) {
             ProcessPointLights(pVeh);
         }
     }

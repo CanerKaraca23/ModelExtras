@@ -5,7 +5,8 @@
 #include <CCamera.h>
 #include <CGeneral.h>
 #include <CWaterLevel.h>
-#include <Fx_c.h>
+#include <CParticles.h>
+#include "utils/car.h"
 
 #include "utils/modelinfomgr.h"
 #include "utils/datamgr.h"
@@ -21,7 +22,6 @@
 
 // Global trampolines
 ExhaustFn_t ogFunc1 = nullptr, ogFunc2 = nullptr;
-NitroFn_t ogNitro1 = nullptr, ogNitro2 = nullptr, ogNitro3 = nullptr;
 
 void __fastcall ExhaustFx::hkAddExhaustParticles1(CVehicle * pVeh)
 {
@@ -47,41 +47,6 @@ void __fastcall ExhaustFx::hkAddExhaustParticles2(CVehicle *pVeh)
     if (!data.isUsed && ogFunc2) {
         ogFunc2(pVeh);
     }
-}
-
-char __fastcall ExhaustFx::hkDoNitroEffect1(CAutomobile* pVeh, float power)
-{
-    auto& data = m_VehData.Get(pVeh);
-    if (pVeh->m_fGasPedal > 0.05f && pVeh->m_fNitroValue < 0.0f) {
-        data.lastNitroFrame = CTimer::m_FrameCounter;
-    }
-    if (data.isUsed) {
-        RenderNitroFx(pVeh, power);
-        return 1;
-    }
-    return ogNitro1(pVeh, power);
-}
-
-char __fastcall ExhaustFx::hkDoNitroEffect2(CAutomobile* pVeh, float power)
-{
-    auto& data = m_VehData.Get(pVeh);
-    if (pVeh->m_fGasPedal > 0.05f && pVeh->m_fNitroValue < 0.0f) {
-        data.lastNitroFrame = CTimer::m_FrameCounter;
-    }
-    if (data.isUsed) {
-        RenderNitroFx(pVeh, power);
-        return 1;
-    }
-    return ogNitro2(pVeh, power);
-}
-
-char __fastcall ExhaustFx::hkDoNitroEffect3(CAutomobile* pVeh, float power)
-{
-    auto& data = m_VehData.Get(pVeh);
-    if (data.isUsed) {
-        return 1;
-    }
-    return ogNitro3(pVeh, power);
 }
 
 void ExhaustFx::FindNodes(CVehicle *pVeh, RwFrame *pFrame)
@@ -113,8 +78,7 @@ void ExhaustFx::Init()
     bEnabled = true;
 
     ModelInfoMgr::RegisterRender([](CVehicle *pVeh)
-                                 {
-
+    {
         if (!pVeh || !pVeh->GetIsOnScreen()) {
             return;
         }
@@ -132,50 +96,28 @@ void ExhaustFx::Init()
 
         for (auto& e : data.m_pDummies) {
             RenderSmokeFx(pVeh, e.second);
-            if (e.second.pFxSysem && data.lastNitroFrame != CTimer::m_FrameCounter) {
-                if (e.second.pFxSysem->m_nPlayStatus == eFxSystemPlayStatus::FX_PLAYING) {
-                    e.second.pFxSysem->Stop();
-                }
-            }
-        } });
+        }
+    });
+
     MEEvents::vehPreRenderEvent.before += [](CVehicle *pVeh)
     {
         ExhaustFx::ProcessPointLights(pVeh);
     };
 
+    // Hook VC 1.0 CAutomobile::AddExhaustParticles (0x589570) and CBike::AddExhaustParticles (0x60E890)
+    ogFunc1 = injector::GetBranchDestination(0x589570, true).get();
+    injector::MakeCALL(0x589570, hkAddExhaustParticles1, true);
 
-
-    ogFunc1 = injector::GetBranchDestination(0x6AB344, true).get();
-    injector::MakeCALL(0x6AB344, hkAddExhaustParticles1, true);
-
-    ogFunc2 = injector::GetBranchDestination(0x6BD3FF, true).get();
-    injector::MakeCALL(0x6BD3FF, hkAddExhaustParticles2, true);
-
-    ogNitro1 = injector::GetBranchDestination(0x6A405A, true).get();
-    injector::MakeCALL(0x6A405A, hkDoNitroEffect1, true);
-
-    ogNitro2 = injector::GetBranchDestination(0x6A406B, true).get();
-    injector::MakeCALL(0x6A406B, hkDoNitroEffect2, true);
-
-    ogNitro3 = injector::GetBranchDestination(0x6A40E1, true).get();
-    injector::MakeCALL(0x6A40E1, hkDoNitroEffect3, true);
+    ogFunc2 = injector::GetBranchDestination(0x60E890, true).get();
+    injector::MakeCALL(0x60E890, hkAddExhaustParticles2, true);
 }
 
 void ExhaustFx::ProcessPointLights(CVehicle *pVeh)
 {
     extern bool gbLightPointLights;
-    if (!gbLightPointLights || !pVeh || !pVeh->GetIsOnScreen() || !pVeh->bEngineOn || pVeh->bEngineBroken)
+    if (!gbLightPointLights || !pVeh || !pVeh->GetIsOnScreen() || !pVeh->bEngineOn || CarUtil::IsEngineBroken(pVeh))
     {
         return;
-    }
-
-    if (pVeh->m_nVehicleSubClass == VEHICLE_AUTOMOBILE)
-    {
-        CAutomobile *pAuto = reinterpret_cast<CAutomobile *>(pVeh);
-        if (!pAuto->m_nHandlingFlags.bNosInst || pAuto->m_fNitroValue >= 0.0f)
-        {
-            return;
-        }
     }
 
     ExhaustVehData &data = m_VehData.Get(pVeh);
@@ -208,7 +150,7 @@ void ExhaustFx::ProcessPointLights(CVehicle *pVeh)
                     CVector backwardDir = -(CVector &)e.second.pFrame->ltm.up;
                     backwardDir.Normalize();
                     CVector plightPos = pos + backwardDir * rearOffset;
-                    CPointLights::AddLight(PLTYPE_POINTLIGHT, plightPos, CVector(0.0f, 0.0f, 0.0f), radius, r, g, b, 0, false, nullptr);
+                    CPointLights::AddLight(PLTYPE_POINTLIGHT, plightPos, CVector(0.0f, 0.0f, 0.0f), radius, r, g, b, 0, false);
                 }
             }
         }
@@ -216,31 +158,31 @@ void ExhaustFx::ProcessPointLights(CVehicle *pVeh)
     else
     {
         CVehicleModelInfo *pInfo = static_cast<CVehicleModelInfo *>(CModelInfo::GetModelInfo(pVeh->m_nModelIndex));
-        if (pInfo && pInfo->m_pVehicleStruct)
+        if (pInfo)
         {
-            CVector pos = pInfo->m_pVehicleStruct->m_avDummyPos[eVehicleDummies::EXHAUST];
+            CVector pos = pInfo->m_dummyPos[eVehicleDummies::EXHAUST];
             if (!pos.IsZero())
             {
                 CVector worldPos = pVeh->TransformFromObjectSpace(CVector(pos.x, pos.y - rearOffset, pos.z));
-                CPointLights::AddLight(PLTYPE_POINTLIGHT, worldPos, CVector(0.0f, 0.0f, 0.0f), radius, r, g, b, 0, false, nullptr);
+                CPointLights::AddLight(PLTYPE_POINTLIGHT, worldPos, CVector(0.0f, 0.0f, 0.0f), radius, r, g, b, 0, false);
 
                 if (pVeh->m_pHandlingData && pVeh->m_pHandlingData->m_bDoubleExhaust)
                 {
                     CVector doubleWorldPos = pVeh->TransformFromObjectSpace(CVector(-pos.x, pos.y - rearOffset, pos.z));
-                    CPointLights::AddLight(PLTYPE_POINTLIGHT, doubleWorldPos, CVector(0.0f, 0.0f, 0.0f), radius, r, g, b, 0, false, nullptr);
+                    CPointLights::AddLight(PLTYPE_POINTLIGHT, doubleWorldPos, CVector(0.0f, 0.0f, 0.0f), radius, r, g, b, 0, false);
                 }
             }
 
-            CVector secPos = pInfo->m_pVehicleStruct->m_avDummyPos[eVehicleDummies::EXHAUST_SECONDARY];
+            CVector secPos = pInfo->m_dummyPos[eVehicleDummies::EXHAUST_SECONDARY];
             if (!secPos.IsZero())
             {
                 CVector secWorldPos = pVeh->TransformFromObjectSpace(CVector(secPos.x, secPos.y - rearOffset, secPos.z));
-                CPointLights::AddLight(PLTYPE_POINTLIGHT, secWorldPos, CVector(0.0f, 0.0f, 0.0f), radius, r, g, b, 0, false, nullptr);
+                CPointLights::AddLight(PLTYPE_POINTLIGHT, secWorldPos, CVector(0.0f, 0.0f, 0.0f), radius, r, g, b, 0, false);
 
                 if (pVeh->m_pHandlingData && pVeh->m_pHandlingData->m_bDoubleExhaust)
                 {
                     CVector doubleSecWorldPos = pVeh->TransformFromObjectSpace(CVector(-secPos.x, secPos.y - rearOffset, secPos.z));
-                    CPointLights::AddLight(PLTYPE_POINTLIGHT, doubleSecWorldPos, CVector(0.0f, 0.0f, 0.0f), radius, r, g, b, 0, false, nullptr);
+                    CPointLights::AddLight(PLTYPE_POINTLIGHT, doubleSecWorldPos, CVector(0.0f, 0.0f, 0.0f), radius, r, g, b, 0, false);
                 }
             }
         }
@@ -280,7 +222,7 @@ void ExhaustFx::RenderSmokeFx(CVehicle *pVeh, const ExhaustData &info)
     {
         return;
     }
-    if (!pVeh || !pVeh->GetIsOnScreen() || !pVeh->bEngineOn || pVeh->bEngineBroken)
+    if (!pVeh || !pVeh->GetIsOnScreen() || !pVeh->bEngineOn || CarUtil::IsEngineBroken(pVeh))
     {
         return;
     }
@@ -309,12 +251,7 @@ void ExhaustFx::RenderSmokeFx(CVehicle *pVeh, const ExhaustData &info)
         data.reloadCount++;
     }
 
-    // properties
-    float moveSpeed = pVeh->m_vecMoveSpeed.Magnitude() * info.fSpeedMul;
-    float life = std::max(info.fLifeTime - moveSpeed, 0.0f);
-    float alpha = std::max(info.Color.a / 255.0f - moveSpeed, 0.0f);
-
-    CVector particleDir = info.pFrame->ltm.up; // forward is up in psdk
+    CVector particleDir = info.pFrame->ltm.up;
     particleDir *= -1;
 
     CVector parVelocity;
@@ -328,160 +265,36 @@ void ExhaustFx::RenderSmokeFx(CVehicle *pVeh, const ExhaustData &info)
         parVelocity = randomFactor * particleDir;
     }
 
-    bool isExhaustSubmerged = false;
-    float waterLevel = 0.0f;
-    if (pVeh->bTouchingWater &&
-        CWaterLevel::GetWaterLevel(exhaustPos.x, exhaustPos.y, exhaustPos.z, &waterLevel, true, nullptr) &&
-        waterLevel >= exhaustPos.z)
-    {
-        isExhaustSubmerged = true;
-    }
-
     float randomFactor = CGeneral::GetRandomNumberInRange(1.0f, 3.0f);
     if (randomFactor * (pVeh->m_fGasPedal + 1.1f) <= 2.5f)
     {
         return;
     }
 
-    FxPrtMult_c fxPrt(info.Color.r / 255.0f, info.Color.g / 255.0f, info.Color.b / 255.0f, alpha, 0.2f * info.fSizeMul, 1.0f, life);
-
     for (int i = 0; i < 2; i++)
     {
-        FxSystem_c *fxSystem = isExhaustSubmerged ? g_fx.m_pPrtBubble : g_fx.m_pPrtSmokeII3expand;
-
-        if (isExhaustSubmerged)
-        {
-            fxPrt.m_color.alpha = alpha * 0.5f;
-            fxPrt.m_fSize = 0.6f * info.fSizeMul;
-        }
-
-        fxSystem->AddParticle(
-            (RwV3d *)&exhaustPos,
-            (RwV3d *)&parVelocity,
-            0.0f,
-            &fxPrt,
-            -1.0f,
-            pVeh->m_fContactSurfaceBrightness,
-            0.6f,
+        CParticles::AddParticle(
+            PARTICLE_EXHAUST_STEAM,
+            exhaustPos,
+            parVelocity,
+            nullptr,
+            0.2f * info.fSizeMul,
+            nullptr,
+            0,
+            0,
+            0,
             0);
-
-        // secondary emission
-        if (pVeh->m_fGasPedal > 0.5f && pVeh->m_nCurrentGear < 3 && (CGeneral::GetRandomNumber() % 2))
-        {
-            FxSystem_c *secondaryFxSystem = isExhaustSubmerged ? g_fx.m_pPrtBubble : g_fx.m_pPrtSmokeII3expand;
-
-            if (isExhaustSubmerged)
-            {
-                fxPrt.m_color.alpha = alpha * 0.5f;
-                fxPrt.m_fSize = 0.6f * info.fSizeMul;
-            }
-
-            secondaryFxSystem->AddParticle(
-                (RwV3d *)&exhaustPos,
-                (RwV3d *)&parVelocity,
-                0.0f,
-                &fxPrt,
-                -1.0f,
-                pVeh->m_fContactSurfaceBrightness,
-                0.6f,
-                0);
-        }
     }
 }
 
 void ExhaustFx::RenderNitroFx(CVehicle *pVeh, float power)
 {
-    if (!CBaseFeature::IsEnabled(eFeatureMatrix::ExhaustFx) || !pVeh)
-    {
-        return;
-    }
-
-    if (pVeh->m_nVehicleSubClass == VEHICLE_AUTOMOBILE)
-    {
-        CAutomobile *pAuto = reinterpret_cast<CAutomobile *>(pVeh);
-        if (!pAuto->m_nHandlingFlags.bNosInst || pAuto->m_fNitroValue >= 0.0f)
-        {
-            return;
-        }
-    }
-    const auto &mi = CModelInfo::GetModelInfo(pVeh->m_nModelIndex);
-
-    auto &data = m_VehData.Get(pVeh);
-
-    if (!data.isUsed || !pVeh->bEngineOn || pVeh->bEngineBroken)
-    {
-        return;
-    }
-
-    data.lastNitroFrame = CTimer::m_FrameCounter;
-
-    for (auto &e : data.m_pDummies)
-    {
-        if (!e.second.bNitroEffect)
-        {
-            continue;
-        }
-
-        RwMatrix *dummyMatrix = &e.second.pFrame->ltm;
-
-        bool isExhaustSubmerged = false;
-        if (pVeh->bTouchingWater)
-        {
-            float level = 0.0f;
-            CVector pos = dummyMatrix->pos;
-            if (CWaterLevel::GetWaterLevel(pos.x, pos.y, pos.z, &level, true, nullptr))
-            {
-                if (level >= pos.z)
-                {
-                    isExhaustSubmerged = true;
-                }
-            }
-        }
-
-        if (e.second.pFxSysem)
-        {
-            e.second.pFxSysem->SetConstTime(1, std::fabs(power));
-            if (e.second.pFxSysem->m_nPlayStatus == eFxSystemPlayStatus::FX_PLAYING && isExhaustSubmerged)
-            {
-                e.second.pFxSysem->Stop();
-            }
-            else if (e.second.pFxSysem->m_nPlayStatus == eFxSystemPlayStatus::FX_STOPPED && !isExhaustSubmerged)
-            {
-                e.second.pFxSysem->Play();
-            }
-        }
-        else if (!isExhaustSubmerged && dummyMatrix)
-        {
-            static RwMatrixTag gFlipForward = {
-                {1.0f, 0.0f, 0.0f},  // right (X)
-                0,                   // flags
-                {0.0f, -1.0f, 0.0f}, // up (forward flipped)
-                0,
-                {0.0f, 0.0f, 1.0f}, // at
-                0,
-                {0.0f, 0.0f, 0.0f}, // pos
-                0};
-
-            e.second.pFxSysem = g_fxMan.CreateFxSystem((char *)"nitro", &gFlipForward, dummyMatrix, true);
-            if (e.second.pFxSysem)
-            {
-                e.second.pFxSysem->SetLocalParticles(true);
-                e.second.pFxSysem->Play();
-            }
-        }
-    }
 }
 
 void ExhaustFx::Reload(CVehicle* pVeh)
 {
     if (pVeh) {
         auto &data = m_VehData.Get(pVeh);
-        for (auto &e : data.m_pDummies) {
-            if (e.second.pFxSysem) {
-                e.second.pFxSysem->Kill();
-                e.second.pFxSysem = nullptr;
-            }
-        }
         data.bNodesSearched = false;
         data.isUsed = false;
         data.m_pDummies.clear();

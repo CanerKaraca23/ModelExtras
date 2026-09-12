@@ -31,7 +31,7 @@ bool TailLightComponent::TryRegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const
         c.mirroredX = false;
         data.dummies[c.lightType].push_back(VehicleDummy(c));
         
-        if (pVeh->m_nVehicleSubClass != VEHICLE_BIKE || std::abs(c.frame->modelling.pos.x) > 0.05f) {
+        if (!CarUtil::IsBike(pVeh) || std::abs(c.frame->modelling.pos.x) > 0.05f) {
             c.mirroredX = true;
             c.lightType = eMaterialType::TailLightLeft;
             data.dummies[c.lightType].push_back(VehicleDummy(c));
@@ -46,9 +46,7 @@ void TailLightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehL
     std::string shdwName = (isBike ? "taillight_bike" : "taillight");
     float shdwSz = 1.6f;
 
-    if (pControlVeh->m_nVehicleSubClass == VEHICLE_AUTOMOBILE || pControlVeh->m_nVehicleSubClass == VEHICLE_MTRUCK
-        || pControlVeh->m_nVehicleSubClass == VEHICLE_QUAD || pControlVeh->m_nVehicleSubClass == VEHICLE_BIKE
-        || pControlVeh->m_nVehicleSubClass == VEHICLE_TRAILER) 
+    if (CarUtil::IsAutomobile(pControlVeh) || CarUtil::IsBike(pControlVeh)) 
     {
         auto damage = LightDamageState::Get(pControlVeh, pTowedVeh);
         bool isLeftRearOk = damage.isRearLeftOk;

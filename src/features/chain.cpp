@@ -42,19 +42,12 @@ void ChainFeature::Init() {
     size_t curTime = CTimer::m_snTimeInMilliseconds;
 
     if (curTime - data.lastUpdateTime >= interval) {
-      if (pVeh->m_nVehicleSubClass == VEHICLE_BMX) {
-        if (pVeh->m_fGasPedal && speed > 0.0f) {
-          data.m_nCurChain =
-              (data.m_nCurChain == 0) ? maxIndex : data.m_nCurChain - 1;
-        }
-      } else {
-        if (speed > minSpeed) {
-          data.m_nCurChain =
-              (data.m_nCurChain == 0) ? maxIndex : data.m_nCurChain - 1;
-        } else if (speed < -minSpeed) {
-          data.m_nCurChain =
-              (data.m_nCurChain == maxIndex) ? 0 : data.m_nCurChain + 1;
-        }
+      if (speed > minSpeed) {
+        data.m_nCurChain =
+            (data.m_nCurChain == 0) ? maxIndex : data.m_nCurChain - 1;
+      } else if (speed < -minSpeed) {
+        data.m_nCurChain =
+            (data.m_nCurChain == maxIndex) ? 0 : data.m_nCurChain + 1;
       }
 
       FrameUtil::HideAllChilds(data.m_pRootFrame);

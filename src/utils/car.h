@@ -22,6 +22,8 @@ public:
     static bool AreHeadlightsPopUpOpen(CVehicle *pVeh);
 
     static bool IsEngineOff(CVehicle *pVeh);
+    static bool IsEngineBroken(CVehicle *pVeh);
+    static float GetDoorAngleOpenRatio(CVehicle *pVeh, eDoors door);
     static bool IsDoorDamaged(CVehicle *pVeh, eDoors door);
     static bool IsLightDamaged(CVehicle *pVeh, eLights light);
     static bool IsPanelDamaged(CVehicle *pVeh, ePanels panel);

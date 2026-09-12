@@ -134,7 +134,7 @@ void RenderUtil::RegisterHeadlightPointLight(const DummyConfig *pConfig, float r
         return;
     }
 
-    bool isBike = pConfig->pVeh->m_nVehicleSubClass == VEHICLE_BIKE;
+    bool isBike = CarUtil::IsBike(pConfig->pVeh);
     if (!isBike && pConfig->pVeh->GetIsOnScreen())
     {
         RwFrame *parent = pConfig->frame ? RwFrameGetParent(pConfig->frame) : nullptr;
@@ -170,7 +170,7 @@ void RenderUtil::RegisterHeadlightPointLight(const DummyConfig *pConfig, float r
     }
 
     CVector lightPos = pConfig->pVeh->TransformFromObjectSpace(pConfig->shadow.position);
-    if (pConfig->pVeh->m_nVehicleSubClass == VEHICLE_BIKE && pConfig->leanAffected)
+    if (CarUtil::IsBike(pConfig->pVeh) && pConfig->leanAffected)
     {
         CBike *pBike = static_cast<CBike *>(pConfig->pVeh);
         bool wasCalculated = pBike->m_bLeanMatrixCalculated;
@@ -199,7 +199,7 @@ void RenderUtil::RegisterHeadlightPointLight(const DummyConfig *pConfig, float r
 
     CRGBA col = pConfig->corona.color;
     CPointLights::AddLight(PLTYPE_SPOTLIGHT, lightPos, lightDir, HEADLIGHT_PLIGHT_RANGE * rangeMul,
-                           col.r / 255.0f, col.g / 255.0f, col.b / 255.0f, 0, 0, 0);
+                           col.r / 255.0f, col.g / 255.0f, col.b / 255.0f, 0, false);
 }
 
 void RenderUtil::RegisterPointLight(const DummyConfig *pConfig, CRGBA col, float radius, bool isSpotlight)
@@ -215,7 +215,7 @@ void RenderUtil::RegisterPointLight(const DummyConfig *pConfig, CRGBA col, float
         return;
     }
 
-    bool isBike = pConfig->pVeh->m_nVehicleSubClass == VEHICLE_BIKE;
+    bool isBike = CarUtil::IsBike(pConfig->pVeh);
     if (!isBike && pConfig->pVeh->GetIsOnScreen())
     {
         RwFrame *parent = pConfig->frame ? RwFrameGetParent(pConfig->frame) : nullptr;
@@ -234,7 +234,7 @@ void RenderUtil::RegisterPointLight(const DummyConfig *pConfig, CRGBA col, float
         }
     }
 
-    bool isSirenFlashing = pConfig->pVeh->bSirenOrAlarm;
+    bool isSirenFlashing = (pConfig->pVeh->m_nSirenOrAlarm != 0);
 
     // Front Left
     if (pConfig->lightType == eMaterialType::HeadLightLeft || pConfig->lightType == eMaterialType::FogLightLeft)
@@ -294,7 +294,7 @@ void RenderUtil::RegisterPointLight(const DummyConfig *pConfig, CRGBA col, float
 
     CMatrix vehMat = pConfig->pVeh->GetMatrix();
     CVector lightPos = pConfig->pVeh->TransformFromObjectSpace(pConfig->shadow.position);
-    if (pConfig->pVeh->m_nVehicleSubClass == VEHICLE_BIKE && pConfig->leanAffected)
+    if (CarUtil::IsBike(pConfig->pVeh) && pConfig->leanAffected)
     {
         CBike *pBike = static_cast<CBike *>(pConfig->pVeh);
         bool wasCalculated = pBike->m_bLeanMatrixCalculated;
@@ -384,7 +384,7 @@ void RenderUtil::RegisterPointLight(const DummyConfig *pConfig, CRGBA col, float
     float b = std::clamp(col.b * INV_255, 0.0f, 1.0f);
 
     unsigned char lightType = isSpotlight ? PLTYPE_SPOTLIGHT : PLTYPE_POINTLIGHT;
-    CPointLights::AddLight(lightType, plightPos, lightDir, radius, r, g, b, 0, false, nullptr);
+    CPointLights::AddLight(lightType, plightPos, lightDir, radius, r, g, b, 0, false);
 }
 
 void RenderUtil::RegisterCoronaDirectional(const DummyConfig *pConfig, float angle, float radius, float szMul, bool inversed, bool skipCheck)
@@ -516,7 +516,7 @@ void RenderUtil::RegisterShadowDirectional(const DummyConfig *pConfig, const std
     CVector worldPos = pConfig->pVeh->TransformFromObjectSpace(pConfig->shadow.position);
 
     // Expand through bike lean matrix when available so roll angle matches the chassis
-    if (pConfig->pVeh->m_nVehicleSubClass == VEHICLE_BIKE && pConfig->leanAffected)
+    if (CarUtil::IsBike(pConfig->pVeh) && pConfig->leanAffected)
     {
         CBike *pBike = static_cast<CBike *>(pConfig->pVeh);
         bool wasCalculated = pBike->m_bLeanMatrixCalculated;
@@ -649,7 +649,7 @@ void RenderUtil::RegisterShadow(CEntity *pEntity, CVector position, CRGBA col, f
         0.0f};
 
     CVector shdwPos = pEntity->TransformFromObjectSpace(position + nOffset + nSize);
-    if (pEntity->m_nType == ENTITY_TYPE_VEHICLE && static_cast<CVehicle *>(pEntity)->m_nVehicleSubClass == VEHICLE_BIKE)
+    if (pEntity->m_nType == ENTITY_TYPE_VEHICLE && CarUtil::IsBike(static_cast<CVehicle *>(pEntity)))
     {
         CBike *pBike = static_cast<CBike *>(pEntity);
         bool wasCalculated = pBike->m_bLeanMatrixCalculated;

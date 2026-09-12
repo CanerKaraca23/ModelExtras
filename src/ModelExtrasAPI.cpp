@@ -70,7 +70,7 @@ void ME_SetSirenMute(CVehicle *pVeh, bool mute) {
   pData->vehicle = pVeh;
   pData->Mute = mute;
   if (mute) {
-    pVeh->bSirenOrAlarm = false;
+    pVeh->m_nSirenOrAlarm = 0;
   }
 }
 

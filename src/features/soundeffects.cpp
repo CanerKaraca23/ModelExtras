@@ -79,16 +79,14 @@ void SoundEffects::ProcessVehicle(CVehicle *pVeh)
                 return;
             }
 
-            int animGroup = pVeh->m_pHandlingData ? pVeh->m_pHandlingData->m_nAnimGroup : 0;
-            bool isAllowed = (pVeh->m_nVehicleSubClass == VEHICLE_AUTOMOBILE || pVeh->m_nVehicleSubClass == VEHICLE_MTRUCK) &&
-                            (animGroup == ANIMGROUP_TRUCK || animGroup == ANIMGROUP_BUS || animGroup == ANIMGROUP_COACH ||
-                             pVeh->bIsBig || pVeh->bIsBus || (pVeh->bIsVan && pVeh->m_pHandlingData && pVeh->m_pHandlingData->m_fMass >= 2500.0f) ||
+            bool isAllowed = CarUtil::IsAutomobile(pVeh) &&
+                            (pVeh->bIsBig || pVeh->bIsBus || (pVeh->bIsVan && pVeh->m_pHandlingData && pVeh->m_pHandlingData->m_fMass >= 2500.0f) ||
                              (pVeh->m_pHandlingData && pVeh->m_pHandlingData->m_fMass >= 3500.0f));
             bool isBigVeh = isAllowed || std::find(ValidForReverseSound.begin(), ValidForReverseSound.end(), pVeh->m_nModelIndex) != ValidForReverseSound.end();
 
             if (bEngineSounds)
             {
-                bool isValid = !CModelInfo::IsPlaneModel(model) && !CModelInfo::IsBmxModel(model) && !CModelInfo::IsHeliModel(model) && !CModelInfo::IsBoatModel(model);
+                bool isValid = !CarUtil::IsPlane(pVeh) && !CarUtil::IsHeli(pVeh) && !CarUtil::IsBoat(pVeh);
                 bool isEligible = isPlayerDriver || (!bOnlyPlayerVehicle && pVeh->m_pDriver != nullptr);
 
                 if (isValid && isEligible)
@@ -101,7 +99,7 @@ void SoundEffects::ProcessVehicle(CVehicle *pVeh)
                         {
                             static std::string carPath = MOD_DATA_PATH("audio/engine_start.wav");
                             static std::string bikePath = MOD_DATA_PATH("audio/bike_engine_start.wav");
-                            if (CModelInfo::IsBikeModel(model) || CModelInfo::IsQuadBikeModel(model))
+                            if (CarUtil::IsBike(pVeh))
                             {
                                 AudioMgr::Play3DSound(bikePath, pVeh->GetPosition(), pVeh, 1.0f, 65.0f);
                             }

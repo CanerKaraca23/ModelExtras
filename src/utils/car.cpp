@@ -54,21 +54,30 @@ bool CarUtil::IsLightsForcedOff(CVehicle *pVeh)
 
 bool CarUtil::AreHeadlightsPopUpOpen(CVehicle *pVeh)
 {
-    if (pVeh && IsAutomobile(pVeh))
-    {
-        CAutomobile *pAuto = static_cast<CAutomobile *>(pVeh);
-        if (!pAuto->m_aCarNodes[CAR_MISC_A])
-        {
-            return true;
-        }
-        return pAuto->m_renderLights.m_bLeftFront || pAuto->m_renderLights.m_bRightFront;
-    }
     return true;
 }
 
 bool CarUtil::IsEngineOff(CVehicle *pVeh) {
     if (!pVeh) return true;
-    return !pVeh->m_nVehicleFlags.bEngineOn || pVeh->m_nVehicleFlags.bEngineBroken;
+    return !pVeh->bEngineOn || IsEngineBroken(pVeh);
+}
+
+bool CarUtil::IsEngineBroken(CVehicle *pVeh) {
+    if (!pVeh) return false;
+    if (pVeh->m_fHealth < 250.0f) return true;
+    if (IsAutomobile(pVeh)) {
+        CAutomobile *pAuto = static_cast<CAutomobile*>(pVeh);
+        return pAuto->m_carDamage.GetEngineStatus() > 100;
+    }
+    return false;
+}
+
+float CarUtil::GetDoorAngleOpenRatio(CVehicle *pVeh, eDoors door) {
+    if (!pVeh || !IsAutomobile(pVeh) || door < 0 || door >= 6) return 0.0f;
+    CAutomobile *pAuto = static_cast<CAutomobile*>(pVeh);
+    float maxAngle = pAuto->m_aDoors[door].fAngleInPosTwo;
+    if (std::abs(maxAngle) < 0.0001f) return 0.0f;
+    return std::clamp(pAuto->m_aDoors[door].fAngle / maxAngle, 0.0f, 1.0f);
 }
 
 float CarUtil::GetVehicleSpeed(CVehicle *pVeh)
@@ -113,7 +122,7 @@ bool CarUtil::IsLightDamaged(CVehicle *pVeh, eLights light) {
         return false;
     }
 
-    return pAutoMobile->m_damageManager.GetLightStatus(light);
+    return pAutoMobile->m_carDamage.GetLightStatus(light) != 0;
 }
 
 bool CarUtil::IsDoorDamaged(CVehicle *pVeh, eDoors door) {
@@ -125,7 +134,7 @@ bool CarUtil::IsDoorDamaged(CVehicle *pVeh, eDoors door) {
         return false;
     }
 
-    return pAutoMobile->m_damageManager.GetDoorStatus(door);
+    return pAutoMobile->m_carDamage.GetDoorStatus(door) != 0;
 }
 
 bool CarUtil::IsPanelDamaged(CVehicle *pVeh, ePanels panel) {
@@ -137,7 +146,7 @@ bool CarUtil::IsPanelDamaged(CVehicle *pVeh, ePanels panel) {
         return false;
     }
 
-    return pAutoMobile->m_damageManager.GetPanelStatus(panel);
+    return pAutoMobile->m_carDamage.GetPanelStatus(panel) != 0;
 }
 
 bool CarUtil::IsFrameDamaged(CVehicle *pVeh, RwFrame *frame) {

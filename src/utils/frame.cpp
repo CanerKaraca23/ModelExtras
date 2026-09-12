@@ -3,21 +3,25 @@
 #include <rw/rpworld.h>
 #include <CVisibilityPlugins.h>
 
+static const RwV3d s_axisX = { 1.0f, 0.0f, 0.0f };
+static const RwV3d s_axisY = { 0.0f, 1.0f, 0.0f };
+static const RwV3d s_axisZ = { 0.0f, 0.0f, 1.0f };
+
 void FrameUtil::SetRotationX(RwFrame *frame, float angle)
 {
-    RwFrameRotate(frame, (RwV3d *)0x008D2E00, (RwReal)angle, rwCOMBINEPRECONCAT);
+    RwFrameRotate(frame, &s_axisX, (RwReal)angle, rwCOMBINEPRECONCAT);
     RwFrameUpdateObjects(frame);
 }
 
 void FrameUtil::SetRotationY(RwFrame *frame, float angle)
 {
-    RwFrameRotate(frame, (RwV3d *)0x008D2E0C, (RwReal)angle, rwCOMBINEPRECONCAT);
+    RwFrameRotate(frame, &s_axisY, (RwReal)angle, rwCOMBINEPRECONCAT);
     RwFrameUpdateObjects(frame);
 }
 
 void FrameUtil::SetRotationZ(RwFrame *frame, float angle)
 {
-    RwFrameRotate(frame, (RwV3d *)0x008D2E18, (RwReal)angle, rwCOMBINEPRECONCAT);
+    RwFrameRotate(frame, &s_axisZ, (RwReal)angle, rwCOMBINEPRECONCAT);
     RwFrameUpdateObjects(frame);
 }
 
@@ -242,7 +246,6 @@ bool FrameUtil::IsOkAtomicVisible(RwFrame* frame) {
 RwFrame * FrameUtil::Clone(RwFrame *frame, RpClump *clump, RwFrame *parent, bool isRoot) {
 	RwFrame * newFrame = parent;
 	if (isRoot) {
-		*(uint32_t*)0xC1CB58 = (uint32_t)clump;
 		RwFrameForAllObjects(frame, CopyObjectsCB, parent);
 		if (RwFrame * nextFrame = frame->child) Clone(nextFrame, clump, parent, false);
 	} else {

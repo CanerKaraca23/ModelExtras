@@ -2,28 +2,24 @@
 #include "defines.h"
 #include "backfire.h"
 #include "utils/datamgr.h"
-#include <extensions/ScriptCommands.h>
-#include <extensions/scripting/ScriptCommandNames.h>
 #include "utils/audiomgr.h"
 #include "enums/vehdummy.h"
 #include <CCamera.h>
+#include <CParticle.h>
 #include "ModelExtrasAPI.h"
 
 using namespace plugin;
 
 void BackFireEffect::BackFireFX(CVehicle *pVeh, float x, float y, float z, float dirX, float dirY, float dirZ)
 {
-    int handle = NULL;
-    Command<Commands::CREATE_FX_SYSTEM_ON_CAR_WITH_DIRECTION>("GUNFLASH", CPools::GetVehicleRef(pVeh), x, y, z, dirX, dirY, dirZ, 1, &handle);
+    CVector exhaustLocalPos(x, y, z);
+    CVector exhaustWorldPos = pVeh->TransformFromObjectSpace(exhaustLocalPos);
+    CVector dir = pVeh->TransformFromObjectSpace(CVector(dirX, dirY, dirZ)) - pVeh->GetPosition();
+    dir.Normalize();
 
-    if (handle == NULL)
-    {
-        return;
-    }
+    CParticle::AddParticle(PARTICLE_GUNFLASH, exhaustWorldPos, dir * 0.2f, pVeh, 0.4f, 0, 0, 0, 0);
+    CParticle::AddParticle(PARTICLE_CARFLAME, exhaustWorldPos, dir * 0.1f, pVeh, 0.3f, 0, 0, 0, 0);
 
-    Command<Commands::PLAY_AND_KILL_FX_SYSTEM>(handle);
-
-    CVector exhaustWorldPos = pVeh->TransformFromObjectSpace(CVector(x, y, z));
     static std::string audioPath = MOD_DATA_PATH("audio/backfire.wav");
     AudioMgr::Play3DSound(audioPath, exhaustWorldPos, pVeh, 1.5f, 80.0f);
 }
@@ -34,31 +30,31 @@ void BackFireEffect::BackFireSingle(CVehicle *pVeh)
     size_t count = ME_GetExhaustCount(pVeh);
     if (count <= 0)
     {
-        // https://github.com/multitheftauto/mtasa-blue/blob/16769b8d1c94e2b9fe6323dcba46d1305f87a190/Client/game_sa/CModelInfoSA.h#L213
         CVehicleModelInfo *pInfo = static_cast<CVehicleModelInfo *>(CModelInfo::GetModelInfo(pVeh->m_nModelIndex));
+        if (!pInfo) return;
         float vx = 0;
-        CVector pos = pInfo->m_pVehicleStruct->m_avDummyPos[eVehicleDummies::EXHAUST];
-        if (pVeh->m_pHandlingData->m_bDoubleExhaust)
+        CVector pos = pInfo->m_dummyPos[eVehicleDummies::EXHAUST];
+        if (pVeh->m_pHandlingData && pVeh->m_pHandlingData->m_bDoubleExhaust)
         {
             vx = pos.x * -1.0f;
         }
 
-        if (pVeh->m_pHandlingData->m_bDoubleExhaust)
+        if (pVeh->m_pHandlingData && pVeh->m_pHandlingData->m_bDoubleExhaust)
         {
             BackFireFX(pVeh, vx, pos.y, pos.z);
         }
         BackFireFX(pVeh, pos.x, pos.y, pos.z);
 
         vx = 0.0f;
-        pos = pInfo->m_pVehicleStruct->m_avDummyPos[eVehicleDummies::EXHAUST_SECONDARY];
+        pos = pInfo->m_dummyPos[eVehicleDummies::EXHAUST_SECONDARY];
         if (!pos.IsZero())
         {
-            if (pVeh->m_pHandlingData->m_bDoubleExhaust)
+            if (pVeh->m_pHandlingData && pVeh->m_pHandlingData->m_bDoubleExhaust)
             {
                 vx = pos.x * -1.0f;
             }
 
-            if (pVeh->m_pHandlingData->m_bDoubleExhaust)
+            if (pVeh->m_pHandlingData && pVeh->m_pHandlingData->m_bDoubleExhaust)
             {
                 BackFireFX(pVeh, vx, pos.y, pos.z);
             }
@@ -149,28 +145,10 @@ void BackFireEffect::Process(CVehicle *pVeh)
 
     BackfireData &data = m_VehData.Get(pVeh);
 
-    if (pVeh->m_nVehicleSubClass == VEHICLE_BIKE || pVeh->m_nVehicleSubClass == VEHICLE_AUTOMOBILE)
+    if (CarUtil::IsBike(pVeh) || CarUtil::IsAutomobile(pVeh))
     {
-        unsigned short rpm = *(unsigned short *)((int)pVeh + 0x280);
-        unsigned char gchanging = *(unsigned char *)((int)pVeh + 0x284);
-        unsigned char nitroActivated = *(unsigned char *)((int)pVeh + 0x37C);
         float speed = Util::GetVehicleSpeed(pVeh);
-
-        // sizeof(CBike) is 0x814, so reading pVeh + 0x966 ran past the end of the
-        // object on every bike and fed the throttle checks below whatever happened to
-        // sit in the heap after it. It only stayed in bounds because sizeof(CAutomobile)
-        // is 0x988, which is why this looked like it worked on cars. m_fGasPedal is a
-        // CVehicle member, so it is valid for both classes.
-        float throttle = pVeh->m_fGasPedal;
-        if (throttle < 0.0f)
-        {
-            throttle = -throttle;
-        }
-
-        if (pVeh->m_pDriver && gchanging == 0 && rpm != 65535 && rpm > 100.0f && speed > 5.0f)
-        {
-            BackFireSingle(pVeh);
-        }
+        float throttle = std::abs(pVeh->m_fGasPedal);
 
         // handle multi
         size_t timer = CTimer::m_snTimeInMilliseconds;
@@ -185,7 +163,7 @@ void BackFireEffect::Process(CVehicle *pVeh)
         }
         else
         {
-            if (throttle >= 0.99f || (throttle > 0.39f && nitroActivated))
+            if (throttle >= 0.99f)
             {
                 data.wasFullThrottled = true;
             }

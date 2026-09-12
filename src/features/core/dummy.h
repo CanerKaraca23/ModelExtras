@@ -1,16 +1,16 @@
 #pragma once
 #include "utils/modelinfomgr.h"
-#include "game_sa/CGeneral.h"
+#include <CGeneral.h>
 #include "RenderWare.h"
 #include "enums/dummypos.h"
 #include "enums/lightingmode.h"
 #include "dummyconfig.h"
 
-
 class VehicleDummy
 {
 private:
     DummyConfig data;
+    static inline const RwV3d s_axisZ = { 0.0f, 0.0f, 1.0f };
 
 public:
     VehicleDummy() = default;
@@ -39,7 +39,7 @@ public:
     {
         if (angle != 0.0f)
         {
-            RwFrameRotate(data.frame, (RwV3d *)0x008D2E18, angle, rwCOMBINEPRECONCAT);
+            RwFrameRotate(data.frame, &s_axisZ, angle, rwCOMBINEPRECONCAT);
             data.rotation.currentAngle += angle;
         }
     };
@@ -48,7 +48,7 @@ public:
     {
         if (angle != 0.0f)
         {
-            RwFrameRotate(data.frame, (RwV3d *)0x008D2E18, -angle, rwCOMBINEPRECONCAT);
+            RwFrameRotate(data.frame, &s_axisZ, -angle, rwCOMBINEPRECONCAT);
             data.rotation.currentAngle -= angle;
         }
     };

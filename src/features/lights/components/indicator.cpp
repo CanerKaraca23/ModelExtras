@@ -103,9 +103,8 @@ void IndicatorComponent::Process(CVehicle* pVeh, VehLightData& data) {
                          LightManager::IsDummyAvailable(data, INDICATOR_LIGHTS_TYPE) ||
                          LightManager::IsMaterialAvailable(pVeh, {eMaterialType::STTLightLeft, eMaterialType::STTLightRight}) ||
                          (LightsConfig::Get().gbGlobalIndicatorLights &&
-                          (pVeh->m_nVehicleSubClass == VEHICLE_AUTOMOBILE || pVeh->m_nVehicleSubClass == VEHICLE_MTRUCK) &&
-                          !CModelInfo::IsBikeModel(pVeh->m_nModelIndex) &&
-                          pVeh->GetVehicleAppearance() == VEHICLE_APPEARANCE_AUTOMOBILE);
+                          CarUtil::IsAutomobile(pVeh) &&
+                          !CarUtil::IsBike(pVeh));
 
     if (!hasIndicators) {
         data.nIndicatorState = eIndicatorState::Off;
@@ -113,7 +112,7 @@ void IndicatorComponent::Process(CVehicle* pVeh, VehLightData& data) {
     }
 
     if (pVeh->IsDriver(FindPlayerPed()) &&
-        (pVeh->m_nVehicleSubClass == VEHICLE_AUTOMOBILE || pVeh->m_nVehicleSubClass == VEHICLE_BIKE || pVeh->m_nVehicleSubClass == VEHICLE_QUAD || pVeh->m_nVehicleSubClass == VEHICLE_MTRUCK))
+        (CarUtil::IsAutomobile(pVeh) || CarUtil::IsBike(pVeh)))
     {
         if (InputMgr::IsKeyJustDown(LightsConfig::Get().nIndicatorNoneKey)) {
             data.nIndicatorState = eIndicatorState::Off;
@@ -183,9 +182,8 @@ void IndicatorComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehL
 
     // Global turn lights activation check
     if (LightsConfig::Get().gbGlobalIndicatorLights && !LightManager::IsMaterialAvailable(pControlVeh, INDICATOR_LIGHTS_TYPE) && !LightManager::IsMaterialAvailable(pControlVeh, {eMaterialType::STTLightLeft, eMaterialType::STTLightRight})) {
-        if ((pControlVeh->m_nVehicleSubClass == VEHICLE_AUTOMOBILE || pControlVeh->m_nVehicleSubClass == VEHICLE_MTRUCK) &&
-            !CModelInfo::IsBikeModel(pControlVeh->m_nModelIndex) &&
-            (pControlVeh->GetVehicleAppearance() == VEHICLE_APPEARANCE_AUTOMOBILE) &&
+        if (CarUtil::IsAutomobile(pControlVeh) &&
+            !CarUtil::IsBike(pControlVeh) &&
             pControlVeh->bEngineOn && pControlVeh->m_fHealth > 0 && !pControlVeh->bIsDrowning && !pControlVeh->m_pAttachedTo) {
             data.bUsingGlobalIndicators = true;
         }
@@ -240,7 +238,7 @@ void IndicatorComponent::ProcessPointLights(CVehicle* pVeh, VehLightData& data) 
             };
 
             if (data.nIndicatorState == eIndicatorState::BothOn || data.nIndicatorState == eIndicatorState::LeftOn) {
-                bool isLeftFrontDamaged = !pVeh->bSirenOrAlarm && (Util::IsLightDamaged(pVeh, eLights::LIGHT_FRONT_LEFT) || Util::IsPanelDamaged(pVeh, ePanels::WING_FRONT_LEFT));
+                bool isLeftFrontDamaged = (pVeh->m_nSirenOrAlarm == 0) && (Util::IsLightDamaged(pVeh, eLights::LIGHT_FRONT_LEFT) || Util::IsPanelDamaged(pVeh, ePanels::WING_FRONT_LEFT));
                 renderIndPointLight(eMaterialType::IndicatorLightLeftFront, isLeftFrontDamaged);
                 renderIndPointLight(eMaterialType::IndicatorLightLeftRear, Util::IsLightDamaged(pVeh, eLights::LIGHT_REAR_LEFT) || Util::IsPanelDamaged(pVeh, ePanels::WING_REAR_LEFT));
                 renderIndPointLight(eMaterialType::IndicatorLightLeftMiddle, Util::IsPanelDamaged(pVeh, ePanels::WING_FRONT_LEFT));
@@ -248,7 +246,7 @@ void IndicatorComponent::ProcessPointLights(CVehicle* pVeh, VehLightData& data) 
             }
 
             if (data.nIndicatorState == eIndicatorState::BothOn || data.nIndicatorState == eIndicatorState::RightOn) {
-                bool isRightFrontDamaged = !pVeh->bSirenOrAlarm && (Util::IsLightDamaged(pVeh, eLights::LIGHT_FRONT_RIGHT) || Util::IsPanelDamaged(pVeh, ePanels::WING_FRONT_RIGHT));
+                bool isRightFrontDamaged = (pVeh->m_nSirenOrAlarm == 0) && (Util::IsLightDamaged(pVeh, eLights::LIGHT_FRONT_RIGHT) || Util::IsPanelDamaged(pVeh, ePanels::WING_FRONT_RIGHT));
                 renderIndPointLight(eMaterialType::IndicatorLightRightFront, isRightFrontDamaged);
                 renderIndPointLight(eMaterialType::IndicatorLightRightRear, Util::IsLightDamaged(pVeh, eLights::LIGHT_REAR_RIGHT) || Util::IsPanelDamaged(pVeh, ePanels::WING_REAR_RIGHT));
                 renderIndPointLight(eMaterialType::IndicatorLightRightMiddle, Util::IsPanelDamaged(pVeh, ePanels::WING_FRONT_RIGHT));

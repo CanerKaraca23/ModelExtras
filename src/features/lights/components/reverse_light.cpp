@@ -39,9 +39,7 @@ void ReverseLightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, V
     std::string shdwName = (isBike ? "taillight_bike" : "taillight");
     float shdwSz = 2.0f;
 
-    if (pControlVeh->m_nVehicleSubClass == VEHICLE_AUTOMOBILE || pControlVeh->m_nVehicleSubClass == VEHICLE_MTRUCK
-        || pControlVeh->m_nVehicleSubClass == VEHICLE_QUAD || pControlVeh->m_nVehicleSubClass == VEHICLE_BIKE
-        || pControlVeh->m_nVehicleSubClass == VEHICLE_TRAILER) 
+    if (CarUtil::IsAutomobile(pControlVeh) || CarUtil::IsBike(pControlVeh)) 
     {
         bool isRevlightSupportedByModel = LightManager::IsMaterialAvailable(pTowedVeh, {eMaterialType::ReverseLightLeft, eMaterialType::ReverseLightRight});
 
@@ -62,7 +60,7 @@ void ReverseLightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, V
 }
 
 void ReverseLightComponent::ProcessPointLights(CVehicle* pVeh, VehLightData& data) {
-    bool isReversing = (pVeh->m_nCurrentGear == 0) && (Util::GetVehicleSpeed(pVeh) >= 0.001f || pVeh->m_fBreakPedal > 0.05f) && (pVeh->m_pDriver != nullptr) && (pVeh->m_nVehicleSubClass == VEHICLE_AUTOMOBILE || pVeh->m_nVehicleSubClass == VEHICLE_MTRUCK || pVeh->m_nVehicleSubClass == VEHICLE_QUAD);
+    bool isReversing = (pVeh->m_nCurrentGear == 0) && (Util::GetVehicleSpeed(pVeh) >= 0.001f || pVeh->m_fBreakPedal > 0.05f) && (pVeh->m_pDriver != nullptr) && CarUtil::IsAutomobile(pVeh);
 
     if (isReversing) {
         for (eMaterialType type : {eMaterialType::ReverseLightLeft, eMaterialType::ReverseLightRight}) {

@@ -2,13 +2,14 @@
 #include "slidedoor.h"
 #include "utils/datamgr.h"
 #include "utils/modelinfomgr.h"
+#include "utils/car.h"
 
 void SlideDoor::UpdateDoorGroup(CVehicle *pVeh, std::vector<SlideDoorConfig> &configs, eDoors doorID)
 {
     if (configs.empty())
         return;
 
-    float ratio = pVeh->GetDooorAngleOpenRatio(doorID);
+    float ratio = CarUtil::GetDoorAngleOpenRatio(pVeh, doorID);
     float sideMult = (doorID == DOOR_FRONT_LEFT || doorID == DOOR_REAR_LEFT) ? -1.0f : 1.0f;
     float popFactor = std::min(1.0f, ratio * 5.0f);
 

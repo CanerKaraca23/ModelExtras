@@ -75,7 +75,7 @@ void ConvertibleRoof::Init()
                                     // Randomly open the roofs
                                     if (isRoof)
                                     {
-                                        bool isRainy = (CWeather::Rain > 0.05f) || (CWeather::WetRoads > 0.1f) || (CWeather::NewWeatherType == eWeatherType::WEATHER_RAINY || CWeather::OldWeatherType == eWeatherType::WEATHER_RAINY);
+                                        bool isRainy = WorldUtil::IsRainy();
                                         if (!data.m_bRoofTargetExpanded && !isRainy)
                                         {
                                             MatrixUtil::SetRotationXAbsolute(&pFrame->modelling, c.targetRot - c.prevRot);
@@ -92,7 +92,7 @@ void ConvertibleRoof::Init()
     Events::vehicleRenderEvent += [](CVehicle *pVeh)
     {
         if (!CBaseFeature::IsEnabled(eFeatureMatrix::ConvertibleRoof)) return;
-        bool isRainy = (CWeather::Rain > 0.05f) || (CWeather::WetRoads > 0.1f) || (CWeather::NewWeatherType == eWeatherType::WEATHER_RAINY || CWeather::OldWeatherType == eWeatherType::WEATHER_RAINY);
+        bool isRainy = WorldUtil::IsRainy();
         if (!isRainy)
         {
             return;

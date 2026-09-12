@@ -49,7 +49,7 @@ RwTexture *LoadPNGFromFile(const char *filename, RwUInt8 alpha)
 
 RwTexture *TextureMgr::RwReadTexture(const char *name, char *Maskname)
 {
-    return ((RwTexture * (__cdecl *)(char const *, char const *))0x4C7510)(name, Maskname);
+    return RwTextureRead(name, Maskname);
 }
 
 RwTexture *TextureMgr::Get(std::string_view name, RwUInt8 alpha)
