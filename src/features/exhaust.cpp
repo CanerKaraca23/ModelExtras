@@ -5,7 +5,7 @@
 #include <CCamera.h>
 #include <CGeneral.h>
 #include <CWaterLevel.h>
-#include <CParticles.h>
+#include <CParticle.h>
 #include "utils/car.h"
 
 #include "utils/modelinfomgr.h"
@@ -260,8 +260,8 @@ void ExhaustFx::RenderSmokeFx(CVehicle *pVeh, const ExhaustData &info)
 
     for (int i = 0; i < 2; i++)
     {
-        CParticles::AddParticle(
-            PARTICLE_EXHAUST_STEAM,
+        CParticle::AddParticle(
+            PARTICLE_EXHAUST_FUMES,
             exhaustPos,
             parVelocity,
             nullptr,

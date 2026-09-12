@@ -2,7 +2,7 @@
 #include "plugin.h"
 #include "core/base.h"
 #include <unordered_map>
-#include <CParticles.h>
+#include <CParticle.h>
 
 using namespace plugin;
 
