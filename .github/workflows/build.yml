@@ -95,43 +95,43 @@ jobs:
         )
         dir output\lib
 
-    - name: Build ModelExtras with xmake
-      shell: cmd
-      env:
-        PLUGIN_SDK_DIR: ${{ github.workspace }}\plugin-sdk
-        BUILD_MODE: ${{ github.event.inputs.build_type || 'release' }}
-      run: |
-        xmake f -p windows -a x86 -m %BUILD_MODE% -c -y
-        xmake
+    # - name: Build ModelExtras with xmake
+    #   shell: cmd
+    #   env:
+    #     PLUGIN_SDK_DIR: ${{ github.workspace }}\plugin-sdk
+    #     BUILD_MODE: ${{ github.event.inputs.build_type || 'release' }}
+    #   run: |
+    #     xmake f -p windows -a x86 -m %BUILD_MODE% -c -y
+    #     xmake
 
-    - name: Prepare artifact files
-      shell: pwsh
-      env:
-        BUILD_MODE: ${{ github.event.inputs.build_type || 'release' }}
-        INCLUDE_PDB: ${{ github.event.inputs.include_pdb }}
-      run: |
-        $mode = $env:BUILD_MODE
-        $pdbFlag = $env:INCLUDE_PDB
-        if ([string]::IsNullOrEmpty($pdbFlag)) {
-            $pdbFlag = if ($mode -eq "debug") { "true" } else { "false" }
-        }
+    # - name: Prepare artifact files
+    #   shell: pwsh
+    #   env:
+    #     BUILD_MODE: ${{ github.event.inputs.build_type || 'release' }}
+    #     INCLUDE_PDB: ${{ github.event.inputs.include_pdb }}
+    #   run: |
+    #     $mode = $env:BUILD_MODE
+    #     $pdbFlag = $env:INCLUDE_PDB
+    #     if ([string]::IsNullOrEmpty($pdbFlag)) {
+    #         $pdbFlag = if ($mode -eq "debug") { "true" } else { "false" }
+    #     }
 
-        New-Item -ItemType Directory -Force -Path "artifact/ModelExtras"
-        Copy-Item -Path "build/windows/x86/$mode/ModelExtras.asi" -Destination "artifact/ModelExtras.asi"
+    #     New-Item -ItemType Directory -Force -Path "artifact/ModelExtras"
+    #     Copy-Item -Path "build/windows/x86/$mode/ModelExtras.asi" -Destination "artifact/ModelExtras.asi"
 
-        if ($pdbFlag -eq "true" -and (Test-Path "build/windows/x86/$mode/ModelExtras.pdb")) {
-            Copy-Item -Path "build/windows/x86/$mode/ModelExtras.pdb" -Destination "artifact/ModelExtras.pdb"
-        }
+    #     if ($pdbFlag -eq "true" -and (Test-Path "build/windows/x86/$mode/ModelExtras.pdb")) {
+    #         Copy-Item -Path "build/windows/x86/$mode/ModelExtras.pdb" -Destination "artifact/ModelExtras.pdb"
+    #     }
 
-        Copy-Item -Path "resource/dist/ModelExtras.ini" -Destination "artifact/ModelExtras.ini"
-        Copy-Item -Path "resource/dist/ModelExtras/*" -Destination "artifact/ModelExtras/" -Recurse
+    #     Copy-Item -Path "resource/dist/ModelExtras.ini" -Destination "artifact/ModelExtras.ini"
+    #     Copy-Item -Path "resource/dist/ModelExtras/*" -Destination "artifact/ModelExtras/" -Recurse
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v7
-      with:
-        name: ModelExtras-${{ github.event.inputs.build_type || 'Release' }}-Build
-        path: |
-          artifact/ModelExtras.asi
-          artifact/ModelExtras.pdb
-          artifact/ModelExtras.ini
-          artifact/ModelExtras/**
+    # - name: Upload artifact
+    #   uses: actions/upload-artifact@v7
+    #   with:
+    #     name: ModelExtras-${{ github.event.inputs.build_type || 'Release' }}-Build
+    #     path: |
+    #       artifact/ModelExtras.asi
+    #       artifact/ModelExtras.pdb
+    #       artifact/ModelExtras.ini
+    #       artifact/ModelExtras/**
