@@ -201,7 +201,7 @@ void AudioMgr::Play3DSound(const std::string &path, const CVector &worldPos, CEn
     if (dist > 0.1f)
     {
         CVector toSound = worldPos - TheCamera.GetPosition();
-        CVector camRight = TheCamera.m_matrix.right;
+        CVector camRight = TheCamera.m_CameraMatrix.right;
         float rightDot = (toSound.x * camRight.x + toSound.y * camRight.y + toSound.z * camRight.z) / dist;
         pan = std::clamp(rightDot, -1.0f, 1.0f);
     }

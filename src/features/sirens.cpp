@@ -664,7 +664,7 @@ void Sirens::Init()
 
 	Events::processScriptsEvent += []()
 	{
-		CVehicle *vehicle = FindPlayerVehicle(-1, false);
+		CVehicle *vehicle = FindPlayerVehicle();
 		if (!vehicle)
 		{
 			return;

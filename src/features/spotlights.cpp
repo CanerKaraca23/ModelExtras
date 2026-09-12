@@ -90,7 +90,7 @@ void SpotLights::Reload(CVehicle *pVeh)
 
 void SpotLights::OnHudRender()
 {
-	CVehicle *pVeh = FindPlayerVehicle(-1, false);
+	CVehicle *pVeh = FindPlayerVehicle();
 	if (!pVeh)
 	{
 		return;

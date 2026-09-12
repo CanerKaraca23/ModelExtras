@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "drl_light.h"
 #include "utils/util.h"
 #include "utils/render.h"

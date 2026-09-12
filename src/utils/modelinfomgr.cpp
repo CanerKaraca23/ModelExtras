@@ -1,5 +1,5 @@
-#include "modelinfomgr.h"
 #include "pch.h"
+#include "modelinfomgr.h"
 
 #include <CCamera.h>
 #include <CTxdStore.h>

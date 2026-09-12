@@ -67,10 +67,10 @@ bool IndicatorComponent::TryRegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const
     return false;
 }
 
-static CVector2D GetCarPathLinkPosition(CCarPathLinkAddress &address) {
-    if (address.m_wCarPathLinkId >= 0 && address.m_wCarPathLinkId < 9650) {
-        return CVector2D(static_cast<float>(ThePaths.nodes[address.m_wCarPathLinkId].m_wPosX) / 8.0f,
-                         static_cast<float>(ThePaths.nodes[address.m_wCarPathLinkId].m_wPosY) / 8.0f);
+static CVector2D GetCarPathLinkPosition(unsigned int nodeId) {
+    if (nodeId < 9650) {
+        return CVector2D(static_cast<float>(ThePaths.nodes[nodeId].m_wPosX) / 8.0f,
+                         static_cast<float>(ThePaths.nodes[nodeId].m_wPosY) / 8.0f);
     }
     return CVector2D(0.0f, 0.0f);
 }
@@ -171,7 +171,7 @@ void IndicatorComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehL
     if (LightsConfig::Get().gbGlobalIndicatorLights && !LightManager::IsMaterialAvailable(pControlVeh, INDICATOR_LIGHTS_TYPE) && !LightManager::IsMaterialAvailable(pControlVeh, {eMaterialType::STTLightLeft, eMaterialType::STTLightRight})) {
         if (CarUtil::IsAutomobile(pControlVeh) &&
             !CarUtil::IsBike(pControlVeh) &&
-            pControlVeh->bEngineOn && pControlVeh->m_fHealth > 0 && !pControlVeh->bIsDrowning && !pControlVeh->m_pAttachedTo) {
+            pControlVeh->bEngineOn && pControlVeh->m_fHealth > 0) {
             data.bUsingGlobalIndicators = true;
         }
     } else {

@@ -1,12 +1,12 @@
-int GetStrobeIndex(CVehicle *pVeh, RpMaterial *pMat) {
-    return pMat->color.blue;
-}
-
 #include "pch.h"
 #include "strobe_light.h"
 #include "utils/modelinfomgr.h"
 #include "utils/util.h"
 #include "utils/render.h"
+
+int GetStrobeIndex(CVehicle *pVeh, RpMaterial *pMat) {
+    return pMat->color.blue;
+}
 
 void StrobeLightComponent::RegisterMaterials(std::unordered_map<uint32_t, eMaterialType>& matMap) {
     matMap[VEHCOL_STROBELIGHT.ToInt()] = eMaterialType::StrobeLight;

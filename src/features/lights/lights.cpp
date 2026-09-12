@@ -1,5 +1,5 @@
-#include "enums/materialtype.h"
 #include "pch.h"
+#include "enums/materialtype.h"
 #include "lights.h"
 #include "manager.h"
 #include "utils/meevents.h"
