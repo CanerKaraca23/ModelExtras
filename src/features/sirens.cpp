@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "sirens.h"
 #include <common.h>
-#include <CShadows.h>
 #include <rwcore.h>
 #include <rpworld.h>
 #include <CPointLights.h>
@@ -38,25 +37,6 @@ bool IsValidSirenVehicle(RwFrame *pFrame)
 	return false;
 }
 
-bool Sirens::hkUsesSiren(std::function<hkUsesSirenFunc> originalCall, CVehicle* ptr)
-{
-	if (!ptr) return false;
-	auto &data = m_VehData.Get(ptr);
-	if (!data.bUsesSirenChecked)
-	{
-		data.vehicle = ptr;
-		data.bUsesSiren = IsValidSirenVehicle(ptr->m_pRwClump ? (RwFrame *)ptr->m_pRwClump->object.parent : nullptr);
-		data.bUsesSirenChecked = true;
-	}
-
-	if (modelData.contains(ptr->m_nModelIndex) && data.bUsesSiren)
-	{
-		return true;
-	}
-	
-	return originalCall ? originalCall(ptr) : false;
-}
-
 static CVehicle *pCurrentVeh = nullptr;
 static uint32_t g_nSirenKey = VK_L;
 
@@ -84,33 +64,6 @@ void Sirens::Reload(CVehicle *pVeh)
 	data = VehicleSiren(pVeh);
 	EventCtor(pVeh);
 	DataMgr::Reload(model);
-}
-
-void Sirens::hkAddPointLights(
-	std::function<hkAddPointLightsFunc> originalCall, 
-    uint8_t& type, 
-    CVector& position, 
-    CVector& direction, 
-    float& range, 
-    float& red, float& green, float& blue, 
-    uint8_t& fogEffect, 
-    bool& bCastsShadowFromPlayerCarAndPed, 
-    CEntity*& castingEntity
-)
-{
-    if (pCurrentVeh && modelData.contains(pCurrentVeh->m_nModelIndex)) {
-		return;
-	}
-
-    // SkyGfx renders the vanilla siren point light bright enough that it tints the
-    // vehicle and whatever is beside it. Adapted models already skip it above.
-    static bool bSkyGfx = GetModuleHandle("skygfx.asi") != nullptr;
-    if (bSkyGfx)
-    {
-        return;
-    }
-
-    originalCall(type, position, direction, range, red, green, blue, fogEffect, bCastsShadowFromPlayerCarAndPed, castingEntity);
 }
 
 VehicleSirenMaterial::VehicleSirenMaterial(std::string_view state, int material, const nlohmann::json &jsonRaw)
@@ -968,24 +921,6 @@ void Sirens::Init()
 	{
 		ProcessPointLights(pVeh);
 	};
-}
-
-void Sirens::hkRegisterCorona(unsigned int id, CEntity *attachTo, unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha, CVector const &posn, float radius, float farClip, eCoronaType coronaType, eCoronaFlareType flaretype, bool enableReflection, bool checkObstacles, int _param_not_used, float angle, bool longDistance, float nearClip, unsigned char fadeState, float fadeSpeed, bool onlyFromBelow, bool reflectionDelay)
-{
-	CVehicle *vehicle = NULL;
-
-	_asm {
-		pushad
-		mov vehicle, esi
-		popad
-	}
-
-	if (vehicle && modelData.contains(vehicle->m_nModelIndex))
-	{
-		return;
-	}
-
-	CCoronas::RegisterCorona(id, attachTo, red, green, blue, alpha, posn, radius, farClip, coronaType, flaretype, enableReflection, checkObstacles, _param_not_used, angle, longDistance, nearClip, fadeState, fadeSpeed, onlyFromBelow, reflectionDelay);
 }
 
 void Sirens::EnableDummy(int id, VehicleDummy *dummy, CVehicle *vehicle, VehicleSirenMaterial *material, eCoronaFlareType type, uint64_t time)

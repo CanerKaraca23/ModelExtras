@@ -15,4 +15,16 @@
 
 extern bool gbProperShadersDetected;
 
+enum eCoronaFlareType : unsigned char {
+    FLARETYPE_NONE = 0,
+    FLARETYPE_SUN = 1,
+    FLARETYPE_HEADLIGHTS = 2
+};
+
+enum ePointLightType : unsigned char {
+    PLTYPE_POINTLIGHT = 0,
+    PLTYPE_SPOTLIGHT = 1,
+    PLTYPE_DARKLIGHT = 2
+};
+
 #define STR_FOUND(x, y) ((x).find(y) != std::string::npos)

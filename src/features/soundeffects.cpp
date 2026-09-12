@@ -2,7 +2,6 @@
 #include "defines.h"
 #include "soundeffects.h"
 #include "lights/lights.h"
-#include "eVehicleClass.h"
 
 using namespace plugin;
 

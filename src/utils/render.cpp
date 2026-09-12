@@ -3,7 +3,6 @@
 #include "util.h"
 
 #include <CCoronas.h>
-#include <CShadows.h>
 #include <CBike.h>
 #include <CWorld.h>
 #include "utils/texmgr.h"
@@ -119,8 +118,8 @@ void RenderUtil::RegisterCorona(CEntity *pEntity, int coronaID, CVector pos, CRG
         coronaSz = std::max(size, size * dist * gfCoronaDistanceMul);
     }
 
-    CCoronas::RegisterCorona(coronaID, pEntity, col.r, col.g, col.b, col.a, pos,
-                             coronaSz, 350.0f, CORONATYPE_SHINYSTAR, FLARETYPE_NONE, true, false, 0, 0.0f, false, gfCoronaNearClip, 0, 30.0f, false, false);
+    CCoronas::RegisterCorona(coronaID, col.r, col.g, col.b, col.a, pos,
+                             coronaSz, 350.0f, CORONATYPE_SHINYSTAR, 0, 0, 0, 0, 0.0f, false, gfCoronaNearClip);
 };
 
 // Vanilla reach of the headlight spotlight
@@ -173,14 +172,8 @@ void RenderUtil::RegisterHeadlightPointLight(const DummyConfig *pConfig, float r
     if (CarUtil::IsBike(pConfig->pVeh) && pConfig->leanAffected)
     {
         CBike *pBike = static_cast<CBike *>(pConfig->pVeh);
-        bool wasCalculated = pBike->m_bLeanMatrixCalculated;
-        if (!wasCalculated)
-        {
-            pBike->CalculateLeanMatrix();
-        }
-
-        lightPos = pBike->m_mLeanMatrix * pConfig->shadow.position;
-        pBike->m_bLeanMatrixCalculated = wasCalculated;
+        pBike->CalculateLeanMatrix();
+        lightPos = pBike->field_2C4 * pConfig->shadow.position;
     }
 
     CMatrix vehMat = pConfig->pVeh->GetMatrix();
@@ -297,14 +290,8 @@ void RenderUtil::RegisterPointLight(const DummyConfig *pConfig, CRGBA col, float
     if (CarUtil::IsBike(pConfig->pVeh) && pConfig->leanAffected)
     {
         CBike *pBike = static_cast<CBike *>(pConfig->pVeh);
-        bool wasCalculated = pBike->m_bLeanMatrixCalculated;
-        if (!wasCalculated)
-        {
-            pBike->CalculateLeanMatrix();
-        }
-
-        lightPos = pBike->m_mLeanMatrix * pConfig->shadow.position;
-        pBike->m_bLeanMatrixCalculated = wasCalculated;
+        pBike->CalculateLeanMatrix();
+        lightPos = pBike->field_2C4 * pConfig->shadow.position;
     }
 
     // Extract dummy forward vector directly in vehicle space (respecting modder's 3D rotation)
@@ -519,14 +506,8 @@ void RenderUtil::RegisterShadowDirectional(const DummyConfig *pConfig, const std
     if (CarUtil::IsBike(pConfig->pVeh) && pConfig->leanAffected)
     {
         CBike *pBike = static_cast<CBike *>(pConfig->pVeh);
-        bool wasCalculated = pBike->m_bLeanMatrixCalculated;
-        if (!wasCalculated)
-        {
-            pBike->CalculateLeanMatrix();
-        }
-
-        worldPos = pBike->m_mLeanMatrix * pConfig->shadow.position;
-        pBike->m_bLeanMatrixCalculated = wasCalculated;
+        pBike->CalculateLeanMatrix();
+        worldPos = pBike->field_2C4 * pConfig->shadow.position;
     }
 
     // 3D light direction vectors directly from dummy matrix (retaining full 3D roll, pitch, and yaw)
@@ -652,13 +633,8 @@ void RenderUtil::RegisterShadow(CEntity *pEntity, CVector position, CRGBA col, f
     if (pEntity->m_nType == ENTITY_TYPE_VEHICLE && CarUtil::IsBike(static_cast<CVehicle *>(pEntity)))
     {
         CBike *pBike = static_cast<CBike *>(pEntity);
-        bool wasCalculated = pBike->m_bLeanMatrixCalculated;
-        if (!wasCalculated)
-        {
-            pBike->CalculateLeanMatrix();
-        }
-        shdwPos = pBike->m_mLeanMatrix * (position + nOffset + nSize);
-        pBike->m_bLeanMatrixCalculated = wasCalculated;
+        pBike->CalculateLeanMatrix();
+        shdwPos = pBike->field_2C4 * (position + nOffset + nSize);
     }
     shdwPos.z = CWorld::FindGroundZFor3DCoord(shdwPos.x, shdwPos.y, shdwPos.z + 100.0f, NULL, &pEntity) + 2.0f;
 

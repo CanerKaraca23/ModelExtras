@@ -183,13 +183,10 @@ RwTexture *TextureMgr::FindInDict(std::string_view name, RwTexDictionary *pDict,
         }
 
         if (!pTex) {
-            LOG_VERBOSE("TextureMgr: Unable to find '{}' in the ModelExtras TXD file. Searching in the vehicle TXD file instead.", name);
-            pTex = RwTexDictionaryFindNamedTexture(CVehicleModelInfo::ms_pVehicleTxd, nameBuf);
-        }
-
-        if (!pTex) {
-            LOG_VERBOSE("TextureMgr: Unable to find '{}' in the vehicle TXD file. Using the default white texture", name);
-            pTex = CVehicleModelInfo::ms_pWhiteTexture;
+            LOG_VERBOSE("TextureMgr: Unable to find '{}' in the ModelExtras TXD file. Using default texture.", name);
+            if (CVehicleModelInfo::ms_pEnvironmentMaps) {
+                pTex = CVehicleModelInfo::ms_pEnvironmentMaps[0];
+            }
         }
     }
 

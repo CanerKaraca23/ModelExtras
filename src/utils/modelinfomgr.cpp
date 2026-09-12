@@ -214,17 +214,8 @@ RpMaterial *ModelInfoMgr::SetEditableMaterialsCB(RpMaterial *material,
     return material;
   }
 
-  if (material->texture) {
-    const char *texName = material->texture->name;
-    bool isRemapTex = (texName && texName[0] == '#');
-    if (isRemapTex) {
-      if (CVehicleModelInfo::ms_pRemapTexture) {
-        m_RestoreEntries.push_back({&material->texture, material->texture});
-        material->texture = CVehicleModelInfo::ms_pRemapTexture;
-      }
-    } else if (pCurVeh) {
-      Remap::ProcessTextures(pCurVeh, material);
-    }
+  if (material->texture && pCurVeh) {
+    Remap::ProcessTextures(pCurVeh, material);
   }
 
   if (!pCurVeh) {

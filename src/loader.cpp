@@ -69,7 +69,7 @@ void ModelExtras::Init()
                 {
                     static std::string text;
                     text = std::format("Model {} requires ModelExtras v{} but v{} is installed.", model, ver, MOD_VERSION_NUMBER);
-                    CMessages::AddMessageWithString(std::remove_const_t<char*>(text.c_str()), 5000, 0);
+                    CMessages::AddMessage(text.c_str(), 5000, 0);
                     LOG(WARNING) << text;
                 }
             }
@@ -178,6 +178,6 @@ void ModelExtras::Reload()
         ModelInfoMgr::Reload(pVeh);
     }
     static std::string msg = "~g~ModelExtras:~w~ Config reloaded";
-    CMessages::AddMessageWithString(const_cast<char*>(msg.c_str()), 3000, 0);
+    CMessages::AddMessage(msg.c_str(), 3000, 0);
     LOG(INFO) << "ModelExtras: Configuration reloaded successfully.";
 }

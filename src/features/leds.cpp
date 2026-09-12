@@ -2,8 +2,6 @@
 #include "leds.h"
 #include <CClock.h>
 #include "defines.h"
-#include <CShadows.h>
-#include <eVehicleClass.h>
 #include <rwcore.h>
 #include <rpworld.h>
 #include "spotlights.h"

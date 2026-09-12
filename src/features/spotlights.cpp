@@ -2,7 +2,6 @@
 #include "spotlights.h"
 #include <CCamera.h>
 #include <CCoronas.h>
-#include <CShadows.h>
 #include <CPointLights.h>
 #include <CPools.h>
 #include <CWorld.h>
@@ -170,10 +169,12 @@ void SpotLights::OnVehicleRender(CVehicle *pVeh)
 			250.0f,
 			CORONATYPE_SHINYSTAR,
 			FLARETYPE_NONE,
-			false,
-			false,
 			0,
-			0.0f
+			0,
+			0,
+			0.0f,
+			false,
+			1.5f
 		);
 	}
 

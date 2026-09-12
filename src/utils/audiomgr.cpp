@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "utils/audiomgr.h"
 #include "defines.h"
-#include <CAudioEngine.h>
 #include <CCamera.h>
 #include <algorithm>
 
@@ -241,8 +240,7 @@ void AudioMgr::PlayFileSound(const std::string &path, float volume)
         return;
     }
 
-    constexpr float INV_64 = 1.0f / 64.0f;
-    float masterSfxVol = *(BYTE *)0xBA6797 * INV_64;
+    float masterSfxVol = 1.0f;
     float finalVolume = volume * gfSoundMult * masterSfxVol;
     if (finalVolume < 0.005f)
     {

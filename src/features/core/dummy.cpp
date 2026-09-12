@@ -230,15 +230,9 @@ void VehicleDummy::Update() {
     if (CarUtil::IsBike(data.pVeh) && data.leanAffected)
     {
         CBike *pBike = static_cast<CBike *>(data.pVeh);
-        bool wasCalculated = pBike->m_bLeanMatrixCalculated;
-        if (!wasCalculated)
-        {
-            pBike->CalculateLeanMatrix();
-        }
-
-        leanBasis = pBike->m_mLeanMatrix;
+        pBike->CalculateLeanMatrix();
+        leanBasis = pBike->field_2C4;
         pBasis = &leanBasis;
-        pBike->m_bLeanMatrixCalculated = wasCalculated;
     }
     const CMatrix &basis = *pBasis;
 
