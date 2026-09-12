@@ -19,6 +19,16 @@ public:
         return dx * dx + dy * dy + dz * dz;
     }
 
+    static inline float Distance(const CVector &a, const CVector &b)
+    {
+        return std::sqrt(DistanceSquared(a, b));
+    }
+
+    static inline float Dot(const CVector &a, const CVector &b)
+    {
+        return a.x * b.x + a.y * b.y + a.z * b.z;
+    }
+
     static inline float GetSquaredMagnitude(const CVector &v)
     {
         return v.x * v.x + v.y * v.y + v.z * v.z;

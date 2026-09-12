@@ -40,7 +40,7 @@ bool IsShadowTowardVehicle(CMatrix *dummyMatrix, CVector vehicleCenter)
     toVehicle.Normalize();
 
     // If dot > 0, shadow is cast toward vehicle
-    return CVector::Dot(shadowDir, toVehicle) > 0.0f;
+    return MathUtil::Dot(shadowDir, toVehicle) > 0.0f;
 }
 
 void RotateMatrix180Z(CMatrix &mat)
@@ -59,7 +59,7 @@ bool IsDummyPointingUp(CMatrix mat)
 {
     CVector forward = mat.up;
     CVector up = {0.0f, 0.0f, 1.0f};
-    float alignment = CVector::Dot(forward, up);
+    float alignment = MathUtil::Dot(forward, up);
     return alignment > 0.7f;
 }
 
@@ -178,9 +178,9 @@ void RenderUtil::RegisterHeadlightPointLight(const DummyConfig *pConfig, float r
 
     CMatrix vehMat = pConfig->pVeh->GetMatrix();
     CVector localDir;
-    localDir.x = CVector::Dot(mat.up, vehMat.right);
-    localDir.y = CVector::Dot(mat.up, vehMat.up);
-    localDir.z = CVector::Dot(mat.up, vehMat.at);
+    localDir.x = MathUtil::Dot(mat.up, vehMat.right);
+    localDir.y = MathUtil::Dot(mat.up, vehMat.up);
+    localDir.z = MathUtil::Dot(mat.up, vehMat.at);
     if (pConfig->mirroredX) localDir.x = -localDir.x;
     if (localDir.Magnitude() < 0.1f || localDir.y <= 0.0f) {
         localDir = CVector(0.0f, 1.0f, -0.10f);
@@ -296,9 +296,9 @@ void RenderUtil::RegisterPointLight(const DummyConfig *pConfig, CRGBA col, float
 
     // Extract dummy forward vector directly in vehicle space (respecting modder's 3D rotation)
     CVector localDir;
-    localDir.x = CVector::Dot(mat.up, vehMat.right);
-    localDir.y = CVector::Dot(mat.up, vehMat.up);
-    localDir.z = CVector::Dot(mat.up, vehMat.at);
+    localDir.x = MathUtil::Dot(mat.up, vehMat.right);
+    localDir.y = MathUtil::Dot(mat.up, vehMat.up);
+    localDir.z = MathUtil::Dot(mat.up, vehMat.at);
 
     if (pConfig->mirroredX)
     {

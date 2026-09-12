@@ -213,8 +213,7 @@ void ExhaustFx::RenderSmokeFx(CVehicle *pVeh, const ExhaustData &info)
         return;
     }
 
-    float dist = CVector::Distance(pVeh->GetPosition(), TheCamera.GetPosition());
-    dist *= dist;
+    float dist = MathUtil::DistanceSquared(pVeh->GetPosition(), TheCamera.GetPosition());
 
     if (dist > 256.0f || (dist > 64.0f && !((CTimer::m_FrameCounter + pVeh->m_nModelIndex) & 1)))
     {
@@ -241,7 +240,7 @@ void ExhaustFx::RenderSmokeFx(CVehicle *pVeh, const ExhaustData &info)
     particleDir *= -1;
 
     CVector parVelocity;
-    if (CVector::Dot(particleDir, pVeh->m_vecMoveSpeed) >= 0.05f)
+    if (MathUtil::Dot(particleDir, pVeh->m_vecMoveSpeed) >= 0.05f)
     {
         parVelocity = pVeh->m_vecMoveSpeed * 30.0f;
     }

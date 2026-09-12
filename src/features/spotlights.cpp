@@ -156,7 +156,7 @@ void SpotLights::OnVehicleRender(CVehicle *pVeh)
 	// 1. Corona at the spotlight lamp position (strictly visible when looking from the front of the lamp)
 	CVector toCam = TheCamera.GetPosition() - lightPos;
 	toCam.Normalize();
-	float dot = CVector::Dot(lightDir, toCam);
+	float dot = MathUtil::Dot(lightDir, toCam);
 	if (dot > 0.25f)
 	{
 		float alphaMul = std::clamp((dot - 0.25f) / 0.5f, 0.0f, 1.0f);
@@ -196,7 +196,7 @@ void SpotLights::ProcessPointLights(CVehicle *pVeh)
 		return;
 	}
 
-	if (CVector::Distance(pVeh->GetPosition(), TheCamera.GetPosition()) > 120.0f)
+	if (MathUtil::DistanceSquared(pVeh->GetPosition(), TheCamera.GetPosition()) > (120.0f * 120.0f))
 	{
 		return;
 	}
@@ -250,7 +250,7 @@ void SpotLights::ProcessPointLights(CVehicle *pVeh)
 			CVector2D shdwFront = front2D * (shdwLength * 2.0f);
 			CVector2D shdwSide = GetPerpRight(front2D * shdwWidth);
 
-			float distToCam = CVector::Distance(shadowCenter, TheCamera.GetPosition());
+			float distToCam = MathUtil::Distance(shadowCenter, TheCamera.GetPosition());
 			if (distToCam < 130.0f)
 			{
 				float alphaMul = 1.0f;

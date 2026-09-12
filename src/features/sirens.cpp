@@ -994,7 +994,7 @@ void Sirens::ProcessPointLights(CVehicle *pVeh)
 		return;
 	}
 
-	if (CVector::Distance(pVeh->GetPosition(), TheCamera.GetPosition()) > 75.0f)
+	if (MathUtil::DistanceSquared(pVeh->GetPosition(), TheCamera.GetPosition()) > (75.0f * 75.0f))
 	{
 		return;
 	}

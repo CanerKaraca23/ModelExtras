@@ -1,6 +1,7 @@
 #pragma once
 #include <CTimer.h>
 #include <NodeName.h>
+#include <CCamera.h>
 #include <game_vc/CModelInfo.h>
 
 #include <RenderWare.h>
