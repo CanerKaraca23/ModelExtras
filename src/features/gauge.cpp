@@ -77,18 +77,12 @@ void MileageIndicator::Init()
     for (auto& [name, indicator] : data.vecIndicatorData) {
         if (indicator.vecFrameList.size() < 6) continue;
 
-        float curWheelRot = CarUtil::IsBike(pVeh)
-            ? static_cast<CBike *>(pVeh)->m_fWheelSpeed[1]
-            : static_cast<CAutomobile *>(pVeh)->m_fWheelRotation[3];
-
-        float diff = curWheelRot - indicator.fLastWheelRot;
-        if (abs(diff) > 5.0f) diff = 0.0f;
-
+        float speed = Util::GetVehicleSpeed(pVeh);
         CVehicleModelInfo *pModelInfo = static_cast<CVehicleModelInfo *>(CModelInfo::GetModelInfo(pVeh->m_nModelIndex));
         float wheelRadius = (pModelInfo && pModelInfo->m_fWheelSize > 0.0f) ? pModelInfo->m_fWheelSize : 0.35f;
         float wheelDivisor = (wheelRadius * 8.17f) * indicator.fMul;
-        indicator.dCurrentDistance += (abs(diff) / (wheelDivisor > 0.0f ? wheelDivisor : 2.86f));
-        indicator.fLastWheelRot = curWheelRot;
+        float distDelta = (speed * CTimer::ms_fTimeStep * 0.02f) / (wheelDivisor > 0.0f ? wheelDivisor : 2.86f);
+        indicator.dCurrentDistance += distDelta;
 
         int displayVal = static_cast<int>(indicator.dCurrentDistance) % 1000000;
 

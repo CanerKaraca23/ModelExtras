@@ -114,12 +114,7 @@ void Lights::Init() {
 			return;
 		}
 
-		CVehicle *pTowedVeh = pControlVeh;
-		if (pControlVeh->m_pTrailer) {
-			pTowedVeh = pControlVeh->m_pTrailer;
-		}
-
-		LightManager::Render(pControlVeh, pTowedVeh);
+		LightManager::Render(pControlVeh, pControlVeh);
 	});
 }
 

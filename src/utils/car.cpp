@@ -57,12 +57,14 @@ bool CarUtil::HasDoubleExhaust(CVehicle *pVeh)
 
 bool CarUtil::IsLightsForcedOn(CVehicle *pVeh)
 {
-    return pVeh->m_nOverrideLights == eLightOverride::ForceLightsOn;
+    if (!pVeh) return false;
+    return pVeh->bLightsOn != 0;
 }
 
 bool CarUtil::IsLightsForcedOff(CVehicle *pVeh)
 {
-    return pVeh->m_nOverrideLights == eLightOverride::ForceLightsOff;
+    if (!pVeh) return true;
+    return pVeh->bLightsOn == 0;
 }
 
 bool CarUtil::AreHeadlightsPopUpOpen(CVehicle *pVeh)
@@ -101,29 +103,7 @@ float CarUtil::GetVehicleSpeed(CVehicle *pVeh)
 float CarUtil::GetVehicleSpeedRealistic(CVehicle *vehicle)
 {
     if (!vehicle) return 0.0f;
-    float wheelSpeed = 0.0;
-    CVehicleModelInfo *vehicleModelInfo = (CVehicleModelInfo *)CModelInfo::GetModelInfo(vehicle->m_nModelIndex);
-    if (IsBike(vehicle))
-    {
-        CBike *bike = (CBike *)vehicle;
-        float wheelSize = vehicleModelInfo ? vehicleModelInfo->m_fWheelSize : 0.35f;
-        wheelSpeed = (bike->m_fWheelSpeed[0] + bike->m_fWheelSpeed[1]) * 0.5f * wheelSize;
-    }
-    else if (IsAutomobile(vehicle))
-    {
-        CAutomobile *automobile = (CAutomobile *)vehicle;
-        float wheelSize = vehicleModelInfo ? vehicleModelInfo->m_fWheelSize : 0.35f;
-        wheelSpeed = ((automobile->m_fWheelSpeed[0] + automobile->m_fWheelSpeed[1] +
-                       automobile->m_fWheelSpeed[2] + automobile->m_fWheelSpeed[3]) * 0.25f) * wheelSize;
-    }
-    else
-    {
-        return (CarUtil::GetVehicleSpeed(vehicle)) * 3.6f;
-    }
-    wheelSpeed /= 2.45f;
-    wheelSpeed *= -186.0f;
-
-    return wheelSpeed;
+    return CarUtil::GetVehicleSpeed(vehicle) * 3.6f;
 }
 
 bool CarUtil::IsLightDamaged(CVehicle *pVeh, eLights light) {
@@ -234,11 +214,11 @@ bool CarUtil::IsDummyDamaged(CVehicle *pVeh, const DummyConfig &c) {
 }
 
 float CarUtil::GetVehiclePitch(CVehicle *pVeh) {
-    if (!pVeh || !pVeh->m_matrix) {
+    if (!pVeh) {
         return 0.0f;
     }
 
-    CVector forward = pVeh->m_matrix->at;
+    CVector forward = pVeh->GetMatrix().at;
     forward.Normalize();
 
     float pitchRad = asinf(forward.y);

@@ -586,7 +586,7 @@ void RenderUtil::RegisterShadow(CEntity *pEntity, CVector position, CRGBA col, f
 
     const float angleRad = DegToRad(angle);
     const CVector vehPos = pEntity->GetPosition();
-    const CMatrix &entityMatrix = *(CMatrix *)pEntity->m_matrix;
+    const CMatrix &entityMatrix = pEntity->GetMatrix();
 
     auto RotateVector2D = [angleRad](const CVector &v) -> CVector
     {

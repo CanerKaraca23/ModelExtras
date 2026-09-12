@@ -148,7 +148,7 @@ void LightManager::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh) {
                         bool isBike = CarUtil::IsBike(pVeh);
                         bool isDamaged = Util::IsFrameDamaged(pVeh, parent) || !FrameUtil::IsOkAtomicVisible(parent);
                         bool atomicCheck = !isBike && pVeh->GetIsOnScreen() && type != eMaterialType::HeadLightLeft && type != eMaterialType::HeadLightRight && isDamaged;
-                        if (atomicCheck || (c.dummyPos == eDummyPos::Rear && pVeh->m_pTrailer)) continue;
+                        if (atomicCheck) continue;
 
                         float szMul = 1.0f;
                         if (type == eMaterialType::HeadLightLeft || type == eMaterialType::HeadLightRight) {
@@ -243,7 +243,7 @@ void LightManager::RenderLight(CVehicle* pVeh, VehLightData& data, eMaterialType
             }
             bool atomicCheck = !isBike && pVeh->GetIsOnScreen() && type != eMaterialType::HeadLightLeft && type != eMaterialType::HeadLightRight && isDamaged;
 
-            if (atomicCheck || (c.dummyPos == eDummyPos::Rear && pVeh->m_pTrailer) || !isDummyOk) {
+            if (atomicCheck || !isDummyOk) {
                 continue;
             }
 
