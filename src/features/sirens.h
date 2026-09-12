@@ -239,6 +239,20 @@ public:
     }
     friend int GetSirenIndex(CVehicle *pVeh, RpMaterial *pMat);
 
+    static VehicleSirenData* GetModelData(int modelIndex) {
+        auto it = modelData.find(modelIndex);
+        return (it != modelData.end()) ? it->second : nullptr;
+    }
+
+    static VehicleSiren* GetVehicleData(CVehicle* pVeh) {
+        if (!pVeh) return nullptr;
+        return &m_VehData.Get(pVeh);
+    }
+
+    static bool IsSirenModel(int modelIndex) {
+        return modelData.contains(modelIndex);
+    }
+
 private:
     static inline bool m_bEnabled = false;
     static inline std::map<int, VehicleSirenData *> modelData;

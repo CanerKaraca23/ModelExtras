@@ -130,6 +130,16 @@ extern "C"
     ME_WRAPPER bool ME_GetVehicleLightState(CVehicle *pVeh, ME_LightID lightId);
     ME_WRAPPER void ME_SetVehicleLightState(CVehicle *pVeh, ME_LightID lightId, bool state);
 
+    // Sirens
+    ME_WRAPPER int  ME_GetSirenStateCount(CVehicle *pVeh);
+    ME_WRAPPER int  ME_GetSirenStateCountByModel(int modelIndex);
+    ME_WRAPPER int  ME_GetSirenState(CVehicle *pVeh);
+    ME_WRAPPER bool ME_SetSirenState(CVehicle *pVeh, int state);
+    ME_WRAPPER bool ME_GetSirenMute(CVehicle *pVeh);
+    ME_WRAPPER void ME_SetSirenMute(CVehicle *pVeh, bool mute);
+    ME_WRAPPER bool ME_IsSirenActive(CVehicle *pVeh);
+    ME_WRAPPER bool ME_IsSirenVehicle(CVehicle *pVeh);
+
 #ifdef __cplusplus
 }
 #endif
