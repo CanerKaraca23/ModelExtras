@@ -86,28 +86,60 @@ void Lights::Init() {
                 return std::nullopt;
             };
 
+            auto CheckOffCol = [&](const char *key) -> std::optional<CRGBA> {
+                if (!lights.contains(key)) return std::nullopt;
+                const nlohmann::json *pSec = &lights[key];
+                if (pSec->contains("material") && (*pSec)["material"].contains("color_off")) {
+                    pSec = &(*pSec)["material"]["color_off"];
+                } else if (pSec->contains("color_off")) {
+                    pSec = &(*pSec)["color_off"];
+                } else {
+                    return std::nullopt;
+                }
+                CRGBA off;
+                off.r = pSec->value("red", 255);
+                off.g = pSec->value("green", 255);
+                off.b = pSec->value("blue", 255);
+                off.a = 255;
+                return off;
+            };
+
             std::optional<CRGBA> col;
+            std::optional<CRGBA> offCol;
+            auto ResolveLightCol = [&](const char *specific, const char *generic = nullptr, const char *alt = nullptr) {
+                col = CheckCol(specific);
+                offCol = CheckOffCol(specific);
+                if (alt) {
+                    if (!col) col = CheckCol(alt);
+                    if (!offCol) offCol = CheckOffCol(alt);
+                }
+                if (generic) {
+                    if (!col) col = CheckCol(generic);
+                    if (!offCol) offCol = CheckOffCol(generic);
+                }
+            };
+
             switch (type) {
-            case eMaterialType::HeadLightLeft: col = CheckCol("headlight_l"); if (!col) col = CheckCol("headlights"); break;
-            case eMaterialType::HeadLightRight: col = CheckCol("headlight_r"); if (!col) col = CheckCol("headlights"); break;
-            case eMaterialType::TailLightLeft: col = CheckCol("taillight_l"); if (!col) col = CheckCol("taillights"); break;
-            case eMaterialType::TailLightRight: col = CheckCol("taillight_r"); if (!col) col = CheckCol("taillights"); break;
-            case eMaterialType::BrakeLightLeft: case eMaterialType::NABrakeLightLeft: col = CheckCol("brakelight_l"); if (!col) col = CheckCol("brakelights"); break;
-            case eMaterialType::BrakeLightRight: case eMaterialType::NABrakeLightRight: col = CheckCol("brakelight_r"); if (!col) col = CheckCol("brakelights"); break;
-            case eMaterialType::ReverseLightLeft: col = CheckCol("reverselight_l"); if (!col) col = CheckCol("reverselights"); break;
-            case eMaterialType::ReverseLightRight: col = CheckCol("reverselight_r"); if (!col) col = CheckCol("reverselights"); break;
-            case eMaterialType::IndicatorLightLeftFront: col = CheckCol("indicator_lf"); if (!col) col = CheckCol("indicators"); break;
-            case eMaterialType::IndicatorLightRightFront: col = CheckCol("indicator_rf"); if (!col) col = CheckCol("indicators"); break;
-            case eMaterialType::IndicatorLightLeftRear: col = CheckCol("indicator_lr"); if (!col) col = CheckCol("indicators"); break;
-            case eMaterialType::IndicatorLightRightRear: col = CheckCol("indicator_rr"); if (!col) col = CheckCol("indicators"); break;
-            case eMaterialType::IndicatorLightLeftMiddle: col = CheckCol("indicator_lm"); if (!col) col = CheckCol("indicators"); break;
-            case eMaterialType::IndicatorLightRightMiddle: col = CheckCol("indicator_rm"); if (!col) col = CheckCol("indicators"); break;
-            case eMaterialType::FogLightLeft: col = CheckCol("foglight_l"); if (!col) col = CheckCol("fogl_l"); if (!col) col = CheckCol("foglights"); break;
-            case eMaterialType::FogLightRight: col = CheckCol("foglight_r"); if (!col) col = CheckCol("fogl_r"); if (!col) col = CheckCol("foglights"); break;
+            case eMaterialType::HeadLightLeft: ResolveLightCol("headlight_l", "headlights"); break;
+            case eMaterialType::HeadLightRight: ResolveLightCol("headlight_r", "headlights"); break;
+            case eMaterialType::TailLightLeft: ResolveLightCol("taillight_l", "taillights"); break;
+            case eMaterialType::TailLightRight: ResolveLightCol("taillight_r", "taillights"); break;
+            case eMaterialType::BrakeLightLeft: case eMaterialType::NABrakeLightLeft: ResolveLightCol("brakelight_l", "brakelights"); break;
+            case eMaterialType::BrakeLightRight: case eMaterialType::NABrakeLightRight: ResolveLightCol("brakelight_r", "brakelights"); break;
+            case eMaterialType::ReverseLightLeft: ResolveLightCol("reverselight_l", "reverselights"); break;
+            case eMaterialType::ReverseLightRight: ResolveLightCol("reverselight_r", "reverselights"); break;
+            case eMaterialType::IndicatorLightLeftFront: ResolveLightCol("indicator_lf", "indicators"); break;
+            case eMaterialType::IndicatorLightRightFront: ResolveLightCol("indicator_rf", "indicators"); break;
+            case eMaterialType::IndicatorLightLeftRear: ResolveLightCol("indicator_lr", "indicators"); break;
+            case eMaterialType::IndicatorLightRightRear: ResolveLightCol("indicator_rr", "indicators"); break;
+            case eMaterialType::IndicatorLightLeftMiddle: ResolveLightCol("indicator_lm", "indicators"); break;
+            case eMaterialType::IndicatorLightRightMiddle: ResolveLightCol("indicator_rm", "indicators"); break;
+            case eMaterialType::FogLightLeft: ResolveLightCol("foglight_l", "foglights", "fogl_l"); break;
+            case eMaterialType::FogLightRight: ResolveLightCol("foglight_r", "foglights", "fogl_r"); break;
             default: break;
             }
-            if (col) {
-                return MatStateColor{*col, DEFAULT_MAT_COL};
+            if (col || offCol) {
+                return MatStateColor{col.value_or(DEFAULT_MAT_COL), offCol.value_or(DEFAULT_MAT_COL)};
             }
         }
 
