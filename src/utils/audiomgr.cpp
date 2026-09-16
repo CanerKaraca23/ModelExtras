@@ -97,7 +97,7 @@ void AudioMgr::Init()
     Events::processScriptsEvent += []
     {
         static bool bWasPaused = false;
-        bool bIsPaused = CTimer::m_UserPause || CTimer::m_CodePause;
+        bool bIsPaused = !Util::IsWindowFocused() || CTimer::m_UserPause || CTimer::m_CodePause;
 
         if (bIsPaused != bWasPaused)
         {
@@ -169,7 +169,19 @@ void AudioMgr::PlaySwitchSound(CEntity *pEntity)
 
 bool AudioMgr::ShouldPlaySound()
 {
-    return gbSoundEffectsEnabled;
+    if (!gbSoundEffectsEnabled)
+    {
+        return false;
+    }
+    if (!Util::IsWindowFocused())
+    {
+        return false;
+    }
+    if (CTimer::m_UserPause || CTimer::m_CodePause)
+    {
+        return false;
+    }
+    return true;
 }
 
 void AudioMgr::Play3DSound(const std::string &path, const CVector &worldPos, CEntity *pEntity, float baseVolume, float maxDistance)
@@ -358,6 +370,12 @@ void AudioMgr::UpdateLoopStream(StreamHandle stream, const CVector &worldPos, fl
 
     if (BassAPI::fnChannelIsActive(stream) != 1 /* BASS_ACTIVE_PLAYING */)
     {
+        return;
+    }
+
+    if (!ShouldPlaySound())
+    {
+        BassAPI::fnChannelSetAttr(stream, 2 /* BASS_ATTRIB_VOL */, 0.0f);
         return;
     }
 

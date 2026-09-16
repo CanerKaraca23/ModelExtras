@@ -345,9 +345,12 @@ void SoundEffects::ProcessVehicle(CVehicle *pVeh)
                 // Wheels must touch ground (not jumping or flying in mid-air)
                 bool bOnGround = (pAuto->m_nWheelsOnGround > 0);
 
-                if (isEligible && bOnGround && !pVeh->bEngineBroken && !pVeh->bIsDrowning && !isBigVeh && !pVeh->bIsBig && !pVeh->bIsBus)
+                // Wheel lockup check: if front wheels are locked up / stopped spinning while car is moving at speed, don't squeak
+                bool bWheelLocked = (speed > 5.0f && std::abs(pAuto->m_fWheelSpeed[0]) < 0.01f && std::abs(pAuto->m_fWheelSpeed[1]) < 0.01f);
+
+                if (isEligible && bOnGround && !bWheelLocked && !pVeh->bEngineBroken && !pVeh->bIsDrowning && !isBigVeh && !pVeh->bIsBig && !pVeh->bIsBus)
                 {
-                    float brakeInput = pVeh->bIsHandbrakeOn ? 1.0f : pVeh->m_fBreakPedal;
+                    float brakeInput = pVeh->m_fBreakPedal;
                     if (brakeInput > 0.05f && speed > 0.2f)
                     {
                         // Realistic acoustic speed roll-off: as car slows down to a stop, volume smoothly decays
