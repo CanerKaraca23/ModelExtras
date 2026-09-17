@@ -87,6 +87,11 @@ void SpotLights::ReloadConfig()
 void SpotLights::Reload(CVehicle *pVeh)
 {
 	ReloadConfig();
+	if (pVeh)
+	{
+		SpotlightData &data = m_VehData.Get(pVeh);
+		ProperShadersMgr::DestroyLight(data.hPsLight);
+	}
 }
 
 void SpotLights::OnHudRender()
@@ -112,6 +117,10 @@ void SpotLights::OnHudRender()
 			data.bEnabled = !data.bEnabled;
 			prev = now;
 			AudioMgr::PlaySwitchSound(pVeh);
+			if (!data.bEnabled)
+			{
+				ProperShadersMgr::DestroyLight(data.hPsLight);
+			}
 		}
 	}
 
@@ -199,11 +208,19 @@ void SpotLights::ProcessPointLights(CVehicle *pVeh)
 	SpotlightData &data = m_VehData.Get(pVeh);
 	if (!data.bEnabled || data.pFrame == nullptr)
 	{
+		if (data.hPsLight != PS_INVALID_LIGHT)
+		{
+			ProperShadersMgr::DestroyLight(data.hPsLight);
+		}
 		return;
 	}
 
 	if (CVector::Distance(pVeh->GetPosition(), TheCamera.GetPosition()) > 120.0f)
 	{
+		if (data.hPsLight != PS_INVALID_LIGHT)
+		{
+			ProperShadersMgr::SetEnabled(data.hPsLight, false);
+		}
 		return;
 	}
 
@@ -214,22 +231,47 @@ void SpotLights::ProcessPointLights(CVehicle *pVeh)
 	CVector lightDir = frameLtm.up;
 	lightDir.Normalize();
 
-	// 1. 3D Point Light: Placed forward along cone (3.5m) with 18m reach
-	CVector plightPos = lightPos + lightDir * 3.5f;
-	CPointLights::AddLight(
-		PLTYPE_SPOTLIGHT,
-		plightPos,
-		lightDir,
-		18.0f,
-		1.2f, 1.2f, 1.2f,
-		0,
-		false,
-		nullptr
-	);
+	if (ProperShadersMgr::IsAvailable())
+	{
+		if (data.hPsLight == PS_INVALID_LIGHT)
+		{
+			data.hPsLight = ProperShadersMgr::CreateSpotLight(
+				lightPos,
+				lightDir,
+				24.0f,
+				38.0f,
+				CRGBA(255, 255, 255, 255),
+				2.2f,
+				/*bVolumetricBeam=*/ true,
+				/*bFog=*/ true,
+				PS_LIGHTFLAG_IGNORE_AREA_TWEAKS
+			);
+		}
+		else
+		{
+			ProperShadersMgr::SetEnabled(data.hPsLight, true);
+			ProperShadersMgr::SetPosition(data.hPsLight, lightPos);
+			ProperShadersMgr::SetDirection(data.hPsLight, lightDir);
+		}
+	}
+	else
+	{
+		// 1. 3D Point Light: Placed forward along cone (3.5m) with 18m reach
+		CVector plightPos = lightPos + lightDir * 3.5f;
+		CPointLights::AddLight(
+			PLTYPE_SPOTLIGHT,
+			plightPos,
+			lightDir,
+			18.0f,
+			1.2f, 1.2f, 1.2f,
+			0,
+			false,
+			nullptr
+		);
+	}
 
 	// 2. Ground Shadow: Disabled with ProperShaders (unless PointLights is disabled)
 	extern bool gbProperShadersDetected;
-	extern bool gbLightPointLights;
 	if (!gbProperShadersDetected || !gbLightPointLights)
 	{
 		RwTexture *pTex = pSpotlightTex ? pSpotlightTex : TextureMgr::Get("spotlight", gGlobalShadowIntensity);

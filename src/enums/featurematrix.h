@@ -47,6 +47,7 @@ enum class eFeatureMatrix
     RollbackBed,
     Clock,
     ExtraWheels,
+    Underglow,
 
     FeatureCount
 };

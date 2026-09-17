@@ -32,9 +32,11 @@
 #include "features/leds.h"
 #include "features/wheel.h"
 #include "features/rollbackbed.h"
+#include "features/underglow.h"
 #include "utils/frameextension.h"
 #include "utils/meevents.h"
 #include "utils/samp.h"
+#include "utils/propershaders.h"
 
 constexpr uint32_t TEST_CHEAT = 0x0ADC;
 
@@ -49,8 +51,8 @@ void ModelExtras::Init()
     Events::initGameEvent.after += []()
     {
         DataMgr::Init();
-        gbProperShadersDetected = GetModuleHandle("ProperShaders.asi") != nullptr;
-        if (gbProperShadersDetected)
+        ProperShadersMgr::Init();
+        if (ProperShadersMgr::IsAvailable())
         {
             LOG(INFO) << "Proper Shaders detected, enabling compatibility mode for ModelExtras lights.";
         }
@@ -127,6 +129,7 @@ void ModelExtras::Init()
     RegisterFeature<Sirens>();
     RegisterFeature<SoundEffects>();
     RegisterFeature<SpotLights>();
+    RegisterFeature<Underglow>();
     static std::vector<CBaseFeature *> s_ActiveTickFeatures;
     static std::vector<CBaseFeature *> s_ActiveVehicleFeatures;
 

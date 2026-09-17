@@ -4,8 +4,10 @@
 #include "utils/datamgr.h"
 #include "utils/audiomgr.h"
 #include "enums/vehdummy.h"
+#include "utils/propershaders.h"
 #include <CGeneral.h>
 #include <Fx_c.h>
+#include <CPointLights.h>
 #include "ModelExtrasAPI.h"
 
 using namespace plugin;
@@ -213,11 +215,44 @@ void BackFireEffect::BackFireSingle(CVehicle *pVeh, bool bPlaySound)
         }
     }
 
+    // Dynamic backfire light flash (ProperShaders volumetric / vanilla fallback)
+    CVehicleModelInfo *pInfo = static_cast<CVehicleModelInfo *>(CModelInfo::GetModelInfo(pVeh->m_nModelIndex));
+    CVector pos = (pInfo && pInfo->m_pVehicleStruct) ? pInfo->m_pVehicleStruct->m_avDummyPos[eVehicleDummies::EXHAUST] : CVector(0.0f, -2.0f, 0.0f);
+    CVector exhaustWorldPos = pVeh->TransformFromObjectSpace(pos);
+
+    if (ProperShadersMgr::IsAvailable())
+    {
+        CRGBA flameCol = isHighBlastEvent ? CRGBA(255, 140, 30, 255) : CRGBA(255, 180, 60, 255);
+        float flashIntensity = isHighBlastEvent ? 3.0f : 1.8f;
+        unsigned int lifeMs = isHighBlastEvent ? 120 : 80;
+        unsigned int fadeMs = isHighBlastEvent ? 60 : 40;
+
+        ProperShadersMgr::CreateOneShotPointLight(
+            exhaustWorldPos,
+            isHighBlastEvent ? 8.0f : 5.5f,
+            flameCol,
+            flashIntensity,
+            lifeMs,
+            fadeMs,
+            /*bFog=*/ true
+        );
+    }
+    else
+    {
+        CPointLights::AddLight(
+            PLTYPE_POINTLIGHT,
+            exhaustWorldPos,
+            CVector(0.0f, 0.0f, 0.0f),
+            isHighBlastEvent ? 6.0f : 4.0f,
+            1.0f, 0.6f, 0.15f,
+            0,
+            false,
+            nullptr
+        );
+    }
+
     if (bPlaySound)
     {
-        CVehicleModelInfo *pInfo = static_cast<CVehicleModelInfo *>(CModelInfo::GetModelInfo(pVeh->m_nModelIndex));
-        CVector pos = (pInfo && pInfo->m_pVehicleStruct) ? pInfo->m_pVehicleStruct->m_avDummyPos[eVehicleDummies::EXHAUST] : CVector(0.0f, -2.0f, 0.0f);
-        CVector exhaustWorldPos = pVeh->TransformFromObjectSpace(pos);
         static std::string audioPath = MOD_DATA_PATH("audio/backfire.wav");
         AudioMgr::Play3DSound(audioPath, exhaustWorldPos, pVeh, 1.5f, 80.0f);
     }

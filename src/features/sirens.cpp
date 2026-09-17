@@ -10,6 +10,7 @@
 #include "utils/audiomgr.h"
 #include "utils/util.h"
 #include "utils/datamgr.h"
+#include "utils/propershaders.h"
 #include "enums/materialtype.h"
 #include "utils/meevents.h"
 #include <CPools.h>
@@ -1359,6 +1360,20 @@ void Sirens::ProcessPointLights(CVehicle *pVeh)
 
 				CVector plightPos = pVeh->TransformFromObjectSpace(cfg.shadow.position + localDir * 0.45f);
 				CPointLights::AddLight(PLTYPE_SPOTLIGHT, plightPos, worldDir, sirenRadius, r, g, b, 0, false, nullptr);
+
+				if (ProperShadersMgr::IsAvailable())
+				{
+					ProperShadersMgr::CreateOneShotPointLight(
+						plightPos,
+						sirenRadius * 0.75f,
+						activeColor,
+						1.4f,
+						/*lifetimeMs=*/ 75,
+						/*fadeOutMs=*/ 35,
+						/*bFog=*/ true,
+						/*flags=*/ PS_LIGHTFLAG_NO_SURFACE_LIGHTING | PS_LIGHTFLAG_IGNORE_AREA_TWEAKS
+					);
+				}
 			}
 		}
 	}

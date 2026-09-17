@@ -3,6 +3,8 @@
 #include "core/base.h"
 #include <vector>
 
+#include "utils/propershaders.h"
+
 struct SpotlightData
 {
 	RwFrame *pFrame = nullptr;
@@ -10,8 +12,12 @@ struct SpotlightData
 	bool bHasOrigPos = false;
 	bool bEnabled = false;
 	unsigned int nLastFrame = 0;
+	PS_LightHandle hPsLight = PS_INVALID_LIGHT;
 	SpotlightData(CVehicle *pVeh) {}
-	~SpotlightData() = default;
+	~SpotlightData()
+	{
+		ProperShadersMgr::DestroyLight(hPsLight);
+	}
 };
 
 class SpotLights : public CVehFeature<SpotlightData>
