@@ -20,6 +20,7 @@ public:
     
     static void Process(CVehicle* pVeh);
     static void ProcessPointLights(CVehicle* pVeh);
+    static void ProcessLightBreakEffects(CVehicle* pVeh, VehLightData& data);
     static void Render(CVehicle* pControlVeh, CVehicle* pTowedVeh);
 
     static DummyConfig CreateBaseConfig(CVehicle* pVeh, RwFrame* pFrame);

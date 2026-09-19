@@ -998,6 +998,10 @@ bool ME_IsPlayerIdleBrakeLightsEnabled() {
   return LightsConfig::Get().bPlayerIdleBrakeLights;
 }
 
+bool ME_IsLightBreakEffectEnabled() {
+  return LightsConfig::Get().bLightBreakEffect;
+}
+
 // Vehicle Physics & Auxiliary
 float ME_GetVehiclePitch(CVehicle *pVeh) {
   if (!pVeh) return 0.0f;

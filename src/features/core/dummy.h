@@ -18,7 +18,7 @@ public:
     VehicleDummy* operator->() { return this; }
     const VehicleDummy* operator->() const { return this; }
 
-    const DummyConfig& GetRef() {
+    const DummyConfig& GetRef() const {
         return data;
     }
 

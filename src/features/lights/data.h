@@ -50,6 +50,7 @@ struct LightsConfig {
     bool bAutoIndicatorsOnSteer = false;
     bool bFoglightTiedToHeadlight = false;
     bool bPlayerIdleBrakeLights = false;
+    bool bLightBreakEffect = true;
     float fHighBeamPointLightMul = 2.0f;
     float fSirenPointLightMul = 1.0f;
 
@@ -82,6 +83,7 @@ struct LightsConfig {
         bAutoIndicatorsOnSteer = gConfig.ReadBoolean("LIGHTS", "AutoIndicatorsOnSteer", gConfig.ReadBoolean("TWEAKS", "AutoIndicatorsOnSteer", false));
         bFoglightTiedToHeadlight = gConfig.ReadBoolean("LIGHTS", "FoglightTiedToHeadlight", gConfig.ReadBoolean("TWEAKS", "FoglightTiedToHeadlight", false));
         bPlayerIdleBrakeLights = gConfig.ReadBoolean("LIGHTS", "PlayerIdleBrakeLights", gConfig.ReadBoolean("TWEAKS", "PlayerIdleBrakeLights", false));
+        bLightBreakEffect = gConfig.ReadBoolean("LIGHTS", "LightBreakEffect", gConfig.ReadBoolean("FEATURES", "LightBreakEffect", true));
         
         float rawMul = gConfig.ReadFloat("LIGHTS", "HighBeamPointLightMul", gConfig.ReadFloat("TWEAKS", "HighBeamPointLightMul", 2.0f));
         fHighBeamPointLightMul = (rawMul < 1.0f) ? 1.0f : ((rawMul > 4.0f) ? 4.0f : rawMul);
@@ -134,6 +136,8 @@ struct VehLightData {
     bool bHasVehFuncsPopUp = false;
     std::array<float, eMaterialType::TotalMaterial> fLightFactor = {};
     std::array<bool, eMaterialType::TotalMaterial> bLightRenderedThisFrame = {};
+    bool bPrevLightDamaged[4] = {false, false, false, false};
+    bool bDamageInit = false;
 
     VehLightData(CVehicle* pVeh = nullptr) {
         std::fill(std::begin(bLightStates), std::end(bLightStates), true);
@@ -160,6 +164,8 @@ struct VehLightData {
             bHasVehFuncsPopUp = other.bHasVehFuncsPopUp;
             fLightFactor = other.fLightFactor;
             bLightRenderedThisFrame = other.bLightRenderedThisFrame;
+            std::copy(std::begin(other.bPrevLightDamaged), std::end(other.bPrevLightDamaged), std::begin(bPrevLightDamaged));
+            bDamageInit = other.bDamageInit;
             dummies = std::move(other.dummies);
             for (auto& vec : other.dummies) {
                 vec.clear();
@@ -178,6 +184,8 @@ struct VehLightData {
         fHighBeamFactor = 0.0f;
         bLightRenderedThisFrame.fill(false);
         bHasVehFuncsPopUp = false;
+        std::fill(std::begin(bPrevLightDamaged), std::end(bPrevLightDamaged), false);
+        bDamageInit = false;
     }
     
     ~VehLightData() {

@@ -307,6 +307,7 @@ extern "C"
     ME_WRAPPER bool  ME_IsAutoIndicatorsOnSteerEnabled();
     ME_WRAPPER bool  ME_IsFoglightTiedToHeadlight();
     ME_WRAPPER bool  ME_IsPlayerIdleBrakeLightsEnabled();
+    ME_WRAPPER bool  ME_IsLightBreakEffectEnabled();
 
     // Vehicle Physics & Auxiliary
     ME_WRAPPER float ME_GetVehiclePitch(CVehicle *pVeh);

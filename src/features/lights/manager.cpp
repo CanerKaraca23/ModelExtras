@@ -18,6 +18,13 @@
 #include "components/drl_light.h"
 #include "components/side_light.h"
 #include "components/spot_light.h"
+#include "damage.h"
+#include <CAudioEngine.h>
+#include <Fx_c.h>
+#include <CModelInfo.h>
+#include <CVehicleModelInfo.h>
+#include "enums/vehdummy.h"
+#include "utils/mathutil.h"
 
 void LightManager::Init() {
     m_Components.clear();
@@ -90,6 +97,223 @@ void LightManager::RegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const std::str
     }
 }
 
+static CVector GetLightWorldPosition(CVehicle* pVeh, const VehLightData& data, int lightIdx) {
+    if (!pVeh) return CVector(0.0f, 0.0f, 0.0f);
+
+    auto getDummyPos = [&](eMaterialType type, bool isLeft) -> std::optional<CVector> {
+        if (type >= 0 && type < eMaterialType::TotalMaterial && !data.dummies[type].empty()) {
+            for (const auto& dummy : data.dummies[type]) {
+                const auto& c = dummy.GetRef();
+                if (c.frame) {
+                    RwFrameGetLTM(c.frame);
+                    if (c.mirroredX) {
+                        CVector localPos = c.position;
+                        if (localPos.Magnitude() < 0.001f) {
+                            localPos = c.frame->modelling.pos;
+                        }
+                        localPos.x = isLeft ? -std::abs(localPos.x) : std::abs(localPos.x);
+                        return pVeh->TransformFromObjectSpace(localPos);
+                    } else {
+                        CVector worldPos = reinterpret_cast<const CVector&>(c.frame->ltm.pos);
+                        if (worldPos.Magnitude() > 0.01f) {
+                            return worldPos;
+                        }
+                    }
+                }
+            }
+        }
+        return std::nullopt;
+    };
+
+    std::optional<CVector> pos;
+    switch (lightIdx) {
+    case 0: // Front-Left
+        pos = getDummyPos(eMaterialType::HeadLightLeft, true);
+        break;
+    case 1: // Front-Right
+        pos = getDummyPos(eMaterialType::HeadLightRight, false);
+        break;
+    case 2: // Rear-Left
+        pos = getDummyPos(eMaterialType::TailLightLeft, true);
+        if (!pos) pos = getDummyPos(eMaterialType::BrakeLightLeft, true);
+        if (!pos) pos = getDummyPos(eMaterialType::STTLightLeft, true);
+        break;
+    case 3: // Rear-Right
+        pos = getDummyPos(eMaterialType::TailLightRight, false);
+        if (!pos) pos = getDummyPos(eMaterialType::BrakeLightRight, false);
+        if (!pos) pos = getDummyPos(eMaterialType::STTLightRight, false);
+        break;
+    }
+
+    if (pos && !pos->IsZero()) {
+        return *pos;
+    }
+
+    CVehicleModelInfo* pInfo = static_cast<CVehicleModelInfo*>(CModelInfo::GetModelInfo(pVeh->m_nModelIndex));
+    if (pInfo && pInfo->m_pVehicleStruct) {
+        if (lightIdx == 0 || lightIdx == 1) {
+            CVector dPos = pInfo->m_pVehicleStruct->m_avDummyPos[eVehicleDummies::LIGHT_FRONT_MAIN];
+            if (!dPos.IsZero()) {
+                dPos.x = (lightIdx == 0) ? -std::abs(dPos.x) : std::abs(dPos.x);
+                return pVeh->TransformFromObjectSpace(dPos);
+            }
+        } else {
+            CVector dPos = pInfo->m_pVehicleStruct->m_avDummyPos[eVehicleDummies::LIGHT_REAR_MAIN];
+            if (!dPos.IsZero()) {
+                dPos.x = (lightIdx == 2) ? -std::abs(dPos.x) : std::abs(dPos.x);
+                return pVeh->TransformFromObjectSpace(dPos);
+            }
+        }
+    }
+
+    if (pInfo && pInfo->m_pColModel) {
+        const auto& box = pInfo->m_pColModel->m_boundBox;
+        float x = (lightIdx == 0 || lightIdx == 2) ? box.m_vecMin.x * 0.75f : box.m_vecMax.x * 0.75f;
+        float y = (lightIdx == 0 || lightIdx == 1) ? box.m_vecMax.y * 0.95f : box.m_vecMin.y * 0.95f;
+        float z = (box.m_vecMin.z + box.m_vecMax.z) * 0.5f;
+        return pVeh->TransformFromObjectSpace(CVector(x, y, z));
+    }
+
+    return pVeh->GetPosition();
+}
+
+static std::optional<CVector> GetSpecificDummyPos(CVehicle* pVeh, const VehLightData& data, eMaterialType type, bool isLeft) {
+    if (!pVeh || type < 0 || type >= eMaterialType::TotalMaterial || data.dummies[type].empty()) {
+        return std::nullopt;
+    }
+    for (const auto& dummy : data.dummies[type]) {
+        const auto& c = dummy.GetRef();
+        if (c.frame) {
+            RwFrameGetLTM(c.frame);
+            if (c.mirroredX) {
+                CVector localPos = c.position;
+                if (localPos.Magnitude() < 0.001f) {
+                    localPos = c.frame->modelling.pos;
+                }
+                localPos.x = isLeft ? -std::abs(localPos.x) : std::abs(localPos.x);
+                return pVeh->TransformFromObjectSpace(localPos);
+            } else {
+                CVector worldPos = reinterpret_cast<const CVector&>(c.frame->ltm.pos);
+                if (worldPos.Magnitude() > 0.01f) {
+                    return worldPos;
+                }
+            }
+        }
+    }
+    return std::nullopt;
+}
+
+static RwRGBA ResolveLightColor(CVehicle* pVeh, const VehLightData& data, eMaterialType type, RwRGBA defaultCol) {
+    if (!pVeh) return defaultCol;
+
+    if (type >= 0 && type < eMaterialType::TotalMaterial && !data.dummies[type].empty()) {
+        const auto& c = data.dummies[type].front().GetRef();
+        if (c.hasCustomColor) {
+            return { c.corona.color.r, c.corona.color.g, c.corona.color.b, 255 };
+        }
+    }
+
+    MatStateColor matCol = LightManager::GetMaterialColor(pVeh, type);
+    if (matCol.on != DEFAULT_MAT_COL) {
+        return { matCol.on.r, matCol.on.g, matCol.on.b, 255 };
+    }
+
+    return defaultCol;
+}
+
+void LightManager::ProcessLightBreakEffects(CVehicle* pVeh, VehLightData& data) {
+    if (!LightsConfig::Get().bLightBreakEffect || !pVeh || pVeh->m_nVehicleSubClass != VEHICLE_AUTOMOBILE) {
+        return;
+    }
+
+    LightDamageState dmg = LightDamageState::Get(pVeh, pVeh);
+    bool curDamaged[4] = {
+        !dmg.isHeadlightLeftOk,
+        !dmg.isHeadlightRightOk,
+        !dmg.isRearLeftOk,
+        !dmg.isRearRightOk
+    };
+
+    if (!data.bDamageInit) {
+        for (int i = 0; i < 4; ++i) {
+            data.bPrevLightDamaged[i] = curDamaged[i];
+        }
+        data.bDamageInit = true;
+        return;
+    }
+
+    for (int i = 0; i < 4; ++i) {
+        if (!data.bPrevLightDamaged[i] && curDamaged[i]) {
+            if (pVeh->GetIsOnScreen()) {
+                CVector vehPos = pVeh->GetPosition();
+                float distSq = MathUtil::DistanceSquared(TheCamera.GetPosition(), vehPos);
+                if (distSq < (150.0f * 150.0f)) {
+                    CVector cornerPos = GetLightWorldPosition(pVeh, data, i);
+                    if (!cornerPos.IsZero()) {
+                        if (i == 0 || i == 1) { // Front corners
+                            bool isLeft = (i == 0);
+                            eMaterialType headType = isLeft ? eMaterialType::HeadLightLeft : eMaterialType::HeadLightRight;
+                            eMaterialType indType = isLeft ? eMaterialType::IndicatorLightLeftFront : eMaterialType::IndicatorLightRightFront;
+                            eMaterialType fogType = isLeft ? eMaterialType::FogLightLeft : eMaterialType::FogLightRight;
+
+                            // 1. Headlight (Clear/White or custom)
+                            RwRGBA headCol = ResolveLightColor(pVeh, data, headType, { 255, 255, 255, 255 });
+                            CVector headPos = GetSpecificDummyPos(pVeh, data, headType, isLeft).value_or(cornerPos);
+                            g_fx.AddGlass(headPos, headCol, 0.40f, 22);
+
+                            // 2. Front Turn Indicator (Amber or custom)
+                            RwRGBA indCol = ResolveLightColor(pVeh, data, indType, { 255, 160, 20, 255 });
+                            CVector indPos = GetSpecificDummyPos(pVeh, data, indType, isLeft).value_or(cornerPos);
+                            g_fx.AddGlass(indPos, indCol, 0.35f, 14);
+
+                            // 3. Fog Light (if present)
+                            if (!data.dummies[fogType].empty() || LightManager::IsMaterialAvailable(pVeh, fogType)) {
+                                RwRGBA fogCol = ResolveLightColor(pVeh, data, fogType, { 255, 255, 230, 255 });
+                                CVector fogPos = GetSpecificDummyPos(pVeh, data, fogType, isLeft).value_or(cornerPos);
+                                g_fx.AddGlass(fogPos, fogCol, 0.35f, 10);
+                            }
+                        } else { // Rear corners
+                            bool isLeft = (i == 2);
+                            eMaterialType tailType = isLeft ? eMaterialType::TailLightLeft : eMaterialType::TailLightRight;
+                            eMaterialType brakeType = isLeft ? eMaterialType::BrakeLightLeft : eMaterialType::BrakeLightRight;
+                            eMaterialType sttType = isLeft ? eMaterialType::STTLightLeft : eMaterialType::STTLightRight;
+                            eMaterialType indType = isLeft ? eMaterialType::IndicatorLightLeftRear : eMaterialType::IndicatorLightRightRear;
+                            eMaterialType revType = isLeft ? eMaterialType::ReverseLightLeft : eMaterialType::ReverseLightRight;
+
+                            // 1. Taillight / Brake light (Red or custom)
+                            RwRGBA tailCol = ResolveLightColor(pVeh, data, tailType, { 240, 25, 25, 255 });
+                            CVector tailPos = GetSpecificDummyPos(pVeh, data, tailType, isLeft)
+                                .value_or(GetSpecificDummyPos(pVeh, data, brakeType, isLeft)
+                                .value_or(GetSpecificDummyPos(pVeh, data, sttType, isLeft)
+                                .value_or(cornerPos)));
+                            g_fx.AddGlass(tailPos, tailCol, 0.40f, 20);
+
+                            // 2. Rear Turn Indicator (Amber or custom)
+                            RwRGBA indCol = ResolveLightColor(pVeh, data, indType, { 255, 160, 20, 255 });
+                            CVector indPos = GetSpecificDummyPos(pVeh, data, indType, isLeft).value_or(cornerPos);
+                            g_fx.AddGlass(indPos, indCol, 0.35f, 12);
+
+                            // 3. Reverse Light (Clear/White or custom)
+                            RwRGBA revCol = ResolveLightColor(pVeh, data, revType, { 255, 255, 255, 255 });
+                            CVector revPos = GetSpecificDummyPos(pVeh, data, revType, isLeft).value_or(cornerPos);
+                            g_fx.AddGlass(revPos, revCol, 0.35f, 8);
+                        }
+
+                        CVector forward = pVeh->GetForward();
+                        CVector sparkDir = (i == 0 || i == 1) ? (forward + CVector(0.0f, 0.0f, 0.3f)) : (-forward + CVector(0.0f, 0.0f, 0.3f));
+                        sparkDir.Normalize();
+                        CVector across = CVector(0.0f, 0.0f, 1.0f);
+                        g_fx.AddSparks(cornerPos, sparkDir, 2.5f, 12, across, 0, 0.5f, 0.5f);
+
+                        AudioEngine.ReportMissionAudioEvent(eAudioEvents::AE_GLASS_BREAK_FAST, &cornerPos);
+                    }
+                }
+            }
+        }
+        data.bPrevLightDamaged[i] = curDamaged[i];
+    }
+}
+
 void LightManager::Process(CVehicle* pVeh) {
     if (!pVeh) return;
 
@@ -97,6 +321,7 @@ void LightManager::Process(CVehicle* pVeh) {
     for (const auto& comp : m_Components) {
         comp->Process(pVeh, data);
     }
+    ProcessLightBreakEffects(pVeh, data);
 }
 
 void LightManager::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh) {
