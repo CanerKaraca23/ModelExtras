@@ -51,6 +51,7 @@ struct LightsConfig {
     bool bFoglightTiedToHeadlight = false;
     bool bPlayerIdleBrakeLights = false;
     float fHighBeamPointLightMul = 2.0f;
+    float fSirenPointLightMul = 1.0f;
 
     void InitConfig() {
         gbGlobalIndicatorLights = gConfig.ReadBoolean("LIGHTS", "StandardLights_GlobalIndicatorLights", gConfig.ReadBoolean("FEATURES", "StandardLights_GlobalIndicatorLights", false));
@@ -84,6 +85,9 @@ struct LightsConfig {
         
         float rawMul = gConfig.ReadFloat("LIGHTS", "HighBeamPointLightMul", gConfig.ReadFloat("TWEAKS", "HighBeamPointLightMul", 2.0f));
         fHighBeamPointLightMul = (rawMul < 1.0f) ? 1.0f : ((rawMul > 4.0f) ? 4.0f : rawMul);
+
+        float rawSirenMul = gConfig.ReadFloat("LIGHTS", "SirenPointLightMul", gConfig.ReadFloat("TWEAKS", "SirenPointLightMul", 1.0f));
+        fSirenPointLightMul = (rawSirenMul < 0.1f) ? 0.1f : ((rawSirenMul > 4.0f) ? 4.0f : rawSirenMul);
     }
 
 private:

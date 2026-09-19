@@ -982,6 +982,10 @@ float ME_GetHighBeamPointLightMul() {
   return LightsConfig::Get().fHighBeamPointLightMul;
 }
 
+float ME_GetSirenPointLightMul() {
+  return LightsConfig::Get().fSirenPointLightMul;
+}
+
 bool ME_IsAutoIndicatorsOnSteerEnabled() {
   return LightsConfig::Get().bAutoIndicatorsOnSteer;
 }
