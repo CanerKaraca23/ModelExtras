@@ -130,7 +130,6 @@ struct VehLightData {
     std::array<std::vector<VehicleDummy>, eMaterialType::TotalMaterial> dummies;
     
     bool bLightStates[eMaterialType::TotalMaterial];
-    unsigned int nHeadlightTickFrame = 0;
     bool bHasVehFuncsPopUp = false;
     std::array<float, eMaterialType::TotalMaterial> fLightFactor = {};
     std::array<bool, eMaterialType::TotalMaterial> bLightRenderedThisFrame = {};
@@ -165,7 +164,6 @@ struct VehLightData {
                 vec.clear();
             }
             std::copy(std::begin(other.bLightStates), std::end(other.bLightStates), std::begin(bLightStates));
-            nHeadlightTickFrame = other.nHeadlightTickFrame;
         }
         return *this;
     }
