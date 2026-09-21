@@ -222,10 +222,10 @@ bool ME_IsLightDamaged(CVehicle *pVeh, ME_LightID lightId, int dummyIndex) {
   if (dummyIndex >= 0 && dummyIndex < static_cast<int>(data.dummies[matType].size())) {
     return CarUtil::IsDummyDamaged(pVeh, data.dummies[matType][dummyIndex]->GetRef());
   }
-  if (matType == eMaterialType::HeadLightLeft) return CarUtil::IsLightDamaged(pVeh, eLights::LIGHT_FRONT_LEFT);
-  if (matType == eMaterialType::HeadLightRight) return CarUtil::IsLightDamaged(pVeh, eLights::LIGHT_FRONT_RIGHT);
-  if (matType == eMaterialType::TailLightLeft || matType == eMaterialType::BrakeLightLeft) return CarUtil::IsLightDamaged(pVeh, eLights::LIGHT_REAR_LEFT);
-  if (matType == eMaterialType::TailLightRight || matType == eMaterialType::BrakeLightRight) return CarUtil::IsLightDamaged(pVeh, eLights::LIGHT_REAR_RIGHT);
+  if (matType == eMaterialType::HeadLightLeft || matType == eMaterialType::HighBeamLeft) return CarUtil::IsLightDamaged(pVeh, eLights::LIGHT_FRONT_LEFT) || CarUtil::IsPanelDamaged(pVeh, ePanels::WING_FRONT_LEFT);
+  if (matType == eMaterialType::HeadLightRight || matType == eMaterialType::HighBeamRight) return CarUtil::IsLightDamaged(pVeh, eLights::LIGHT_FRONT_RIGHT) || CarUtil::IsPanelDamaged(pVeh, ePanels::WING_FRONT_RIGHT);
+  if (matType == eMaterialType::TailLightLeft || matType == eMaterialType::BrakeLightLeft || matType == eMaterialType::ReverseLightLeft) return CarUtil::IsLightDamaged(pVeh, eLights::LIGHT_REAR_LEFT) || CarUtil::IsPanelDamaged(pVeh, ePanels::WING_REAR_LEFT);
+  if (matType == eMaterialType::TailLightRight || matType == eMaterialType::BrakeLightRight || matType == eMaterialType::ReverseLightRight) return CarUtil::IsLightDamaged(pVeh, eLights::LIGHT_REAR_RIGHT) || CarUtil::IsPanelDamaged(pVeh, ePanels::WING_REAR_RIGHT);
   return false;
 }
 
