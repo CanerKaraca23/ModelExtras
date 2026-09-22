@@ -67,9 +67,8 @@ bool HeadlightComponent::TryRegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const
         c.shadow.render = name != "headlights2";
         
         bool isBike = (pVeh->m_nVehicleSubClass == VEHICLE_BIKE);
-        bool isCenteredBike = isBike && std::abs(c.frame->modelling.pos.x) <= 0.12f;
 
-        if (isCenteredBike) {
+        if (isBike) {
             c.mirroredX = false;
             c.lightType = eMaterialType::HeadLightLeft;
             data.dummies[c.lightType].push_back(VehicleDummy(c));
@@ -140,9 +139,8 @@ bool HeadlightComponent::TryRegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const
         c.shadow.render = false;
         
         bool isBike = (pVeh->m_nVehicleSubClass == VEHICLE_BIKE);
-        bool isCenteredBike = isBike && std::abs(c.frame->modelling.pos.x) <= 0.12f;
 
-        if (isCenteredBike) {
+        if (isBike) {
             c.mirroredX = false;
             c.lightType = eMaterialType::HighBeamLeft;
             data.dummies[c.lightType].push_back(VehicleDummy(c));
