@@ -29,9 +29,8 @@ bool TailLightComponent::TryRegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const
         c.shadow.render = name != "taillights2";
 
         bool isBike = (pVeh->m_nVehicleSubClass == VEHICLE_BIKE);
-        bool isCenteredBike = isBike && std::abs(c.frame->modelling.pos.x) <= 0.12f;
 
-        if (isCenteredBike) {
+        if (isBike) {
             c.mirroredX = false;
             c.lightType = eMaterialType::TailLightRight;
             data.dummies[c.lightType].push_back(VehicleDummy(c));
