@@ -306,6 +306,7 @@ extern "C"
     ME_WRAPPER float ME_GetLightShadowDistance();
     ME_WRAPPER float ME_GetHighBeamPointLightMul();
     ME_WRAPPER float ME_GetSirenPointLightMul();
+    ME_WRAPPER float ME_GetPointLightIntensity();
     ME_WRAPPER bool  ME_IsAutoIndicatorsOnSteerEnabled();
     ME_WRAPPER bool  ME_IsFoglightTiedToHeadlight();
     ME_WRAPPER bool  ME_IsPlayerIdleBrakeLightsEnabled();

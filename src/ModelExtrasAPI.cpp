@@ -986,6 +986,10 @@ float ME_GetSirenPointLightMul() {
   return LightsConfig::Get().fSirenPointLightMul;
 }
 
+float ME_GetPointLightIntensity() {
+  return LightsConfig::Get().fPointLightIntensity;
+}
+
 bool ME_IsAutoIndicatorsOnSteerEnabled() {
   return LightsConfig::Get().bAutoIndicatorsOnSteer;
 }

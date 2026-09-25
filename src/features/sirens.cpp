@@ -1347,9 +1347,10 @@ void Sirens::ProcessPointLights(CVehicle *pVeh)
 			}
 			sirenRadius = std::clamp(sirenRadius, 5.0f, 15.0f) * LightsConfig::Get().fSirenPointLightMul;
 
-			float r = std::clamp(activeColor.r / 255.0f, 0.0f, 1.0f);
-			float g = std::clamp(activeColor.g / 255.0f, 0.0f, 1.0f);
-			float b = std::clamp(activeColor.b / 255.0f, 0.0f, 1.0f);
+			float intensity = LightsConfig::Get().fPointLightIntensity;
+			float r = std::clamp((activeColor.r / 255.0f) * intensity, 0.0f, 1.0f);
+			float g = std::clamp((activeColor.g / 255.0f) * intensity, 0.0f, 1.0f);
+			float b = std::clamp((activeColor.b / 255.0f) * intensity, 0.0f, 1.0f);
 
 			for (auto &e : data.Dummies[mat.first])
 			{
@@ -1423,13 +1424,14 @@ void Sirens::ProcessPointLights(CVehicle *pVeh)
 			uint32_t step = (CTimer::m_snTimeInMilliseconds / 120) % 4;
 			CMatrix vehMat = pVeh->GetMatrix();
 			float bikeSirenRadius = 8.5f * LightsConfig::Get().fSirenPointLightMul;
+			float intensity = LightsConfig::Get().fPointLightIntensity;
 			if (step == 0 || step == 1)
 			{
 				CVector localLeft(-0.35f, 0.70f, 0.45f);
 				CVector plightPos = pVeh->TransformFromObjectSpace(localLeft);
 				CVector worldDir = vehMat.up - vehMat.at * 0.25f;
 				worldDir.Normalize();
-				CPointLights::AddLight(PLTYPE_SPOTLIGHT, plightPos, worldDir, bikeSirenRadius, 1.0f, 0.1f, 0.1f, 0, false, nullptr);
+				CPointLights::AddLight(PLTYPE_SPOTLIGHT, plightPos, worldDir, bikeSirenRadius, 1.0f * intensity, 0.1f * intensity, 0.1f * intensity, 0, false, nullptr);
 			}
 			else if (step == 2 || step == 3)
 			{
@@ -1437,7 +1439,7 @@ void Sirens::ProcessPointLights(CVehicle *pVeh)
 				CVector plightPos = pVeh->TransformFromObjectSpace(localRight);
 				CVector worldDir = vehMat.up - vehMat.at * 0.25f;
 				worldDir.Normalize();
-				CPointLights::AddLight(PLTYPE_SPOTLIGHT, plightPos, worldDir, bikeSirenRadius, 0.1f, 0.1f, 1.0f, 0, false, nullptr);
+				CPointLights::AddLight(PLTYPE_SPOTLIGHT, plightPos, worldDir, bikeSirenRadius, 0.1f * intensity, 0.1f * intensity, 1.0f * intensity, 0, false, nullptr);
 			}
 		}
 	}
