@@ -11,8 +11,13 @@ using namespace plugin;
 #define RwRGBAGetRGB(a) (*(DWORD *)&(a) & 0xFFFFFF)
 
 void PedColors::SetEditableMaterials(RpClump *pClump) {
+	if (!pClump || reinterpret_cast<uintptr_t>(pClump) < 0x10000 || reinterpret_cast<uintptr_t>(pClump) >= 0x7FFF0000) return;
+	if (RwObjectGetType(pClump) != rpCLUMP) return;
 	RpClumpForAllAtomics(pClump, [](RpAtomic * pAtomic, void *data) {
-		if (rwObjectGetFlags(pAtomic) & rpATOMICRENDER) {
+		if (pAtomic && reinterpret_cast<uintptr_t>(pAtomic) > 0x10000 && reinterpret_cast<uintptr_t>(pAtomic) < 0x7FFF0000 &&
+		    RwObjectGetType(pAtomic) == rpATOMIC && (rwObjectGetFlags(pAtomic) & rpATOMICRENDER) &&
+		    pAtomic->geometry && reinterpret_cast<uintptr_t>(pAtomic->geometry) > 0x10000 && reinterpret_cast<uintptr_t>(pAtomic->geometry) < 0x7FFF0000 &&
+		    RwObjectGetType(pAtomic->geometry) == rpGEOMETRY && pAtomic->geometry->matList.numMaterials > 0 && pAtomic->geometry->matList.materials) {
 			RpGeometryForAllMaterials(pAtomic->geometry, [](RpMaterial *pMaterial, void* data) {
 				if (PedColors::m_pCurrentPed) {
 					int idx = 0;

@@ -59,26 +59,41 @@ void ModelInfoMgr::Init() {
       return;
     }
 
-    ModelInfoMgr::SetupRender(pVeh);
-
-    RpClumpForAllAtomics(
-        pVeh->m_pRwClump,
-        [](RpAtomic *atomic, void *data) -> RpAtomic * {
-          if (atomic && atomic->geometry) {
-            RpGeometryForAllMaterials(atomic->geometry,
-                                      ModelInfoMgr::SetEditableMaterialsCB,
-                                      data);
-          }
-          return atomic;
-        },
-        nullptr);
-
     auto &data = m_VehData.Get(pVeh);
     if (data.nFrameCount > 10) {
+      ModelInfoMgr::SetupRender(pVeh);
+
+      if (reinterpret_cast<uintptr_t>(pVeh->m_pRwClump) > 0x10000 &&
+          reinterpret_cast<uintptr_t>(pVeh->m_pRwClump) < 0x7FFF0000 &&
+          RwObjectGetType(pVeh->m_pRwClump) == rpCLUMP) {
+        RpClumpForAllAtomics(
+            pVeh->m_pRwClump,
+            [](RpAtomic *atomic, void *data) -> RpAtomic * {
+              if (atomic &&
+                  reinterpret_cast<uintptr_t>(atomic) > 0x10000 &&
+                  reinterpret_cast<uintptr_t>(atomic) < 0x7FFF0000 &&
+                  RwObjectGetType(atomic) == rpATOMIC &&
+                  atomic->geometry &&
+                  reinterpret_cast<uintptr_t>(atomic->geometry) > 0x10000 &&
+                  reinterpret_cast<uintptr_t>(atomic->geometry) < 0x7FFF0000 &&
+                  RwObjectGetType(atomic->geometry) == rpGEOMETRY &&
+                  atomic->geometry->matList.numMaterials > 0 &&
+                  atomic->geometry->matList.materials != nullptr) {
+                RpGeometryForAllMaterials(atomic->geometry,
+                                          ModelInfoMgr::SetEditableMaterialsCB,
+                                          data);
+              }
+              return atomic;
+            },
+            nullptr);
+      }
+
       ModelInfoMgr::OnRender(pVeh);
     } else if (data.nFrameCount == 10) {
-      ModelInfoMgr::FindDummies(
-          pVeh, reinterpret_cast<RwFrame *>(pVeh->m_pRwClump->object.parent));
+      if (pVeh->m_pRwClump->object.parent) {
+        ModelInfoMgr::FindDummies(
+            pVeh, reinterpret_cast<RwFrame *>(pVeh->m_pRwClump->object.parent));
+      }
       data.nFrameCount++;
     } else {
       data.nFrameCount++;
