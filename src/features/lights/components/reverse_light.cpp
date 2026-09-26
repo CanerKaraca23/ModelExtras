@@ -41,7 +41,8 @@ void ReverseLightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, V
 
     if (CarUtil::IsAutomobile(pControlVeh) || CarUtil::IsBike(pControlVeh)) 
     {
-        bool isRevlightSupportedByModel = LightManager::IsMaterialAvailable(pTowedVeh, {eMaterialType::ReverseLightLeft, eMaterialType::ReverseLightRight});
+        bool isRevlightSupportedByModel = LightManager::IsMaterialAvailable(pTowedVeh, {eMaterialType::ReverseLightLeft, eMaterialType::ReverseLightRight}) ||
+                                          LightManager::IsDummyAvailable(data, {eMaterialType::ReverseLightLeft, eMaterialType::ReverseLightRight});
 
         bool reverseLightsOn = !isBike && isRevlightSupportedByModel && pControlVeh->m_nCurrentGear == 0 && (Util::GetVehicleSpeed(pControlVeh) >= 0.001f) && pControlVeh->m_pDriver;
         if (reverseLightsOn) {

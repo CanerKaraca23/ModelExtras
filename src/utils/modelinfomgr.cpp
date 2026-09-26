@@ -62,6 +62,7 @@ void ModelInfoMgr::Init() {
     auto &data = m_VehData.Get(pVeh);
     if (data.nFrameCount > 10) {
       ModelInfoMgr::SetupRender(pVeh);
+      ModelInfoMgr::OnRender(pVeh);
 
       if (reinterpret_cast<uintptr_t>(pVeh->m_pRwClump) > 0x10000 &&
           reinterpret_cast<uintptr_t>(pVeh->m_pRwClump) < 0x7FFF0000 &&
@@ -87,13 +88,12 @@ void ModelInfoMgr::Init() {
             },
             nullptr);
       }
-
-      ModelInfoMgr::OnRender(pVeh);
     } else if (data.nFrameCount == 10) {
       if (pVeh->m_pRwClump->object.parent) {
         ModelInfoMgr::FindDummies(
             pVeh, reinterpret_cast<RwFrame *>(pVeh->m_pRwClump->object.parent));
       }
+      ModelInfoMgr::FindMaterials(pVeh, pVeh->m_pRwClump);
       data.nFrameCount++;
     } else {
       data.nFrameCount++;
@@ -156,12 +156,51 @@ void ModelInfoMgr::FindDummies(CVehicle *vehicle, RwFrame *frame) {
   }
 }
 
+void ModelInfoMgr::FindMaterials(CVehicle *pVeh, RpClump *pClump) {
+  if (!pVeh || !pClump ||
+      reinterpret_cast<uintptr_t>(pClump) <= 0x10000 ||
+      reinterpret_cast<uintptr_t>(pClump) >= 0x7FFF0000 ||
+      RwObjectGetType(pClump) != rpCLUMP) {
+    return;
+  }
+
+  RpClumpForAllAtomics(
+      pClump,
+      [](RpAtomic *atomic, void *dataPtr) -> RpAtomic * {
+        if (atomic &&
+            reinterpret_cast<uintptr_t>(atomic) > 0x10000 &&
+            reinterpret_cast<uintptr_t>(atomic) < 0x7FFF0000 &&
+            RwObjectGetType(atomic) == rpATOMIC &&
+            atomic->geometry &&
+            reinterpret_cast<uintptr_t>(atomic->geometry) > 0x10000 &&
+            reinterpret_cast<uintptr_t>(atomic->geometry) < 0x7FFF0000 &&
+            RwObjectGetType(atomic->geometry) == rpGEOMETRY &&
+            atomic->geometry->matList.numMaterials > 0 &&
+            atomic->geometry->matList.materials != nullptr) {
+          CVehicle *pVehicle = static_cast<CVehicle *>(dataPtr);
+          auto &vData = m_VehData.Get(pVehicle);
+          for (int i = 0; i < atomic->geometry->matList.numMaterials; ++i) {
+            RpMaterial *mat = atomic->geometry->matList.materials[i];
+            if (mat) {
+              eMaterialType type = FetchMaterialType(pVehicle, mat);
+              if (type >= 0 && type < eMaterialType::TotalMaterial) {
+                vData.m_MatAvail[type] = true;
+              }
+            }
+          }
+        }
+        return atomic;
+      },
+      pVeh);
+}
+
 void ModelInfoMgr::Reload(CVehicle *pVeh) {
   ReloadConfig();
   if (pVeh && pVeh->m_pRwClump) {
     RwFrame *frame =
         reinterpret_cast<RwFrame *>(pVeh->m_pRwClump->object.parent);
     FindDummies(pVeh, frame);
+    FindMaterials(pVeh, pVeh->m_pRwClump);
   }
 }
 
@@ -261,11 +300,11 @@ RpMaterial *ModelInfoMgr::SetEditableMaterialsCB(RpMaterial *material,
     RwRGBA *pColor = RpMaterialGetColor(material);
     m_RestoreEntries.push_back({pColor, *reinterpret_cast<void **>(pColor)});
 
-    pColor->red = matCol.on.r;
-    pColor->green = matCol.on.g;
-    pColor->blue = matCol.on.b;
-
     if (lightOn) {
+      pColor->red = matCol.on.r;
+      pColor->green = matCol.on.g;
+      pColor->blue = matCol.on.b;
+
       float factor = 1.0f;
       if (iLightIndex != eMaterialType::SirenLight &&
           iLightIndex != eMaterialType::SpotLight &&
@@ -276,27 +315,27 @@ RpMaterial *ModelInfoMgr::SetEditableMaterialsCB(RpMaterial *material,
           factor = lData.fLightFactor[iLightIndex];
         }
       }
-      m_RestoreEntries.push_back({&material->texture, material->texture});
 
       if (material->texture) {
         const char *matTexName = material->texture->name;
+        RwTexture *pTex = nullptr;
         if (matTexName && strcmp(matTexName, "vehiclelights128") == 0) {
-          material->texture = TextureMgr::FindInDict("vehiclelightson128", material->texture->dict, true);
-        } else if (material->texture == TextureMgr::FindInDict("vehiclelights128", material->texture->dict, true)) {
-          material->texture = TextureMgr::FindInDict("vehiclelightson128", material->texture->dict, true);
+          pTex = TextureMgr::FindInDict("vehiclelightson128", material->texture->dict, false);
         } else {
-          RwTexture *pTex = TextureMgr::FindOnTextureInDict(
-              material, material->texture->dict);
-          if (pTex) {
-            material->texture = pTex;
-          } else {
-            LOG_VERBOSE("Expected an 'on' texture for {} but none found",
-                        material->texture->name);
-          }
+          pTex = TextureMgr::FindOnTextureInDict(material, material->texture->dict, false);
+        }
+
+        if (pTex) {
+          m_RestoreEntries.push_back({&material->texture, material->texture});
+          material->texture = pTex;
         }
       }
       m_SurfPropsRestoreEntries.push_back({material, material->surfaceProps});
       material->surfaceProps = GetLightSurfaceProps(factor);
+    } else {
+      pColor->red = matCol.off.r;
+      pColor->green = matCol.off.g;
+      pColor->blue = matCol.off.b;
     }
   } else {
     CRGBA col = {255, 255, 255, 255};

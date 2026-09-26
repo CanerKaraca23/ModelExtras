@@ -89,6 +89,7 @@ void IndicatorComponent::Process(CVehicle* pVeh, VehLightData& data) {
                          LightManager::IsMaterialAvailable(pVeh, INDICATOR_LIGHTS_TYPE) ||
                          LightManager::IsDummyAvailable(data, INDICATOR_LIGHTS_TYPE) ||
                          LightManager::IsMaterialAvailable(pVeh, {eMaterialType::STTLightLeft, eMaterialType::STTLightRight}) ||
+                         LightManager::IsDummyAvailable(data, {eMaterialType::STTLightLeft, eMaterialType::STTLightRight}) ||
                          (LightsConfig::Get().gbGlobalIndicatorLights &&
                           CarUtil::IsAutomobile(pVeh) &&
                           !CarUtil::IsBike(pVeh));
@@ -153,7 +154,12 @@ void IndicatorComponent::Process(CVehicle* pVeh, VehLightData& data) {
 }
 
 void IndicatorComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehLightData& data) {
-    if (!LightsConfig::Get().gbGlobalIndicatorLights && !LightManager::IsMaterialAvailable(pControlVeh, INDICATOR_LIGHTS_TYPE)) {
+    bool hasDedicated = LightManager::IsMaterialAvailable(pControlVeh, INDICATOR_LIGHTS_TYPE) ||
+                         LightManager::IsDummyAvailable(data, INDICATOR_LIGHTS_TYPE) ||
+                         LightManager::IsMaterialAvailable(pControlVeh, {eMaterialType::STTLightLeft, eMaterialType::STTLightRight}) ||
+                         LightManager::IsDummyAvailable(data, {eMaterialType::STTLightLeft, eMaterialType::STTLightRight});
+
+    if (!hasDedicated && !LightsConfig::Get().gbGlobalIndicatorLights) {
         return;
     }
 
@@ -168,7 +174,7 @@ void IndicatorComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehL
     bool isRightMiddleOk = damage.isMiddleRightOk;
 
     // Global turn lights activation check
-    if (LightsConfig::Get().gbGlobalIndicatorLights && !LightManager::IsMaterialAvailable(pControlVeh, INDICATOR_LIGHTS_TYPE) && !LightManager::IsMaterialAvailable(pControlVeh, {eMaterialType::STTLightLeft, eMaterialType::STTLightRight})) {
+    if (!hasDedicated && LightsConfig::Get().gbGlobalIndicatorLights) {
         if (CarUtil::IsAutomobile(pControlVeh) &&
             !CarUtil::IsBike(pControlVeh) &&
             pControlVeh->bEngineOn && pControlVeh->m_fHealth > 0) {

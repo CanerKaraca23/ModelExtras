@@ -61,6 +61,7 @@ private:
   static inline plugin::VehicleExtendedData<VehModelData> m_VehData;
 
   static void FindDummies(CVehicle *vehicle, RwFrame *frame);
+  static void FindMaterials(CVehicle *pVeh, RpClump *pClump);
   static void OnRender(CVehicle *pVeh);
   static MatStateColor FetchMaterialCol(CVehicle *pVeh, RpMaterial *pMat,
                                         eMaterialType type);

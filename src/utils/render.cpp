@@ -110,16 +110,26 @@ void RenderUtil::RegisterCorona(CEntity *pEntity, int coronaID, CVector pos, CRG
 
     float coronaSz = size;
 
+    CVector worldPos = pos;
+    if (pEntity)
+    {
+        worldPos = pEntity->TransformFromObjectSpace(pos);
+        if (pEntity->m_nType == ENTITY_TYPE_VEHICLE && CarUtil::IsBike(static_cast<CVehicle *>(pEntity)))
+        {
+            CBike *pBike = static_cast<CBike *>(pEntity);
+            pBike->CalculateLeanMatrix();
+            worldPos = pBike->field_2C4 * pos;
+        }
+    }
+
     // Only during night time
     if (Util::IsNightTime() && gfCoronaDistanceMul != 0.0f) {
-        // pEntity is null for unattached coronas, pos is already in world space then
-        CVector refPos = pEntity ? pEntity->GetPosition() : pos;
-        float distSq = MathUtil::DistanceSquared(TheCamera.GetPosition(), refPos);
+        float distSq = MathUtil::DistanceSquared(TheCamera.GetPosition(), worldPos);
         float dist = std::sqrt(distSq);
         coronaSz = std::max(size, size * dist * gfCoronaDistanceMul);
     }
 
-    CCoronas::RegisterCorona(coronaID, col.r, col.g, col.b, col.a, pos,
+    CCoronas::RegisterCorona(coronaID, col.r, col.g, col.b, col.a, worldPos,
                              coronaSz, 350.0f, CORONATYPE_SHINYSTAR, 0, 0, 0, 0, 0.0f, false, gfCoronaNearClip);
 };
 
