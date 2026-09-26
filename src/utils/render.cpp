@@ -3,6 +3,7 @@
 #include "util.h"
 
 #include <CCoronas.h>
+#include <enums/eCoronaType.h>
 #include <CBike.h>
 #include <CWorld.h>
 #include "utils/texmgr.h"
@@ -405,7 +406,7 @@ void RenderUtil::RegisterCoronaDirectional(const DummyConfig *pConfig, float ang
         }
 
         float vehicleAngle = Util::NormalizeAngle(static_cast<float>(Util::RadToDeg(pConfig->pVeh->GetHeading())));
-        float cameraAngle = Util::NormalizeAngle(static_cast<float>(Util::RadToDeg(TheCamera.GetHeading())));
+        float cameraAngle = Util::NormalizeAngle(static_cast<float>(Util::RadToDeg(TheCamera.m_CameraMatrix.up.Heading())));
         float dummyAngle = Util::NormalizeAngle(vehicleAngle + targetAngle);
         float diffAngle = Util::NormalizeAngle(cameraAngle - dummyAngle);
         float cutoff = (radius / 2.0f);
@@ -636,7 +637,7 @@ void RenderUtil::RegisterShadow(CEntity *pEntity, CVector position, CRGBA col, f
         pBike->CalculateLeanMatrix();
         shdwPos = pBike->field_2C4 * (position + nOffset + nSize);
     }
-    shdwPos.z = CWorld::FindGroundZFor3DCoord(shdwPos.x, shdwPos.y, shdwPos.z + 100.0f, NULL, &pEntity) + 2.0f;
+    shdwPos.z = CWorld::FindGroundZFor3DCoord(shdwPos.x, shdwPos.y, shdwPos.z + 100.0f, nullptr) + 2.0f;
 
     const float zDiff = abs(shdwPos.z - vehPos.z);
     if (zDiff > 3.0f)

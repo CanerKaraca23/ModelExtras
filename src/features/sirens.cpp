@@ -11,6 +11,7 @@
 #include "utils/datamgr.h"
 #include "enums/materialtype.h"
 #include "utils/meevents.h"
+#include "features/remap.h"
 
 bool VehicleSiren::GetSirenState()
 {
@@ -718,7 +719,7 @@ void Sirens::Init()
 				if (data.State == -1)
 					data.State = (int)modelData[model]->States.size() - 1;
 
-				while (modelData[model]->States[data.State]->Paintjob != -1 && modelData[model]->States[data.State]->Paintjob != vehicle->GetRemapIndex())
+				while (modelData[model]->States[data.State]->Paintjob != -1 && modelData[model]->States[data.State]->Paintjob != Remap::GetRemapIndex(vehicle))
 				{
 					data.State += (Util::IsKeyPressed(0x10)) ? (-1) : (1);
 
@@ -765,7 +766,7 @@ void Sirens::Init()
 				if (data.State == newState)
 					return;
 
-				if (modelData[model]->States[newState]->Paintjob != -1 && modelData[model]->States[newState]->Paintjob != vehicle->GetRemapIndex())
+				if (modelData[model]->States[newState]->Paintjob != -1 && modelData[model]->States[newState]->Paintjob != Remap::GetRemapIndex(vehicle))
 					return;
 
 				data.State = newState;

@@ -81,7 +81,11 @@ void AudioMgr::Init()
         ReloadConfig();
     };
 
+#ifdef GTASA
     Events::reInitGameEvent += []
+#else
+    Events::restartGameEvent += []
+#endif
     {
         for (auto stream : needToFree)
         {

@@ -8,44 +8,6 @@
 #include <RenderWare.h>
 #include <CFileLoader.h>
 
-RwTexture *LoadPNGFromFile(const char *filename, RwUInt8 alpha)
-{
-    RwImage *image = RtPNGImageRead(filename);
-    if (!image)
-    {
-        return nullptr;
-    }
-
-    RwInt32 width, height, depth, flags;
-    RwImageFindRasterFormat(image, rwRASTERTYPETEXTURE | rwRASTERFORMAT888, &width, &height, &depth, &flags);
-
-    RwRaster *raster = RwRasterCreate(width, height, depth, flags);
-    if (!raster)
-    {
-        RwImageDestroy(image);
-        return nullptr;
-    }
-    if (alpha != 255)
-    {
-        // Set the alpha value for each pixel
-        RwRGBA *pixels = (RwRGBA *)RwImageGetPixels(image);
-        for (RwInt32 y = 0; y < height; y++)
-        {
-            for (RwInt32 x = 0; x < width; x++)
-            {
-                RwRGBA *pixel = pixels + (y * width + x);
-                pixel->red = (pixel->red * alpha) / 255;
-                pixel->green = (pixel->green * alpha) / 255;
-                pixel->blue = (pixel->blue * alpha) / 255;
-                pixel->alpha = alpha;
-            }
-        }
-    }
-
-    RwRasterSetFromImage(raster, image);
-    RwImageDestroy(image);
-    return RwTextureCreate(raster);
-}
 
 RwTexture *TextureMgr::RwReadTexture(const char *name, char *Maskname)
 {

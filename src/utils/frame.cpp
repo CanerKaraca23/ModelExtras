@@ -242,6 +242,19 @@ bool FrameUtil::IsOkAtomicVisible(RwFrame* frame) {
     return true;
 }
 
+static RwObject *CopyObjectsCB(RwObject *object, void *data) {
+    RwFrame *frame = (RwFrame *)data;
+    RpAtomic *atomic = (RpAtomic *)object;
+    if (atomic) {
+        RpAtomic *newAtomic = RpAtomicClone(atomic);
+        RpAtomicSetFrame(newAtomic, frame);
+        if (atomic->clump) {
+            RpClumpAddAtomic(atomic->clump, newAtomic);
+        }
+    }
+    return object;
+}
+
 // VehFuncs
 RwFrame * FrameUtil::Clone(RwFrame *frame, RpClump *clump, RwFrame *parent, bool isRoot) {
 	RwFrame * newFrame = parent;

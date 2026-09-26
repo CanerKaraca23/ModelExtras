@@ -15,7 +15,7 @@ public:
     static inline void StoreShadowToBeRendered(unsigned char shadowType, RwTexture *texture, CVector *posn,
                                                float frontX, float frontY, float sideX, float sideY,
                                                short intensity, unsigned char red, unsigned char green, unsigned char blue,
-                                               float zDistance, bool drawOnWater, float scale, void *realTimeShadow, bool drawOnVehicles)
+                                               float zDistance = 8.0f, bool drawOnWater = false, float scale = 1.0f, void *realTimeShadow = nullptr, bool drawOnVehicles = false)
     {
         plugin::Call<0x56E780, unsigned char, RwTexture *, CVector *, float, float, float, float, short, unsigned char, unsigned char, unsigned char, float, bool, float, void *, bool>(
             shadowType, texture, posn, frontX, frontY, sideX, sideY, intensity, red, green, blue, zDistance, drawOnWater, scale, realTimeShadow, drawOnVehicles);

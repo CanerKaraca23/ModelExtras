@@ -32,4 +32,18 @@ protected:
 public:
   Remap() : CVehFeature<RemapVehData>("TextureRemaper", "FEATURES", eFeatureMatrix::TextureRemapper) {}
   static void ProcessTextures(CVehicle *pVeh, RpMaterial *pMat);
+  static bool HasRemaps(int modelIndex) {
+    auto it = xRemaps.find(modelIndex);
+    return it != xRemaps.end() && !it->second.pTextures.empty();
+  }
+  static int GetRemapCount(int modelIndex) {
+    auto it = xRemaps.find(modelIndex);
+    if (it == xRemaps.end() || it->second.pTextures.empty()) return 0;
+    return static_cast<int>(it->second.pTextures.begin()->second.size());
+  }
+  static int GetRemapIndex(CVehicle* pVeh) {
+    if (!pVeh) return 0;
+    int rId = m_VehData.Get(pVeh).randomId;
+    return (rId >= 0) ? rId : 0;
+  }
 };

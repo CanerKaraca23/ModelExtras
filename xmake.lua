@@ -7,6 +7,10 @@ local PLUGIN_SDK_DIR = os.getenv("PLUGIN_SDK_DIR")
 if not PLUGIN_SDK_DIR or not os.isdir(PLUGIN_SDK_DIR) then
     if os.isdir("D:/Dev/plugin-sdk") then
         PLUGIN_SDK_DIR = "D:/Dev/plugin-sdk"
+    elseif os.isdir("plugin-sdk") then
+        PLUGIN_SDK_DIR = "plugin-sdk"
+    elseif os.isdir("C:/Users/caner/.gemini/antigravity/scratch/CLEO5/third-party/plugin-sdk") then
+        PLUGIN_SDK_DIR = "C:/Users/caner/.gemini/antigravity/scratch/CLEO5/third-party/plugin-sdk"
     end
 end
 local GAME_DIR = os.getenv("GTAVC_DIR") or "C:/Users/caner/OneDrive/Documents/GTA Vice City"
@@ -104,12 +108,12 @@ target("ModelExtras")
     )
 
     if is_mode("debug") then
-        add_links("plugin_vc_d", "plugin_d")
+        add_links("plugin_vc_d")
         set_runtimes("MTd")
         set_optimize("none")
         set_symbols("debug")
     else
-        add_links("plugin_vc", "plugin")
+        add_links("plugin_vc")
         set_runtimes("MT")
         set_optimize("fastest")
         set_symbols("hidden")

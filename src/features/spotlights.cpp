@@ -2,6 +2,7 @@
 #include "spotlights.h"
 #include <CCamera.h>
 #include <CCoronas.h>
+#include <enums/eCoronaType.h>
 #include <CPointLights.h>
 #include <CPools.h>
 #include <CWorld.h>
@@ -126,9 +127,9 @@ void SpotLights::OnHudRender()
 	}
 
 	// Aiming: Align spotlight frame orientation with camera look direction (AVS method)
-	data.pFrame->modelling.right = *(RwV3d *)&TheCamera.m_mCameraMatrix.right;
-	data.pFrame->modelling.up = *(RwV3d *)&TheCamera.m_mCameraMatrix.up;
-	data.pFrame->modelling.at = *(RwV3d *)&TheCamera.m_mCameraMatrix.at;
+	data.pFrame->modelling.right = *(RwV3d *)&TheCamera.m_CameraMatrix.right;
+	data.pFrame->modelling.up = *(RwV3d *)&TheCamera.m_CameraMatrix.up;
+	data.pFrame->modelling.at = *(RwV3d *)&TheCamera.m_CameraMatrix.at;
 	data.pFrame->modelling.pos = data.origPos;
 
 	float vehicleHeadingDeg = pVeh->GetHeading() * 180.0f / 3.14159265f;
@@ -236,8 +237,7 @@ void SpotLights::ProcessPointLights(CVehicle *pVeh)
 			float castDist = 12.5f;
 			CVector shadowCenter = lightPos + lightDir * castDist;
 			bool groundFound = false;
-			CEntity *pGroundEntity = nullptr;
-			float groundZ = CWorld::FindGroundZFor3DCoord(shadowCenter.x, shadowCenter.y, shadowCenter.z + 10.0f, &groundFound, &pGroundEntity);
+			float groundZ = CWorld::FindGroundZFor3DCoord(shadowCenter.x, shadowCenter.y, shadowCenter.z + 10.0f, &groundFound);
 			if (groundFound)
 			{
 				shadowCenter.z = groundZ + 0.05f;

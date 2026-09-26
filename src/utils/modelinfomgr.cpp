@@ -177,7 +177,9 @@ void ModelInfoMgr::SetupRender(CVehicle *ptr) {
   }
   pCurVeh = ptr;
   auto &data = m_VehData.Get(pCurVeh);
+#ifdef GTASA
   ptr->SetupRender();
+#endif
 
   data.m_MatStatus.fill(false);
   data.m_SirenStatus.fill(false);

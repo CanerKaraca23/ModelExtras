@@ -37,3 +37,14 @@ inline std::string_view GetSafeFrameNodeName(RwFrame *pFrame)
     const char *name = GetFrameNodeName(pFrame);
     return name ? std::string_view(name) : std::string_view{};
 }
+
+inline void SetFrameNodeName(RwFrame *pFrame, const char *name)
+{
+    if (!pFrame || !name) return;
+    char *nodeName = GetFrameNodeName(pFrame);
+    if (nodeName)
+    {
+        strncpy(nodeName, name, 23);
+        nodeName[23] = '\0';
+    }
+}
