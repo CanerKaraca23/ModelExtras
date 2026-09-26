@@ -8,10 +8,6 @@ using namespace plugin;
 
 struct ME_ExhaustInfo;
 
-// Function types
-using ExhaustFn_t = void (__fastcall *)(CVehicle *);
-using NitroFn_t = char (__fastcall *)(CAutomobile *pVeh, float power);
-
 struct ExhaustData
 {
     std::string sName;
@@ -43,22 +39,8 @@ private:
     static inline size_t nReloadCount = 0;
 
     static void RenderSmokeFx(CVehicle *pVeh, const ExhaustData &info);
-
     static void RenderNitroFx(CVehicle *pVeh, float power);
-
     static ExhaustData LoadData(CVehicle *pVeh, RwFrame *pFrame);
-
-    static void __fastcall hkAddExhaustParticles1(CVehicle *pVeh);
-
-    static void __fastcall hkAddExhaustParticles2(CVehicle *pVeh);
-
-    // Fixed Nitro hooks with edx parameter
-    static char __fastcall hkDoNitroEffect1(CAutomobile *pVeh, float power);
-
-    static char __fastcall hkDoNitroEffect2(CAutomobile *pVeh, float power);
-
-    static char __fastcall hkDoNitroEffect3(CAutomobile *pVeh, float power);
-
     static void FindNodes(CVehicle *pVeh, RwFrame *frame);
     static void ProcessPointLights(CVehicle *pVeh);
 

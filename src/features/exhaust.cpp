@@ -19,35 +19,6 @@
 
 #define NODE_NAME "x_exhaust"
 
-// Global trampolines
-ExhaustFn_t ogFunc1 = nullptr, ogFunc2 = nullptr;
-
-void __fastcall ExhaustFx::hkAddExhaustParticles1(CVehicle * pVeh)
-{
-    if (!pVeh) return;
-    if (!CBaseFeature::IsEnabled(eFeatureMatrix::ExhaustFx)) {
-        if (ogFunc1) ogFunc1(pVeh);
-        return;
-    }
-    auto &data = m_VehData.Get(pVeh);
-    if (!data.isUsed && ogFunc1) {
-        ogFunc1(pVeh);
-    }
-}
-
-void __fastcall ExhaustFx::hkAddExhaustParticles2(CVehicle *pVeh)
-{
-    if (!pVeh) return;
-    if (!CBaseFeature::IsEnabled(eFeatureMatrix::ExhaustFx)) {
-        if (ogFunc2) ogFunc2(pVeh);
-        return;
-    }
-    auto &data = m_VehData.Get(pVeh);
-    if (!data.isUsed && ogFunc2) {
-        ogFunc2(pVeh);
-    }
-}
-
 void ExhaustFx::FindNodes(CVehicle *pVeh, RwFrame *pFrame)
 {
     if (pFrame)
@@ -102,13 +73,6 @@ void ExhaustFx::Init()
     {
         ExhaustFx::ProcessPointLights(pVeh);
     };
-
-    // Hook VC 1.0 CAutomobile::AddExhaustParticles (0x589570) and CBike::AddExhaustParticles (0x60E890)
-    ogFunc1 = injector::GetBranchDestination(0x589570, true).get();
-    injector::MakeCALL(0x589570, hkAddExhaustParticles1, true);
-
-    ogFunc2 = injector::GetBranchDestination(0x60E890, true).get();
-    injector::MakeCALL(0x60E890, hkAddExhaustParticles2, true);
 }
 
 void ExhaustFx::ProcessPointLights(CVehicle *pVeh)

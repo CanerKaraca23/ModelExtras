@@ -20,14 +20,6 @@ void Lights::Init() {
 
     LightManager::Init();
 
-    // Disable vanilla VC car lights (DoHeadLightEffect: 0x589130, DoTailLightEffect: 0x588E50, DoHeadLightBeam: 0x589360)
-    patch::SetUChar(0x589130, 0xC3); // retn
-    patch::SetUChar(0x588E50, 0xC3); // retn
-    if (!gConfig.ReadBoolean("LIGHTS", "HeadLightBeams", gConfig.ReadBoolean("TWEAKS", "HeadLightBeams", true)))
-    {
-        patch::SetUChar(0x589360, 0xC3); // retn
-    }
-
 	Events::initGameEvent += []()
 	{
 		LightsConfig::Get().InitConfig();

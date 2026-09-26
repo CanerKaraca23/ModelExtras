@@ -54,16 +54,24 @@ void ModelInfoMgr::Init() {
 
   ReloadConfig();
 
-  // Hook VC 1.0 CVehicleModelInfo::SetEditableMaterialsCB (0x579AE0) and ResetEditableMaterials (0x5799D0)
-  patch::ReplaceFunction(
-      0x579AE0, reinterpret_cast<void *>(ModelInfoMgr::SetEditableMaterialsCB));
-  patch::ReplaceFunction(
-      0x5799D0, reinterpret_cast<void *>(ModelInfoMgr::ResetEditableMaterials));
-
   MEEvents::vehRenderEvent.before += [](CVehicle *pVeh) {
     if (!pVeh || !pVeh->m_pRwClump) {
       return;
     }
+
+    ModelInfoMgr::SetupRender(pVeh);
+
+    RpClumpForAllAtomics(
+        pVeh->m_pRwClump,
+        [](RpAtomic *atomic, void *data) -> RpAtomic * {
+          if (atomic && atomic->geometry) {
+            RpGeometryForAllMaterials(atomic->geometry,
+                                      ModelInfoMgr::SetEditableMaterialsCB,
+                                      data);
+          }
+          return atomic;
+        },
+        nullptr);
 
     auto &data = m_VehData.Get(pVeh);
     if (data.nFrameCount > 10) {
@@ -77,23 +85,9 @@ void ModelInfoMgr::Init() {
     }
   };
 
-  MEEvents::heliRenderEvent.after += [](CVehicle *pVeh) {
-    if (!pVeh || !pVeh->m_pRwClump) {
-      return;
-    }
-
-    if (CModelInfo::IsHeliModel(pVeh->m_nModelIndex)) {
-      auto &data = m_VehData.Get(pVeh);
-      if (data.nFrameCount > 10) {
-        ModelInfoMgr::OnRender(pVeh);
-      } else if (data.nFrameCount == 10) {
-        ModelInfoMgr::FindDummies(
-            pVeh, reinterpret_cast<RwFrame *>(pVeh->m_pRwClump->object.parent));
-        data.nFrameCount++;
-      } else {
-        data.nFrameCount++;
-      }
-    }
+  MEEvents::vehRenderEvent.after += [](CVehicle *pVeh) {
+    ModelInfoMgr::ResetEditableMaterials();
+    pCurVeh = nullptr;
   };
 }
 
