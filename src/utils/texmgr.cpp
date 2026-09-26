@@ -26,13 +26,35 @@ RwTexture *TextureMgr::Get(std::string_view name, RwUInt8 alpha)
         }
     }
 
-    static auto pDict = CFileLoader::LoadTexDictionary(MOD_DATA_PATH("ME_TEXDB.TXD"));
+    static RwTexDictionary *pDict = nullptr;
+    if (!pDict) {
+        pDict = CFileLoader::LoadTexDictionary(MOD_DATA_PATH("me_texdb.txd"));
+        if (!pDict || rwLinkListEmpty(&pDict->texturesInDict)) {
+            pDict = CFileLoader::LoadTexDictionary("ModelExtras/me_texdb.txd");
+        }
+    }
+
     char nameBuf[64];
     size_t copyLen = std::min(name.size(), sizeof(nameBuf) - 1);
     std::memcpy(nameBuf, name.data(), copyLen);
     nameBuf[copyLen] = '\0';
 
-    RwTexture *pTex = RwTexDictionaryFindNamedTexture(pDict, nameBuf);
+    RwTexture *pTex = nullptr;
+    if (pDict) {
+        pTex = RwTexDictionaryFindNamedTexture(pDict, nameBuf);
+    }
+
+    if (pTex == nullptr) {
+        if (name == "headlight_short" || name == "headlight_long" || name == "foglight") {
+            pTex = RwTextureRead("headlight", nullptr);
+        } else if (name == "indicator" || name == "taillight" || name == "taillight_bike") {
+            pTex = RwTextureRead("pointlight", nullptr);
+            if (!pTex) {
+                pTex = RwTextureRead("headlight", nullptr);
+            }
+        }
+    }
+
     if (pTex == nullptr) {
         return nullptr;
     }

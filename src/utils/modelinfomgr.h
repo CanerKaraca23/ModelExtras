@@ -19,6 +19,7 @@ struct MatStateColor {
 
 constexpr uint32_t MAX_LIGHTS = 256;
 inline const CRGBA DEFAULT_MAT_COL = CRGBA(255, 255, 255, 255);
+inline const CRGBA DEFAULT_MAT_COL_OFF = CRGBA(55, 55, 55, 255);
 
 using DummyCallback_t =
     std::function<void(CVehicle *, RwFrame *, const std::string_view &)>;
@@ -73,7 +74,7 @@ private:
 
 public:
   static inline float gfMaterialAmbientMul = 1.0f;
-  static inline RwSurfaceProperties ms_LightSurfaceProps{1.0f, 1.0f, 1.0f};
+  static inline RwSurfaceProperties ms_LightSurfaceProps{3.0f, 1.0f, 1.0f};
   static void ReloadConfig();
   static float GetMaterialAmbientMul() { return gfMaterialAmbientMul; }
   static RwSurfaceProperties GetLightSurfaceProps(float ambientScale = 1.0f) {

@@ -36,13 +36,13 @@ void Lights::Init() {
 
     ModelInfoMgr::RegisterMaterialColProvider([](CVehicle *pVeh, RpMaterial *pMat, eMaterialType type) -> MatStateColor {
         if (!m_bEnabled || !pVeh || type < 0 || type >= eMaterialType::TotalMaterial) {
-            return MatStateColor{DEFAULT_MAT_COL, DEFAULT_MAT_COL};
+            return MatStateColor{DEFAULT_MAT_COL, DEFAULT_MAT_COL_OFF};
         }
         VehLightData &data = LightManager::m_VehData.Get(pVeh);
         if (LightManager::IsDummyAvailable(data, type)) {
             const DummyConfig &c = data.dummies[type][0]->GetRef();
             if (c.hasCustomColor) {
-                return MatStateColor{c.corona.color, DEFAULT_MAT_COL};
+                return MatStateColor{c.corona.color, DEFAULT_MAT_COL_OFF};
             }
         }
 
@@ -83,11 +83,17 @@ void Lights::Init() {
             default: break;
             }
             if (col) {
-                return MatStateColor{*col, DEFAULT_MAT_COL};
+                return MatStateColor{*col, DEFAULT_MAT_COL_OFF};
             }
         }
 
-        return MatStateColor{DEFAULT_MAT_COL, DEFAULT_MAT_COL};
+        if (type == eMaterialType::IndicatorLightLeftFront || type == eMaterialType::IndicatorLightRightFront ||
+            type == eMaterialType::IndicatorLightLeftRear || type == eMaterialType::IndicatorLightRightRear ||
+            type == eMaterialType::IndicatorLightLeftMiddle || type == eMaterialType::IndicatorLightRightMiddle) {
+            return MatStateColor{CRGBA(255, 175, 0, 255), DEFAULT_MAT_COL_OFF};
+        }
+
+        return MatStateColor{DEFAULT_MAT_COL, DEFAULT_MAT_COL_OFF};
     });
 
 	MEEvents::vehPreRenderEvent.before += [](CVehicle *pVeh)

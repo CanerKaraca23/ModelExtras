@@ -43,8 +43,7 @@ void ModelInfoMgr::ResetEditableMaterials() {
 
 void ModelInfoMgr::ReloadConfig() {
   gfMaterialAmbientMul = std::max(0.0f, gConfig.ReadFloat("LIGHTS", "MaterialAmbientMul", 1.0f));
-  RwSurfaceProperties baseProps{1.0f, 1.0f, 1.0f};
-  baseProps.ambient = std::max(0.0f, baseProps.ambient * gfMaterialAmbientMul);
+  RwSurfaceProperties baseProps{3.0f * gfMaterialAmbientMul, 1.0f, 1.0f};
   ms_LightSurfaceProps = baseProps;
 }
 
