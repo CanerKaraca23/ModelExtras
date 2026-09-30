@@ -9,6 +9,7 @@ using namespace plugin;
 
 std::vector<int> ValidForReverseSound;
 std::vector<int> ValidForDoorChime;
+std::vector<int> ValidForBrakePad;
 
 #define ANIMGROUP_TRUCK 2
 #define ANIMGROUP_BUS 15
@@ -21,6 +22,9 @@ static bool bAirbreakSounds = false;
 static bool bDoorChimeSounds = true;
 static bool bDoorChimeOnlySelected = true;
 static float fDoorChimeVolume = 0.7f;
+static bool bBrakePadSounds = false;
+static bool bBrakePadOnlySelected = true;
+static float fBrakePadVolume = 0.7f;
 static bool bOnlyPlayerVehicle = true;
 
 static bool IsVehicleEligible(int model, const char *jsonKey, bool onlySelected, const std::vector<int> &modelList)
@@ -57,6 +61,12 @@ void SoundEffects::ReloadConfig()
     bAirbreakSounds = gConfig.ReadBoolean("SOUND", "AirbreakSound", false);
     bDoorChimeSounds = gConfig.ReadBoolean("SOUND", "DoorChimeSound", true);
     bDoorChimeOnlySelected = gConfig.ReadBoolean("SOUND", "DoorChimeOnlySelected", true);
+    std::string brakePadModelsLine = gConfig.ReadString("TABLE", "BrakePad_VehicleModels", "");
+    ValidForBrakePad.clear();
+    Util::GetModelsFromIni(brakePadModelsLine, ValidForBrakePad);
+
+    bBrakePadSounds = gConfig.ReadBoolean("SOUND", "BrakePadSound", false);
+    bBrakePadOnlySelected = gConfig.ReadBoolean("SOUND", "BrakePadOnlySelected", true);
     bOnlyPlayerVehicle = !gConfig.ReadBoolean("SOUND", "NonPlayerVehicles", false);
 }
 
@@ -124,6 +134,90 @@ static void HandleChimeSounds(CVehicle *pVeh, SoundEffectsData &data, int model,
         static std::string chimePath = MOD_DATA_PATH("audio/door_chime.mp3");
         AudioMgr::Play3DSound(chimePath, pVeh->GetPosition(), pVeh, fDoorChimeVolume, 25.0f);
         data.m_nLastDoorChimeTime = curTime;
+    }
+}
+
+static void HandleBrakePadSounds(CVehicle *pVeh, SoundEffectsData &data, int model, bool isPlayerDriver, bool isBigVeh, float speed)
+{
+    const auto stopStream = [&]() {
+        if (data.m_hBrakePadStream)
+        {
+            AudioMgr::StopLoopStream(data.m_hBrakePadStream);
+            data.m_hBrakePadStream = 0;
+            data.m_fBrakePadVol = 0.0f;
+        }
+    };
+
+    if (!bBrakePadSounds || pVeh->m_nVehicleSubClass != VEHICLE_AUTOMOBILE)
+    {
+        stopStream();
+        return;
+    }
+
+    if (bOnlyPlayerVehicle && !isPlayerDriver)
+    {
+        stopStream();
+        return;
+    }
+
+    if (isBigVeh || pVeh->bIsBig || pVeh->bIsBus || pVeh->bEngineBroken || pVeh->bIsDrowning)
+    {
+        stopStream();
+        return;
+    }
+
+    CAutomobile *pAuto = static_cast<CAutomobile *>(pVeh);
+    if (pAuto->m_nWheelsOnGround == 0)
+    {
+        stopStream();
+        return;
+    }
+
+    bool bWheelLocked = (speed > 5.0f && std::abs(pAuto->m_fWheelSpeed[0]) < 0.01f && std::abs(pAuto->m_fWheelSpeed[1]) < 0.01f);
+    if (bWheelLocked)
+    {
+        stopStream();
+        return;
+    }
+
+    if (!IsVehicleEligible(model, "brake_pad", bBrakePadOnlySelected, ValidForBrakePad))
+    {
+        stopStream();
+        return;
+    }
+
+    float brakeInput = pVeh->m_fBreakPedal;
+    float targetVol = 0.0f;
+    if (brakeInput > 0.05f && speed > 0.2f)
+    {
+        float speedFactor = std::clamp((speed - 0.2f) / 4.0f, 0.0f, 1.0f);
+        targetVol = fBrakePadVolume * std::clamp(brakeInput, 0.35f, 1.0f) * speedFactor;
+    }
+
+    if (targetVol > data.m_fBrakePadVol)
+    {
+        data.m_fBrakePadVol = std::min(targetVol, data.m_fBrakePadVol + 0.1f);
+    }
+    else if (targetVol < data.m_fBrakePadVol)
+    {
+        data.m_fBrakePadVol = std::max(targetVol, data.m_fBrakePadVol - 0.06f);
+    }
+
+    if (data.m_fBrakePadVol > 0.01f)
+    {
+        static std::string brakePadPath = MOD_DATA_PATH("audio/brake_pad.mp3");
+        if (!data.m_hBrakePadStream)
+        {
+            data.m_hBrakePadStream = AudioMgr::PlayLoopStream(brakePadPath, pVeh->GetPosition(), data.m_fBrakePadVol, 25.0f);
+        }
+        else
+        {
+            AudioMgr::UpdateLoopStream(data.m_hBrakePadStream, pVeh->GetPosition(), data.m_fBrakePadVol, 25.0f);
+        }
+    }
+    else
+    {
+        stopStream();
     }
 }
 
@@ -256,4 +350,7 @@ void SoundEffects::ProcessVehicle(CVehicle *pVeh)
 
             // Door open warning chime: plays a periodic 3D chime when front doors are opened while vehicle is operating
             HandleChimeSounds(pVeh, data, model, isPlayerDriver);
+
+            // Brake pad friction squeal on braking
+            HandleBrakePadSounds(pVeh, data, model, isPlayerDriver, isBigVeh, speed);
 }
