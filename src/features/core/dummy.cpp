@@ -14,12 +14,18 @@ extern float gfGlobalCoronaSize;
 extern int gGlobalCoronaIntensity;
 extern int gGlobalShadowIntensity;
 
+static int ReadHexDigit(char c)
+{
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    return -1;
+}
+
 int ReadHex(char a, char b)
 {
-    a = (a <= '9') ? a - '0' : (a & 0x7) + 9;
-    b = (b <= '9') ? b - '0' : (b & 0x7) + 9;
-
-    return (a << 4) + b;
+    int high = ReadHexDigit(a), low = ReadHexDigit(b);
+    return high >= 0 && low >= 0 ? (high << 4) + low : -1;
 }
 
 VehicleDummy::VehicleDummy(const DummyConfig& config)
@@ -152,23 +158,29 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
     else
     {
         // Legacy support for ImVehFt vehicles
-        size_t prmPos = name.find("_prm");
+        size_t prmPos = name.find("prm");
         if (prmPos != std::string::npos)
         {
-            if (prmPos + 9 < name.size())
+            const auto prm = name.substr(prmPos + 3);
+            if (prm.size() >= 6)
             {
-                data.shadow.color.r = data.corona.color.r = ReadHex(name[prmPos + 4], name[prmPos + 5]);
-                data.shadow.color.g = data.corona.color.g = ReadHex(name[prmPos + 6], name[prmPos + 7]);
-                data.shadow.color.b = data.corona.color.b = ReadHex(name[prmPos + 8], name[prmPos + 9]);
+                int red = ReadHex(prm[0], prm[1]);
+                int green = ReadHex(prm[2], prm[3]);
+                int blue = ReadHex(prm[4], prm[5]);
+                if (red >= 0 && green >= 0 && blue >= 0) {
+                    data.shadow.color.r = data.corona.color.r = red;
+                    data.shadow.color.g = data.corona.color.g = green;
+                    data.shadow.color.b = data.corona.color.b = blue;
+                }
             }
             else
             {
                 LOG_VERBOSE("Model {} has issue with node `{}`: invalid color format", data.pVeh->m_nModelIndex, name);
             }
 
-            if (prmPos + 10 < name.size())
+            if (prm.size() > 6 && ReadHexDigit(prm[6]) >= 0)
             {
-                int type = name[prmPos + 10] - '0';
+                int type = ReadHexDigit(prm[6]);
                 if (type == 2)
                     data.corona.lightingType = eLightingMode::NonDirectional;
                 else if (type == 1)
@@ -176,39 +188,19 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
                 else
                     data.corona.lightingType = eLightingMode::Directional;
             }
-            else
+
+            if (prm.size() > 7 && ReadHexDigit(prm[7]) >= 0)
             {
-                data.corona.lightingType = eLightingMode::NonDirectional;
-                LOG_VERBOSE("Model {} has issue with node `{}`: invalid light type", data.pVeh->m_nModelIndex, name);
+                data.corona.size = static_cast<float>(ReadHexDigit(prm[7])) / 10.0f;
             }
 
-            if (prmPos + 11 < name.size())
+            if (prm.size() > 8 && ReadHexDigit(prm[8]) >= 0)
             {
-                data.corona.size = static_cast<float>(name[prmPos + 11] - '0') / 10.0f;
-                if (data.corona.size < 0.0f)
-                {
-                    data.corona.size = 0.0f;
-                }
-            }
-            else
-            {
-                data.corona.size = 0.0f;
-                LOG_VERBOSE("Model {} has issue with node `{}`: invalid corona size", data.pVeh->m_nModelIndex, name);
-            }
-
-            if (prmPos + 12 < name.size())
-            {
-                float shadowValue = static_cast<float>(name[prmPos + 12] - '0') / 7.5f;
-                data.shadow.size = std::max(shadowValue, 0.0f);
+                data.shadow.size = static_cast<float>(ReadHexDigit(prm[8])) / 7.5f;
 
                 if (data.shadow.size > 0.0f) {
                     data.shadow.render = true;
                 }
-            }
-            else
-            {
-                data.shadow.size = 0.0f;
-                LOG_VERBOSE("Model {} has issue with node `{}`: invalid shadow size", data.pVeh->m_nModelIndex, name);
             }
         }
     }
