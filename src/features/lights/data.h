@@ -57,6 +57,7 @@ struct LightsConfig {
     bool bLegacyDayNightTimes = false;
     bool bLegacyDummyDefaults = false;
     bool bLegacyLongLightControls = false;
+    bool bLegacyFogState = false;
     bool bLightsRequireEngine = false;
     bool bSirensRequireEngine = false;
     float fHighBeamPointLightMul = 2.0f;
@@ -105,6 +106,7 @@ struct LightsConfig {
         bLegacyDayNightTimes = gConfig.ReadBoolean("LIGHTS", "UseLegacyDayNightTimes", false);
         bLegacyDummyDefaults = gConfig.ReadBoolean("LIGHTS", "UseLegacyDummyDefaults", false);
         bLegacyLongLightControls = gConfig.ReadBoolean("LIGHTS", "UseLegacyLongLightControls", false);
+        bLegacyFogState = gConfig.ReadBoolean("LIGHTS", "UseLegacyFogState", false);
         bLightsRequireEngine = gConfig.ReadBoolean("LIGHTS", "LightsRequireEngine", gConfig.ReadBoolean("TWEAKS", "LightsRequireEngine", false));
         bSirensRequireEngine = gConfig.ReadBoolean("LIGHTS", "SirensRequireEngine", gConfig.ReadBoolean("TWEAKS", "SirensRequireEngine", false));
         

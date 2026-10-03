@@ -6,6 +6,7 @@
 #include "utils/datamgr.h"
 #include "ModelExtrasAPI.h"
 #include "utils/samp.h"
+#include "components/fog_light.h"
 
 
 float gfGlobalCoronaSize = 0.3f;
@@ -167,6 +168,7 @@ extern "C"
 
 void Lights::ProcessTick() {
     if (!m_bEnabled) return;
+    FogLightComponent::UpdateLegacyWeather();
     BlinkerState::Get().Update();
 }
 

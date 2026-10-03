@@ -3,6 +3,29 @@
 #include "utils/audiomgr.h"
 #include "utils/render.h"
 #include "defines.h"
+#include <CWeather.h>
+
+static short gLegacyFogWeather = -1;
+static int gLegacyFogOverride = -1;
+static bool gLegacyFogKeyHeld = false;
+
+void FogLightComponent::UpdateLegacyWeather() {
+    gLegacyFogOverride = -1;
+    if (!LightsConfig::Get().bLegacyFogState) {
+        gLegacyFogWeather = -1;
+        gLegacyFogKeyHeld = false;
+        return;
+    }
+    const short weather = CWeather::OldWeatherType;
+    const auto needsFog = [](short type) {
+        return type == WEATHER_RAINY_SF || type == WEATHER_FOGGY_SF ||
+               type == WEATHER_RAINY_COUNTRYSIDE || type == WEATHER_SANDSTORM_DESERT;
+    };
+    if (gLegacyFogWeather != -1 && needsFog(weather) != needsFog(gLegacyFogWeather)) {
+        gLegacyFogOverride = needsFog(weather) ? 1 : 0;
+    }
+    gLegacyFogWeather = weather;
+}
 
 void FogLightComponent::RegisterMaterials(std::unordered_map<uint32_t, eMaterialType>& matMap) {
     matMap[VEHCOL_FOGLIGHT_LEFT.ToInt()] = eMaterialType::FogLightLeft;
@@ -31,7 +54,21 @@ bool FogLightComponent::TryRegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const 
 }
 
 void FogLightComponent::Process(CVehicle* pVeh, VehLightData& data) {
+    if (!pVeh) return;
     CPed* pPlayer = FindPlayerPed();
+    if (LightsConfig::Get().bLegacyFogState) {
+        if (!pVeh->m_pDriver || !pVeh->bEngineOn) return;
+        if (gLegacyFogOverride >= 0) data.bFogLightsOn = gLegacyFogOverride != 0;
+        if (pPlayer && pVeh->IsDriver(pPlayer)) {
+            const bool held = InputMgr::IsKeyDown(LightsConfig::Get().nFogLightKey);
+            if (held && !gLegacyFogKeyHeld) {
+                data.bFogLightsOn = !data.bFogLightsOn;
+                AudioMgr::PlaySwitchSound(pVeh);
+            }
+            gLegacyFogKeyHeld = held;
+        }
+        return;
+    }
     if (pPlayer && pVeh->IsDriver(pPlayer)) {
         static size_t prev = 0;
         bool isHeadlightsActive = CarUtil::AreLightsOn(pVeh);
@@ -46,9 +83,10 @@ void FogLightComponent::Process(CVehicle* pVeh, VehLightData& data) {
 
 void FogLightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehLightData& data) {
     bool isHeadlightsActive = CarUtil::AreLightsOn(pControlVeh);
-    bool isFoggy = Util::IsFoggy();
-    bool shouldRenderFog = isFoggy || !LightsConfig::Get().bFoglightTiedToHeadlight || isHeadlightsActive;
-    bool isFogLightOn = (data.bFogLightsOn || isFoggy) && (!LightsConfig::Get().bFoglightTiedToHeadlight || !CarUtil::IsLightsForcedOff(pControlVeh));
+    bool legacy = LightsConfig::Get().bLegacyFogState;
+    bool isFoggy = !legacy && Util::IsFoggy();
+    bool shouldRenderFog = legacy || isFoggy || !LightsConfig::Get().bFoglightTiedToHeadlight || isHeadlightsActive;
+    bool isFogLightOn = (data.bFogLightsOn || isFoggy) && (legacy || !LightsConfig::Get().bFoglightTiedToHeadlight || !CarUtil::IsLightsForcedOff(pControlVeh));
 
     if (!isFogLightOn || !shouldRenderFog) return;
     bool isFogOk = !Util::IsPanelDamaged(pControlVeh, ePanels::BUMP_FRONT);
@@ -58,9 +96,10 @@ void FogLightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehLi
 
 void FogLightComponent::ProcessPointLights(CVehicle* pVeh, VehLightData& data) {
     bool isHeadlightsOn = CarUtil::AreLightsOn(pVeh);
-    bool isFoggy = Util::IsFoggy();
-    bool shouldRenderFog = isFoggy || !LightsConfig::Get().bFoglightTiedToHeadlight || isHeadlightsOn;
-    bool isFogLightOn = (data.bFogLightsOn || isFoggy) && (!LightsConfig::Get().bFoglightTiedToHeadlight || !CarUtil::IsLightsForcedOff(pVeh));
+    bool legacy = LightsConfig::Get().bLegacyFogState;
+    bool isFoggy = !legacy && Util::IsFoggy();
+    bool shouldRenderFog = legacy || isFoggy || !LightsConfig::Get().bFoglightTiedToHeadlight || isHeadlightsOn;
+    bool isFogLightOn = (data.bFogLightsOn || isFoggy) && (legacy || !LightsConfig::Get().bFoglightTiedToHeadlight || !CarUtil::IsLightsForcedOff(pVeh));
 
     if (isFogLightOn && shouldRenderFog) {
         for (eMaterialType type : {eMaterialType::FogLightLeft, eMaterialType::FogLightRight}) {
