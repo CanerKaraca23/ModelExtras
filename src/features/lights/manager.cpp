@@ -98,7 +98,7 @@ void LightManager::Process(CVehicle* pVeh) {
 
     VehLightData& data = m_VehData.Get(pVeh);
     if (LightsConfig::Get().bLightsRequireEngine && Util::IsEngineOff(pVeh)) {
-        data.bLongLightsOn = false;
+        if (!LightsConfig::Get().bLegacyLongLightControls) data.bLongLightsOn = false;
         pVeh->bLightsOn = false;
     }
 
