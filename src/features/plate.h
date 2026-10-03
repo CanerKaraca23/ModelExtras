@@ -43,6 +43,8 @@ private:
   static inline bool m_bEnabled = false;
   static inline RwTexture *pCharSetTex = nullptr;
   static inline RwTexture *m_Plates[ePlateType::TOTAL_SZ];
+  static inline RwTexture *m_LegacyPlates[6]{};
+  static void LoadLegacyPlateTextures();
 
   static constexpr uint32_t CHARSET_CHAR_WIDTH{32u};
   static constexpr uint32_t CHARSET_CHAR_HEIGHT{64u};

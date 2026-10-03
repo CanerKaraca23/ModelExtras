@@ -14,6 +14,7 @@
 #include <string_view>
 #include <cctype>
 #include <optional>
+#include <filesystem>
 
 using namespace plugin;
 
@@ -165,16 +166,23 @@ void LicensePlate::ProcessTextures(CVehicle *pVeh, RpMaterial *pMat)
         {
             CCustomCarPlateMgr_SetupMaterialPlatebackTexture(pMat, -1);
         }
-        else if (legacyPlate >= 0 && pVeh->m_fHealth > 0.0f && CarUtil::AreLightsOn(pVeh))
+        else if (legacyPlate >= 0)
         {
             static const char *nightNames[] = {"plateback1_l", "plateback2_l", "plateback3_l"};
-            if (RwTexture *pNight = TextureMgr::FindInDict(nightNames[legacyPlate], pMat->texture->dict, true, false))
+            const bool lit = pVeh->m_fHealth > 0.0f && CarUtil::AreLightsOn(pVeh);
+            RwTexture *replacement = lit ? TextureMgr::FindInDict(nightNames[legacyPlate], pMat->texture->dict, true, false) : nullptr;
+            if (!replacement) replacement = m_LegacyPlates[legacyPlate + (lit ? 3 : 0)];
+            if (!replacement && lit) replacement = m_LegacyPlates[legacyPlate];
+            if (replacement)
             {
                 ModelInfoMgr::RegisterRestore(&pMat->texture, pMat->texture);
-                RpMaterialSetTexture(pMat, pNight);
+                pMat->texture = replacement;
             }
-            ModelInfoMgr::RegisterRestoreSurfProps(pMat);
-            pMat->surfaceProps = *reinterpret_cast<RwSurfaceProperties *>(0x8A645C);
+            if (lit)
+            {
+                ModelInfoMgr::RegisterRestoreSurfProps(pMat);
+                pMat->surfaceProps = *reinterpret_cast<RwSurfaceProperties *>(0x8A645C);
+            }
         }
     }
 
@@ -209,11 +217,41 @@ void LicensePlate::ProcessTextures(CVehicle *pVeh, RpMaterial *pMat)
     }
 }
 
+void LicensePlate::LoadLegacyPlateTextures()
+{
+    const std::filesystem::path adjacent = PLUGIN_PATH((char *)"ImVehFt\\plates");
+    const std::filesystem::path game = GAME_PATH((char *)"ImVehFt\\plates");
+    static const char *names[] = {"plateback1", "plateback2", "plateback3", "plateback1_l", "plateback2_l", "plateback3_l"};
+    for (size_t i = 0; i < 6; ++i)
+    {
+        if (m_LegacyPlates[i]) continue;
+        for (const auto &root : {adjacent, game})
+        {
+            const auto path = root / names[i];
+            std::error_code ec;
+            if (!std::filesystem::is_regular_file(path.string() + ".dds", ec)) continue;
+            RwTexture *texture = RwD3D9DDSTextureRead(path.string().c_str(), nullptr);
+            if (!texture) continue;
+            if (!RwTextureGetRaster(texture))
+            {
+                RwTextureDestroy(texture);
+                continue;
+            }
+            RwTextureSetName(texture, names[i]);
+            RwTextureSetFilterMode(texture, rwFILTERLINEAR);
+            RwTextureSetAddressingU(texture, rwTEXTUREADDRESSCLAMP);
+            RwTextureSetAddressingV(texture, rwTEXTUREADDRESSCLAMP);
+            m_LegacyPlates[i] = texture;
+            break;
+        }
+    }
+}
+
 void __cdecl LicensePlate::CCustomCarPlateMgr_Shudown()
 {
     if (pCharSetTex)
     {
-        RwRasterUnlock(pCharSetTex->raster);
+        if (pCharsetLockedData && pCharSetTex->raster) RwRasterUnlock(pCharSetTex->raster);
         pCharsetLockedData = nullptr;
         RwTextureDestroy(pCharSetTex);
         pCharSetTex = nullptr;
@@ -221,13 +259,21 @@ void __cdecl LicensePlate::CCustomCarPlateMgr_Shudown()
 
     for (size_t i = 0; i < ePlateType::TOTAL_SZ; i++)
     {
-        RwTextureDestroy(m_Plates[i]);
+        if (m_Plates[i]) RwTextureDestroy(m_Plates[i]);
+        m_Plates[i] = nullptr;
+    }
+    for (auto &texture : m_LegacyPlates)
+    {
+        if (texture) RwTextureDestroy(texture);
+        texture = nullptr;
     }
 }
 
 bool __cdecl LicensePlate::CCustomCarPlateMgr_Initialise()
 {
+    LoadLegacyPlateTextures();
     pCharSetTex = TextureMgr::Get("plate_char");
+    if (!pCharSetTex || !RwTextureGetRaster(pCharSetTex)) return false;
     RwTextureSetFilterMode(pCharSetTex, rwFILTERLINEAR);
     RwTextureSetAddressingU(pCharSetTex, rwTEXTUREADDRESSCLAMP);
     RwTextureSetAddressingV(pCharSetTex, rwTEXTUREADDRESSCLAMP);
