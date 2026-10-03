@@ -102,6 +102,8 @@ public:
     int PatternCount = 0;
     int PatternTotal = 0;
     uint64_t PatternTime = 0;
+    uint64_t PatternElapsed = 0;
+    bool LegacyPattern = false;
     uint64_t Delay = 0;
     eLightingMode Type = eLightingMode::Directional;
     bool ImVehFt = false;
@@ -122,6 +124,18 @@ public:
         if (Pattern.size() == 0)
             return false;
 
+        if (LegacyPattern) {
+            if (PatternCount >= (int)Pattern.size()) ResetMaterial(time);
+            if (PatternCount < 0 || Pattern[PatternCount] < 0) return false;
+            const uint64_t threshold = PatternElapsed + Pattern[PatternCount];
+            if (time - PatternTime < threshold) return false;
+            PatternElapsed = threshold;
+            ++PatternCount;
+            State = !State;
+            Frames = 0;
+            return true;
+        }
+
         if ((time - PatternTime) > Pattern[PatternCount])
         {
             PatternTime = time;
@@ -138,6 +152,7 @@ public:
     {
         PatternCount = 0;
         PatternTime = time;
+        PatternElapsed = 0;
         State = StateDefault;
         Frames = 0;
         ResetColor(time);

@@ -37,6 +37,7 @@ std::shared_ptr<VehicleSirenData> VehicleSirenData::CloneForVehicle() const
             auto rotator = sourceMaterial->Rotator ? std::make_unique<VehicleSirenRotator>(*sourceMaterial->Rotator) : nullptr;
             auto material = std::make_unique<VehicleSirenMaterial>(*sourceMaterial);
             material->Rotator = rotator.release();
+            material->LegacyPattern = isImVehFtSiren;
             state->Materials.emplace(id, material.get());
             material.release();
         }
@@ -1086,6 +1087,7 @@ void Sirens::Init()
 			}
 
 			for (auto& mat : state->Materials) {
+				if (mat.second->LegacyPattern) mat.second->ResetMaterial(time);
 				mat.second->ColorTime = time;
 				mat.second->PatternTime = time;
 				mat.second->InertiaMultiplier = 1.0f;
@@ -1141,9 +1143,9 @@ void Sirens::Init()
 			}
 
 			if (mat.second->UpdateMaterial(time)) {
-				if (mat.second->PatternCount >= (int)mat.second->Pattern.size()) {
+				if (!mat.second->LegacyPattern && mat.second->PatternCount >= (int)mat.second->Pattern.size()) {
 					for (std::map<int, VehicleSirenMaterial*>::iterator materialReset = state->Materials.begin(); materialReset != state->Materials.end(); ++materialReset) {
-						if (mat.second->PatternTotal == materialReset->second->PatternTotal) {
+						if (!materialReset->second->LegacyPattern && mat.second->PatternTotal == materialReset->second->PatternTotal) {
 							materialReset->second->ResetMaterial(time);
 						}
 					}
@@ -1176,7 +1178,7 @@ void Sirens::Init()
 				continue;
 			}
 
-			if (mat.second->PatternTotal != 0 && mat.second->Inertia > 0.0001f) {
+			if (mat.second->PatternTotal != 0 && mat.second->Inertia > 0.0001f && mat.second->PatternCount >= 0 && (size_t)mat.second->PatternCount < mat.second->Pattern.size()) {
 				float currentTime = static_cast<float>(time - mat.second->PatternTime);
 				float patternTotalTime = static_cast<float>(mat.second->Pattern[mat.second->PatternCount]);
 				float inertiaFactor = (mat.second->Inertia <= 1.0f) ? mat.second->Inertia : (mat.second->Inertia <= 100.0f ? (mat.second->Inertia / 100.0f) : 1.0f);
