@@ -81,9 +81,58 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
         }
     }
 
+    // Legacy support for ImVehFt vehicles
+    size_t prmPos = name.find("prm");
+    if (prmPos != std::string::npos)
+    {
+        const auto prm = name.substr(prmPos + 3);
+        if (prm.size() >= 6)
+        {
+            int red = ReadHex(prm[0], prm[1]);
+            int green = ReadHex(prm[2], prm[3]);
+            int blue = ReadHex(prm[4], prm[5]);
+            if (red >= 0 && green >= 0 && blue >= 0) {
+                data.shadow.color.r = data.corona.color.r = red;
+                data.shadow.color.g = data.corona.color.g = green;
+                data.shadow.color.b = data.corona.color.b = blue;
+            }
+        }
+        else
+        {
+            LOG_VERBOSE("Model {} has issue with node `{}`: invalid color format", data.pVeh->m_nModelIndex, name);
+        }
+
+        if (prm.size() > 6 && ReadHexDigit(prm[6]) >= 0)
+        {
+            int type = ReadHexDigit(prm[6]);
+            if (type == 2)
+                data.corona.lightingType = eLightingMode::NonDirectional;
+            else if (type == 1)
+                data.corona.lightingType = eLightingMode::Inversed;
+            else
+                data.corona.lightingType = eLightingMode::Directional;
+        }
+
+        if (prm.size() > 7 && ReadHexDigit(prm[7]) >= 0)
+        {
+            data.corona.size = static_cast<float>(ReadHexDigit(prm[7])) / 10.0f;
+        }
+
+        if (prm.size() > 8 && ReadHexDigit(prm[8]) >= 0)
+        {
+            data.shadow.size = static_cast<float>(ReadHexDigit(prm[8])) / 7.5f;
+
+            if (data.shadow.size > 0.0f) {
+                data.shadow.render = true;
+            }
+        }
+    }
+
     if (jsonData.contains("lights"))
     {
-        std::string newName(name.substr(0, name.find("_prm")));
+        size_t nameEnd = prmPos;
+        if (nameEnd != std::string_view::npos && nameEnd > 0 && name[nameEnd - 1] == '_') --nameEnd;
+        std::string newName(name.substr(0, nameEnd));
         const nlohmann::json* pLightsSec = nullptr;
         if (jsonData["lights"].contains(newName))
         {
@@ -113,8 +162,9 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
                     data.corona.color.b = coronaSec["color"].value("blue", data.corona.color.b);
                     data.corona.color.a = coronaSec["color"].value("alpha", gGlobalCoronaIntensity);
                 }
-                data.corona.size = coronaSec.value("size", gfGlobalCoronaSize);
-                data.corona.lightingType = GetLightingMode(coronaSec.value("type", "directional"));
+                data.corona.size = coronaSec.value("size", prmPos != std::string_view::npos ? data.corona.size : gfGlobalCoronaSize);
+                if (coronaSec.contains("type") || prmPos == std::string_view::npos)
+                    data.corona.lightingType = GetLightingMode(coronaSec.value("type", "directional"));
             }
 
             if (lights.contains("shadow"))
@@ -127,7 +177,7 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
                     data.shadow.color.b = shadow["color"].value("blue", data.shadow.color.b);
                     data.shadow.color.a = shadow["color"].value("alpha", gGlobalShadowIntensity);
                 }
-                data.shadow.size = shadow.value("size", 1.0f);
+                data.shadow.size = shadow.value("size", prmPos != std::string_view::npos ? data.shadow.size : 1.0f);
                 data.shadow.texture = shadow.value("texture", "");
                 data.shadow.rotationChecks = shadow.value("rotationchecks", true);
 
@@ -152,55 +202,6 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
             if (lights.contains("strobedelay"))
             {
                 data.strobe.delay = lights.value("strobedelay", 1000);
-            }
-        }
-    }
-    else
-    {
-        // Legacy support for ImVehFt vehicles
-        size_t prmPos = name.find("prm");
-        if (prmPos != std::string::npos)
-        {
-            const auto prm = name.substr(prmPos + 3);
-            if (prm.size() >= 6)
-            {
-                int red = ReadHex(prm[0], prm[1]);
-                int green = ReadHex(prm[2], prm[3]);
-                int blue = ReadHex(prm[4], prm[5]);
-                if (red >= 0 && green >= 0 && blue >= 0) {
-                    data.shadow.color.r = data.corona.color.r = red;
-                    data.shadow.color.g = data.corona.color.g = green;
-                    data.shadow.color.b = data.corona.color.b = blue;
-                }
-            }
-            else
-            {
-                LOG_VERBOSE("Model {} has issue with node `{}`: invalid color format", data.pVeh->m_nModelIndex, name);
-            }
-
-            if (prm.size() > 6 && ReadHexDigit(prm[6]) >= 0)
-            {
-                int type = ReadHexDigit(prm[6]);
-                if (type == 2)
-                    data.corona.lightingType = eLightingMode::NonDirectional;
-                else if (type == 1)
-                    data.corona.lightingType = eLightingMode::Inversed;
-                else
-                    data.corona.lightingType = eLightingMode::Directional;
-            }
-
-            if (prm.size() > 7 && ReadHexDigit(prm[7]) >= 0)
-            {
-                data.corona.size = static_cast<float>(ReadHexDigit(prm[7])) / 10.0f;
-            }
-
-            if (prm.size() > 8 && ReadHexDigit(prm[8]) >= 0)
-            {
-                data.shadow.size = static_cast<float>(ReadHexDigit(prm[8])) / 7.5f;
-
-                if (data.shadow.size > 0.0f) {
-                    data.shadow.render = true;
-                }
             }
         }
     }
