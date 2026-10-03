@@ -16,6 +16,35 @@
 #include <CAEVehicleAudioEntity.h>
 
 static bool g_bSirensRequireEngine = false;
+static uint64_t g_SirenDataRevision = 0;
+
+std::shared_ptr<VehicleSirenData> VehicleSirenData::CloneForVehicle() const
+{
+    auto copy = std::make_shared<VehicleSirenData>();
+    copy->Validate = Validate;
+    copy->isImVehFtSiren = isImVehFtSiren;
+    copy->Revision = Revision;
+    copy->States.reserve(States.size());
+    for (const auto *source : States) {
+        if (!source) continue;
+        auto state = std::make_unique<VehicleSirenState>();
+        state->Validate = source->Validate;
+        state->Name = source->Name;
+        state->Sound = source->Sound;
+        state->Paintjob = source->Paintjob;
+        for (const auto &[id, sourceMaterial] : source->Materials) {
+            if (!sourceMaterial) continue;
+            auto rotator = sourceMaterial->Rotator ? std::make_unique<VehicleSirenRotator>(*sourceMaterial->Rotator) : nullptr;
+            auto material = std::make_unique<VehicleSirenMaterial>(*sourceMaterial);
+            material->Rotator = rotator.release();
+            state->Materials.emplace(id, material.get());
+            material.release();
+        }
+        copy->States.push_back(state.get());
+        state.release();
+    }
+    return copy;
+}
 
 bool VehicleSiren::GetSirenState()
 {
@@ -632,6 +661,7 @@ void Sirens::Parse(const nlohmann::json &data, int model)
 
 		auto *pNewData = new VehicleSirenData(data["sirens"]);
 		pNewData->isImVehFtSiren = data["sirens"].contains("imvehft") && data["sirens"]["imvehft"];
+		pNewData->Revision = ++g_SirenDataRevision;
 
 		if (!pNewData->Validate)
 		{
@@ -781,10 +811,7 @@ void Sirens::Init()
 			if (matIdx != - 1) {
 				auto &data = m_VehData.Get(pVeh);
 				data.vehicle = pVeh;
-				int curState = data.GetCurrentState();
-
-				if (curState >= 0 && static_cast<size_t>(curState) < modelData[pVeh->m_nModelIndex]->States.size()) {
-					auto& state = modelData[pVeh->m_nModelIndex]->States[curState];
+				if (auto *state = data.GetStateForVehicle(GetModelData(pVeh->m_nModelIndex))) {
 					if (state->Materials.contains(matIdx)) {
 						CRGBA onCol = state->Materials[matIdx]->Color;
 						CRGBA offCol = state->Materials[matIdx]->ColorOff.value_or(
@@ -948,6 +975,7 @@ void Sirens::Init()
 
 			auto &data = m_VehData.Get(pVeh);
 			data.vehicle = pVeh;
+			data.PrepareRuntime(GetModelData(model));
 
 			if (pVeh->m_fHealth <= 0.0f || pVeh->bEngineBroken)
 			{
@@ -1048,7 +1076,8 @@ void Sirens::Init()
 		data.ActiveRotators.clear();
 
 		uint64_t time = static_cast<uint64_t>(CTimer::m_snTimeInMilliseconds);
-		VehicleSirenState* state = modelData[model]->States[data.GetCurrentState()];
+		VehicleSirenState* state = data.GetStateForVehicle(GetModelData(model));
+		if (!state) return;
 		if (data.SirenState == false && sirenState == true) {
 			data.SirenState = true;
 
@@ -1316,7 +1345,7 @@ void Sirens::ProcessPointLights(CVehicle *pVeh)
 		}
 
 		int model = pVeh->m_nModelIndex;
-		VehicleSirenState *state = modelData[model]->States[data.GetCurrentState()];
+		VehicleSirenState *state = data.GetStateForVehicle(GetModelData(model));
 		if (!state)
 		{
 			return;

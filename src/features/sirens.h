@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <memory>
 #include "core/base.h"
 #include <string>
 #include <vector>
@@ -160,6 +161,7 @@ public:
     std::map<int, VehicleSirenMaterial *> Materials;
 
     VehicleSirenState(std::string_view state, const nlohmann::json &json);
+    VehicleSirenState() = default;
     ~VehicleSirenState()
     {
         for (auto &pair : Materials) {
@@ -175,8 +177,11 @@ public:
     bool Validate = false;
     std::vector<VehicleSirenState *> States;
     bool isImVehFtSiren = false;
+    uint64_t Revision = 0;
 
     VehicleSirenData(const nlohmann::json &json);
+    VehicleSirenData() = default;
+    std::shared_ptr<VehicleSirenData> CloneForVehicle() const;
     ~VehicleSirenData()
     {
         for (auto *state : States) {
@@ -206,6 +211,31 @@ public:
     int m_nActiveSirenSoundState = -1;
     int SoundMode = 0;
     bool m_bPlayingCustomSiren = false;
+    std::shared_ptr<VehicleSirenData> RuntimeData;
+
+    void PrepareRuntime(const VehicleSirenData *model)
+    {
+        if (!model || !model->isImVehFtSiren) {
+            RuntimeData.reset();
+            return;
+        }
+        if (!RuntimeData || RuntimeData->Revision != model->Revision) {
+            RuntimeData = model->CloneForVehicle();
+            SirenState = false;
+            Delay = 0;
+            if (State < 0 || static_cast<size_t>(State) >= RuntimeData->States.size()) State = 0;
+        }
+    }
+
+    VehicleSirenState *GetStateForVehicle(const VehicleSirenData *model) const
+    {
+        if (!model) return nullptr;
+        if (model->isImVehFtSiren) {
+            if (!RuntimeData || RuntimeData->Revision != model->Revision) return nullptr;
+            model = RuntimeData.get();
+        }
+        return State >= 0 && static_cast<size_t>(State) < model->States.size() ? model->States[State] : nullptr;
+    }
 
     VehicleSiren(CVehicle *_vehicle = nullptr);
     ~VehicleSiren()
