@@ -218,6 +218,16 @@ void HeadlightComponent::Process(CVehicle* pVeh, VehLightData& data) {
 
     CPed* pPlayer = FindPlayerPed();
     if (pPlayer && pVeh->IsDriver(pPlayer)) {
+        if (LightsConfig::Get().bLegacyLongLightControls) {
+            static uint32_t lastToggle = 0;
+            const uint32_t now = CTimer::m_snTimeInMilliseconds;
+            if (pVeh->bEngineOn && InputMgr::IsKeyDown(LightsConfig::Get().nLongLightKey) && now - lastToggle > 250u) {
+                data.bLongLightsOn = !data.bLongLightsOn;
+                lastToggle = now;
+                AudioMgr::PlaySwitchSound(pVeh);
+            }
+            return;
+        }
         if (!isHeadlightsActive && data.fLightFactor[eMaterialType::HeadLightLeft] <= 0.001f && data.fLightFactor[eMaterialType::HeadLightRight] <= 0.001f) {
             data.bLongLightsOn = false;
         }
