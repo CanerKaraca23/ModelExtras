@@ -6,6 +6,7 @@
 #include <d3d9.h>
 #include <memory>
 #include <cmath>
+#include <filesystem>
 
 using namespace plugin;
 
@@ -590,6 +591,31 @@ void DirtFx::InitialiseDirtTextureSingle(const char *name, RwTexture **dirtTextu
 	}
 }
 
+void DirtFx::InitialiseLegacyTyreTextures()
+{
+	const bool preferLegacy = gConfig.ReadBoolean("DIRT", "UseLegacyTextures", false);
+	const std::filesystem::path adjacent = PLUGIN_PATH((char *)"ImVehFt\\tyres");
+	const std::filesystem::path game = GAME_PATH((char *)"ImVehFt\\tyres");
+	for (int level = 0; level < 16; ++level)
+	{
+		if (!preferLegacy && ms_aDirtTextures_4[level]) continue;
+		const std::string name = "tyrewall_dirt_" + std::to_string(level + 1) + ".png";
+		for (const auto &root : {adjacent, game})
+		{
+			const auto path = root / name;
+			std::error_code ec;
+			if (!std::filesystem::is_regular_file(path, ec)) continue;
+			RwTexture *texture = TextureMgr::LoadFromFile(path.string().c_str());
+			if (!texture) continue;
+			RwTextureSetName(texture, "tyrewall_dirt");
+			RwTextureSetFilterMode(texture, rwFILTERLINEAR);
+			if (ms_aDirtTextures_4[level]) RwTextureDestroy(ms_aDirtTextures_4[level]);
+			ms_aDirtTextures_4[level] = texture;
+			break;
+		}
+	}
+}
+
 void DirtFx::InitialiseDirtTextures()
 {
 	// Dirt Textures which blend to white
@@ -598,4 +624,5 @@ void DirtFx::InitialiseDirtTextures()
 
 	// Textures which belnd between two images
 	InitialiseBlendTextureSingle("tyrewall_dirt", "tyrewall_dirt_dt", ms_aDirtTextures_4);
+	InitialiseLegacyTyreTextures();
 }

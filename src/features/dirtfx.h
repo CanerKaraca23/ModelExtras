@@ -37,6 +37,7 @@ private:
 	void Shutdown() override;
 	static void ShutdownHook();
 	static void InitialiseDirtTextures();
+	static void InitialiseLegacyTyreTextures();
 	static void InitialiseBlendTextureSingle(const char *CleanName, const char *DirtName, RwTexture **TextureArray);
 	static void InitialiseBlendTextureSingleEx(RwTexture *src, RwTexture *dest, bool overlay);
 	static void InitialiseDirtStage(RwTexture *src, RwTexture *dest, DirtStages &stages, int level);
