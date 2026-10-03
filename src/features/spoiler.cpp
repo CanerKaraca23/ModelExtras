@@ -69,6 +69,7 @@ void Spoiler::Init()
             spoilerData.m_fRotation = jsonData["spoilers"][name].value("rotation", 30.0f);
             spoilerData.m_nTime = jsonData["spoilers"][name].value("time", 3000.0f);
             spoilerData.m_nTriggerSpeed = jsonData["spoilers"][name].value("triggerspeed", 20.0f);
+            spoilerData.m_bLegacySpeed = !jsonData["spoilers"][name].contains("triggerspeed");
         }
         else
         {
@@ -77,7 +78,8 @@ void Spoiler::Init()
         data.m_Spoilers.push_back(spoilerData);
     });
 
-    ModelInfoMgr::RegisterRender([](CVehicle *pVeh)
+    const bool legacyMotion = gConfig.ReadBoolean("SPOILERS", "UseLegacyMotion", false);
+    ModelInfoMgr::RegisterRender([legacyMotion](CVehicle *pVeh)
                                 {
         if (!CBaseFeature::IsEnabled(eFeatureMatrix::AnimatedSpoiler))
         {
@@ -96,6 +98,35 @@ void Spoiler::Init()
         for (auto& e: data.m_Spoilers) {
             if (!FrameUtil::ContainsFrame(RpClumpGetFrame(pVeh->m_pRwClump), e.m_pFrame) ||
                 CarUtil::IsLegacyParentDamaged(pVeh, e.m_pFrame)) continue;
+            if (legacyMotion) {
+                if (!std::isfinite(e.m_fRotation)) continue;
+                const uint32_t now = CTimer::m_snTimeInMilliseconds;
+                if (e.m_nLegacyState < 2) {
+                    const float speed = e.m_bLegacySpeed ? pVeh->m_vecMoveSpeed.Magnitude() : Util::GetVehicleSpeed(pVeh);
+                    if (!std::isfinite(speed)) continue;
+                    const bool open = e.m_bLegacySpeed ? static_cast<double>(speed) * 178.0 >= 125.0 : speed > e.m_nTriggerSpeed;
+                    if (open != (e.m_nLegacyState == 1)) {
+                        e.m_nLegacyState = open ? 3 : 2;
+                        e.m_nTransitionStart = now;
+                    }
+                    continue;
+                }
+                const double time = std::isfinite(e.m_nTime) && e.m_nTime > 0 ? e.m_nTime : 2500.0;
+                const uint32_t duration = static_cast<uint32_t>(std::clamp(time, 1.0, 4294967295.0));
+                const uint32_t elapsed = now - e.m_nTransitionStart;
+                const bool opening = e.m_nLegacyState == 3;
+                const double progress = elapsed > duration ? 1.0 : static_cast<double>(elapsed) / duration;
+                e.m_fCurrentRotation = -static_cast<float>((opening ? progress : 1.0 - progress) * e.m_fRotation);
+                if (elapsed > duration) e.m_nLegacyState = opening ? 1 : 0;
+                const float radians = static_cast<float>(e.m_fCurrentRotation * 0.017453292);
+                const float sine = std::sin(radians), cosine = std::cos(radians);
+                auto &matrix = e.m_pFrame->modelling;
+                matrix.right = {1.0f, 0.0f, 0.0f};
+                matrix.up = {0.0f, cosine, sine};
+                matrix.at = {0.0f, -sine, cosine};
+                RwMatrixUpdate(&matrix);
+                continue;
+            }
             bool isEnabled = Util::GetVehicleSpeed(pVeh) > e.m_nTriggerSpeed;
 
            float targetAngle = isEnabled ? -e.m_fRotation : 0.0f;

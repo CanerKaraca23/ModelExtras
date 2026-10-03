@@ -2,6 +2,7 @@
 #include <plugin.h>
 #include "core/base.h"
 #include <vector>
+#include <cstdint>
 
 struct SpoilerData
 {
@@ -10,6 +11,9 @@ struct SpoilerData
   float m_fCurrentRotation = 0.0f;
   float m_nTime = 0.0f;
   float m_nTriggerSpeed = 0.0f;
+  uint32_t m_nTransitionStart = 0;
+  uint8_t m_nLegacyState = 0;
+  bool m_bLegacySpeed = true;
 };
 
 struct SpoilerVehData
