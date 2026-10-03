@@ -7,44 +7,93 @@
 #include <rpworld.h>
 #include <RenderWare.h>
 #include <CFileLoader.h>
+#include <filesystem>
 
-RwTexture *LoadPNGFromFile(const char *filename, RwUInt8 alpha)
+static const char *g_ShadowNames[] = {"headlight_short", "headlight_long", "taillight", "pointlight", "backfire"};
+static const char *g_ShadowFiles[] = {"headlight_s.png", "headlight_l.png", "taillight.png", "pointlight.png", "backfire.png"};
+static RwTexture *g_LegacyShadows[5]{};
+static bool g_UseLegacyShadows = false;
+
+void TextureMgr::Init()
 {
+    Events::initGameEvent.after += [] {
+        g_UseLegacyShadows = gConfig.ReadBoolean("VISUAL", "UseLegacyShadows", false);
+        const std::filesystem::path adjacent = PLUGIN_PATH((char *)"ImVehFt\\shadows");
+        const std::filesystem::path game = GAME_PATH((char *)"ImVehFt\\shadows");
+        for (size_t i = 0; i < 5; ++i) {
+            if (g_LegacyShadows[i]) continue;
+            for (const auto &root : {adjacent, game}) {
+                const auto path = root / g_ShadowFiles[i];
+                std::error_code ec;
+                if (!std::filesystem::is_regular_file(path, ec)) continue;
+                RwTexture *texture = LoadFromFile(path.string().c_str());
+                if (!texture) continue;
+                RwTextureSetName(texture, g_ShadowNames[i]);
+                RwTextureSetFilterMode(texture, rwFILTERLINEAR);
+                RwTextureSetAddressingU(texture, rwTEXTUREADDRESSCLAMP);
+                RwTextureSetAddressingV(texture, rwTEXTUREADDRESSCLAMP);
+                g_LegacyShadows[i] = texture;
+                break;
+            }
+        }
+    };
+    Events::shutdownRwEvent += [] {
+        for (auto &texture : g_LegacyShadows) {
+            if (texture) RwTextureDestroy(texture);
+            texture = nullptr;
+        }
+    };
+}
+
+RwTexture *TextureMgr::LoadFromFile(const char *filename, RwUInt8 alpha)
+{
+    if (!filename) return nullptr;
     RwImage *image = RtPNGImageRead(filename);
     if (!image)
     {
         return nullptr;
     }
 
-    RwInt32 width, height, depth, flags;
-    RwImageFindRasterFormat(image, rwRASTERTYPETEXTURE | rwRASTERFORMAT888, &width, &height, &depth, &flags);
-
-    RwRaster *raster = RwRasterCreate(width, height, depth, flags);
+    const int width = RwImageGetWidth(image), height = RwImageGetHeight(image);
+    RwRaster *raster = width > 0 && height > 0 ? RwRasterCreate(width, height, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888) : nullptr;
     if (!raster)
     {
         RwImageDestroy(image);
         return nullptr;
     }
+    if (!RwRasterSetFromImage(raster, image))
+    {
+        RwImageDestroy(image);
+        RwRasterDestroy(raster);
+        return nullptr;
+    }
+    RwImageDestroy(image);
     if (alpha != 255)
     {
-        // Set the alpha value for each pixel
-        RwRGBA *pixels = (RwRGBA *)RwImageGetPixels(image);
+        auto *pixels = RwRasterLock(raster, 0, rwRASTERLOCKREAD | rwRASTERLOCKWRITE);
+        const int stride = RwRasterGetStride(raster);
+        if (!pixels || stride <= 0 || width > stride / 4) {
+            if (pixels) RwRasterUnlock(raster);
+            RwRasterDestroy(raster);
+            return nullptr;
+        }
         for (RwInt32 y = 0; y < height; y++)
         {
             for (RwInt32 x = 0; x < width; x++)
             {
-                RwRGBA *pixel = pixels + (y * width + x);
+                RwRGBA *pixel = reinterpret_cast<RwRGBA *>(pixels + y * stride + x * 4);
                 pixel->red = (pixel->red * alpha) / 255;
                 pixel->green = (pixel->green * alpha) / 255;
                 pixel->blue = (pixel->blue * alpha) / 255;
                 pixel->alpha = alpha;
             }
         }
+        RwRasterUnlock(raster);
     }
 
-    RwRasterSetFromImage(raster, image);
-    RwImageDestroy(image);
-    return RwTextureCreate(raster);
+    RwTexture *texture = RwTextureCreate(raster);
+    if (!texture) RwRasterDestroy(raster);
+    return texture;
 }
 
 RwTexture *TextureMgr::RwReadTexture(const char *name, char *Maskname)
@@ -54,6 +103,11 @@ RwTexture *TextureMgr::RwReadTexture(const char *name, char *Maskname)
 
 RwTexture *TextureMgr::Get(std::string_view name, RwUInt8 alpha)
 {
+    RwTexture *legacy = nullptr;
+    if (alpha == 255) {
+        for (size_t i = 0; i < 5; ++i) if (name == g_ShadowNames[i]) { legacy = g_LegacyShadows[i]; break; }
+    }
+    if (g_UseLegacyShadows && legacy) return legacy;
     auto it = Textures.find(name);
     if (it != Textures.end())
     {
@@ -70,9 +124,9 @@ RwTexture *TextureMgr::Get(std::string_view name, RwUInt8 alpha)
     std::memcpy(nameBuf, name.data(), copyLen);
     nameBuf[copyLen] = '\0';
 
-    RwTexture *pTex = RwTexDictionaryFindNamedTexture(pDict, nameBuf);
+    RwTexture *pTex = pDict ? RwTexDictionaryFindNamedTexture(pDict, nameBuf) : nullptr;
     if (pTex == nullptr) {
-        return nullptr;
+        return legacy;
     }
 
     std::string keyStr(name);

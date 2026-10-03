@@ -10,6 +10,7 @@ private:
     static inline std::map<std::string, std::map<RwUInt8, RwTexture *>, std::less<>> Textures;
 
 public:
+    static void Init();
     static RwTexture *FindInDict(std::string_view name, RwTexDictionary *pDict, bool fallback = false, bool useDefault = true);
     static RwTexture *FindOnTextureInDict(RpMaterial *pMat, RwTexDictionary *pDict, bool fallback = false);
     static RwTexture *LoadFromFile(const char *filename, RwUInt8 alpha = 255);

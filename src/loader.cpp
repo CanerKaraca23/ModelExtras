@@ -35,6 +35,7 @@
 #include "utils/frameextension.h"
 #include "utils/meevents.h"
 #include "utils/samp.h"
+#include "utils/texmgr.h"
 
 constexpr uint32_t TEST_CHEAT = 0x0ADC;
 
@@ -45,6 +46,7 @@ void ModelExtras::Init()
     AudioMgr::Init();
     ModelInfoMgr::Init();
     RwFrameExtension::Init();
+    TextureMgr::Init();
 
     Events::initGameEvent.after += []()
     {
