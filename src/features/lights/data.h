@@ -47,6 +47,7 @@ struct LightsConfig {
     uint32_t nIndicatorLeftKey = 'Z';
     uint32_t nIndicatorRightKey = 'C';
     uint32_t nIndicatorBothKey = 'X';
+    uint32_t nIndicatorDelay = 500;
     bool bAutoIndicatorsOnSteer = false;
     bool bFoglightTiedToHeadlight = false;
     bool bPlayerIdleBrakeLights = false;
@@ -82,6 +83,7 @@ struct LightsConfig {
         nIndicatorLeftKey = gConfig.ReadInteger("KEYS", "IndicatorLightLeftKey", gConfig.ReadInteger("CONTROL", "key_turnl_l", 'Z'));
         nIndicatorRightKey = gConfig.ReadInteger("KEYS", "IndicatorLightRightKey", gConfig.ReadInteger("CONTROL", "key_turnl_r", 'C'));
         nIndicatorBothKey = gConfig.ReadInteger("KEYS", "IndicatorLightBothKey", gConfig.ReadInteger("CONTROL", "key_turnl_2", 'X'));
+        nIndicatorDelay = static_cast<uint32_t>(std::max(0, gConfig.ReadInteger("LIGHTS", "IndicatorLightDelay", gConfig.ReadInteger("MAIN", "turnlights_delay", 500))));
         bAutoIndicatorsOnSteer = gConfig.ReadBoolean("LIGHTS", "AutoIndicatorsOnSteer", gConfig.ReadBoolean("TWEAKS", "AutoIndicatorsOnSteer", false));
         bFoglightTiedToHeadlight = gConfig.ReadBoolean("LIGHTS", "FoglightTiedToHeadlight", gConfig.ReadBoolean("TWEAKS", "FoglightTiedToHeadlight", false));
         bPlayerIdleBrakeLights = gConfig.ReadBoolean("LIGHTS", "PlayerIdleBrakeLights", gConfig.ReadBoolean("TWEAKS", "PlayerIdleBrakeLights", false));
@@ -118,7 +120,7 @@ struct BlinkerState {
 
     void Update() {
         size_t timestamp = CTimer::m_snTimeInMilliseconds;
-        if ((timestamp - nDelayTimer) > 500) {
+        if ((timestamp - nDelayTimer) > LightsConfig::Get().nIndicatorDelay) {
             nDelayTimer = timestamp;
             bIndicatorsDelay = !bIndicatorsDelay;
         }
