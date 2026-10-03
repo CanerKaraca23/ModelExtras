@@ -220,14 +220,12 @@ bool Parse_EmlToMemory(std::istream &infile, nlohmann::json &jsonData, int &outM
                 }
                 uint64_t ms = (val >= count) ? (val - count) : 0;
                 count = val;
-                if (ms == 0)
-                    continue;
                 pattern.push_back(ms);
             }
             catch (...) {}
         }
 
-        if (count == 0 || count > static_cast<uint64_t>(std::numeric_limits<int>::max()))
+        if (pattern.empty())
         {
             starting = 1;
             pattern.clear();
