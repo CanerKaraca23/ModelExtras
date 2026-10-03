@@ -76,12 +76,12 @@ struct LightsConfig {
         gTailLightShadowIntensity = gConfig.ReadInteger("LIGHTS", "TailLightShadowIntensity", gGlobalShadowIntensity);
         gfTailLightShadowSize = gConfig.ReadFloat("LIGHTS", "TailLightShadowSize", 1.0f);
 
-        nFogLightKey = gConfig.ReadInteger("KEYS", "FogLightKey", 'J');
-        nLongLightKey = gConfig.ReadInteger("KEYS", "LongLightKey", 'G');
-        nIndicatorNoneKey = gConfig.ReadInteger("KEYS", "IndicatorLightNoneKey", VK_SHIFT);
-        nIndicatorLeftKey = gConfig.ReadInteger("KEYS", "IndicatorLightLeftKey", 'Z');
-        nIndicatorRightKey = gConfig.ReadInteger("KEYS", "IndicatorLightRightKey", 'C');
-        nIndicatorBothKey = gConfig.ReadInteger("KEYS", "IndicatorLightBothKey", 'X');
+        nFogLightKey = gConfig.ReadInteger("KEYS", "FogLightKey", gConfig.ReadInteger("CONTROL", "key_fog", 'J'));
+        nLongLightKey = gConfig.ReadInteger("KEYS", "LongLightKey", gConfig.ReadInteger("CONTROL", "key_headlight", 'G'));
+        nIndicatorNoneKey = gConfig.ReadInteger("KEYS", "IndicatorLightNoneKey", gConfig.ReadInteger("CONTROL", "key_turnl_0", VK_SHIFT));
+        nIndicatorLeftKey = gConfig.ReadInteger("KEYS", "IndicatorLightLeftKey", gConfig.ReadInteger("CONTROL", "key_turnl_l", 'Z'));
+        nIndicatorRightKey = gConfig.ReadInteger("KEYS", "IndicatorLightRightKey", gConfig.ReadInteger("CONTROL", "key_turnl_r", 'C'));
+        nIndicatorBothKey = gConfig.ReadInteger("KEYS", "IndicatorLightBothKey", gConfig.ReadInteger("CONTROL", "key_turnl_2", 'X'));
         bAutoIndicatorsOnSteer = gConfig.ReadBoolean("LIGHTS", "AutoIndicatorsOnSteer", gConfig.ReadBoolean("TWEAKS", "AutoIndicatorsOnSteer", false));
         bFoglightTiedToHeadlight = gConfig.ReadBoolean("LIGHTS", "FoglightTiedToHeadlight", gConfig.ReadBoolean("TWEAKS", "FoglightTiedToHeadlight", false));
         bPlayerIdleBrakeLights = gConfig.ReadBoolean("LIGHTS", "PlayerIdleBrakeLights", gConfig.ReadBoolean("TWEAKS", "PlayerIdleBrakeLights", false));
