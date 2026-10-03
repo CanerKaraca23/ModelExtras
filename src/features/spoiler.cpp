@@ -4,17 +4,36 @@
 #include "utils/modelinfomgr.h"
 #include "utils/car.h"
 #include "utils/frame.h"
+#include <cmath>
 
 void Spoiler::Init()
 {
-    ModelInfoMgr::RegisterDummy([](CVehicle *pVeh, RwFrame *pFrame, const std::string_view nodeName)
+    const bool legacyDefaults = gConfig.ReadBoolean("SPOILERS", "UseLegacyDefaults", false);
+    ModelInfoMgr::RegisterDummy([legacyDefaults](CVehicle *pVeh, RwFrame *pFrame, const std::string_view nodeName)
     {
-        if (!nodeName.starts_with("movspoiler")) {
+        if (!pVeh || !pFrame || !nodeName.starts_with("movspoiler")) {
             return;
         }
         
         SpoilerVehData &data = m_VehData.Get(pVeh);
         SpoilerData spoilerData;
+        if (legacyDefaults) {
+            spoilerData.m_fRotation = 25.0f;
+            spoilerData.m_nTime = 2500.0f;
+            auto first = nodeName.find('_');
+            if (first != std::string_view::npos) {
+                const std::string suffix(nodeName.substr(first + 1));
+                try {
+                    size_t end = 0;
+                    float rotation = std::stof(suffix, &end);
+                    if (std::isfinite(rotation)) spoilerData.m_fRotation = rotation;
+                    if (end < suffix.size() && suffix[end] == '_') {
+                        int time = std::stoi(suffix.substr(end + 1));
+                        if (time > 0) spoilerData.m_nTime = static_cast<float>(time);
+                    }
+                } catch (...) {}
+            }
+        } else {
         auto first = nodeName.find('_');
         auto second = (first != std::string_view::npos) ? nodeName.find('_', first + 1) : std::string_view::npos;
         if (first != std::string_view::npos && second != std::string_view::npos && second > first + 1) {
@@ -38,6 +57,7 @@ void Spoiler::Init()
         }
         else {
             spoilerData.m_nTime = 3000.0f;
+        }
         }
 
         spoilerData.m_pFrame = pFrame;
