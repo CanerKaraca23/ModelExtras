@@ -179,6 +179,33 @@ bool CarUtil::IsFrameDamaged(CVehicle *pVeh, RwFrame *frame) {
     return false;
 }
 
+bool CarUtil::IsLegacyParentDamaged(CVehicle *pVeh, RwFrame *frame) {
+    if (!pVeh || !frame || (pVeh->m_nVehicleSubClass != VEHICLE_AUTOMOBILE &&
+        pVeh->m_nVehicleSubClass != VEHICLE_MTRUCK && pVeh->m_nVehicleSubClass != VEHICLE_QUAD)) return false;
+    RwFrame *parent = RwFrameGetParent(frame);
+    if (!parent) return false;
+    const char *name = GetFrameNodeName(parent);
+    if (name && std::string_view(name).starts_with("dummy")) {
+        parent = RwFrameGetParent(parent);
+        if (!parent) return false;
+        name = GetFrameNodeName(parent);
+    }
+    if (!name) return false;
+    const std::string_view node(name);
+    auto &damage = static_cast<CAutomobile *>(pVeh)->m_damageManager;
+    if (node == "door_rf_dummy") return damage.GetDoorStatus(eDoors::DOOR_FRONT_RIGHT) >= 2;
+    if (node == "door_lf_dummy") return damage.GetDoorStatus(eDoors::DOOR_FRONT_LEFT) >= 2;
+    if (node == "door_rr_dummy") return damage.GetDoorStatus(eDoors::DOOR_REAR_RIGHT) >= 2;
+    if (node == "door_lr_dummy") return damage.GetDoorStatus(eDoors::DOOR_REAR_LEFT) >= 2;
+    if (node == "bonnet_dummy") return damage.GetDoorStatus(eDoors::BONNET) >= 2;
+    if (node == "boot_dummy") return damage.GetDoorStatus(eDoors::BOOT) >= 2;
+    if (node == "bump_front_dummy") return damage.GetPanelStatus(ePanels::BUMP_FRONT) != 0;
+    if (node == "bump_rear_dummy") return damage.GetPanelStatus(ePanels::BUMP_REAR) != 0;
+    if (node == "wing_rf_dummy") return damage.GetPanelStatus(ePanels::WING_FRONT_RIGHT) != 0;
+    if (node == "wing_lf_dummy") return damage.GetPanelStatus(ePanels::WING_FRONT_LEFT) != 0;
+    return false;
+}
+
 bool CarUtil::IsDummyDamaged(CVehicle *pVeh, const DummyConfig &c) {
     if (!pVeh || pVeh->m_nVehicleSubClass != VEHICLE_AUTOMOBILE) {
         return false;

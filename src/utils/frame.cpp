@@ -192,6 +192,15 @@ void FrameUtil::ShowAllChilds(RwFrame *parent_frame)
     FrameUtil::ShowAllAtomics(parent_frame);
 }
 
+bool FrameUtil::ContainsFrame(RwFrame *root, const RwFrame *target) {
+    if (!root || !target) return false;
+    if (root == target) return true;
+    for (RwFrame *child = root->child; child; child = child->next) {
+        if (ContainsFrame(child, target)) return true;
+    }
+    return false;
+}
+
 bool FrameUtil::IsAtomicVisible(RwFrame* frame) {
     if (!frame) return true;
 

@@ -2,6 +2,8 @@
 #include "spoiler.h"
 #include "utils/datamgr.h"
 #include "utils/modelinfomgr.h"
+#include "utils/car.h"
+#include "utils/frame.h"
 
 void Spoiler::Init()
 {
@@ -61,7 +63,7 @@ void Spoiler::Init()
         {
             return;
         }
-        if (!pVeh || !pVeh->GetIsOnScreen())
+        if (!pVeh || !pVeh->m_pRwClump || !pVeh->GetIsOnScreen())
         {
             return;
         }
@@ -72,6 +74,8 @@ void Spoiler::Init()
         }
 
         for (auto& e: data.m_Spoilers) {
+            if (!FrameUtil::ContainsFrame(RpClumpGetFrame(pVeh->m_pRwClump), e.m_pFrame) ||
+                CarUtil::IsLegacyParentDamaged(pVeh, e.m_pFrame)) continue;
             bool isEnabled = Util::GetVehicleSpeed(pVeh) > e.m_nTriggerSpeed;
 
            float targetAngle = isEnabled ? -e.m_fRotation : 0.0f;

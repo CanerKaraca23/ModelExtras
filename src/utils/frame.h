@@ -14,6 +14,7 @@ class FrameUtil {
 public:
     static bool IsAtomicVisible(RwFrame* frame);
     static bool IsOkAtomicVisible(RwFrame* frame);
+    static bool ContainsFrame(RwFrame *root, const RwFrame *target);
 
     static RwFrame * Clone(RwFrame *frame, RpClump *clump, RwFrame *parent, bool isRoot);
     static void DestroyNodeHierarchyRecursive(RwFrame * frame);

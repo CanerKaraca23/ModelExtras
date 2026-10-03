@@ -21,6 +21,7 @@ public:
     static bool IsLightDamaged(CVehicle *pVeh, eLights light);
     static bool IsPanelDamaged(CVehicle *pVeh, ePanels panel);
     static bool IsFrameDamaged(CVehicle *pVeh, RwFrame *frame);
+    static bool IsLegacyParentDamaged(CVehicle *pVeh, RwFrame *frame);
     static bool IsDummyDamaged(CVehicle *pVeh, const DummyConfig &c);
     static CVector UpdateRelativeToBoundingBox(CVehicle *pVeh, eDummyPos dummyPos, CVector center, CVector up, CVector right);
 
