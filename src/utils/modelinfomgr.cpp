@@ -21,6 +21,7 @@
 #include "utils/meevents.h"
 #include "utils/texmgr.h"
 #include "utils/mathutil.h"
+#include "utils/parentdamage.h"
 
 using namespace plugin;
 
@@ -140,6 +141,7 @@ void ModelInfoMgr::ReloadConfig() {
 }
 
 void ModelInfoMgr::Init() {
+  ParentDamageVisibility::Init();
   m_RestoreEntries.reserve(256);
   m_SurfPropsRestoreEntries.reserve(256);
 
@@ -189,6 +191,7 @@ void ModelInfoMgr::Init() {
     } else {
       data.nFrameCount++;
     }
+    ParentDamageVisibility::Apply(pVeh);
   };
 
   MEEvents::heliRenderEvent.after += [](CVehicle *pVeh) {
