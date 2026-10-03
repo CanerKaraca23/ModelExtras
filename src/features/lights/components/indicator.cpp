@@ -28,11 +28,21 @@ eMaterialType IndicatorComponent::GetMatType(CRGBA matCol) {
 }
 
 bool IndicatorComponent::TryRegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const std::string_view name, VehLightData& data) {
-    if (name.starts_with("turnl_") || name.starts_with("indicator_")) {
+    if (name.starts_with("turnl") || name.starts_with("indicator")) {
         auto d = Util::GetCharsAfterPrefix(name, "turnl_", 2);
         if (!d) d = Util::GetCharsAfterPrefix(name, "indicator_", 2);
         if (!d) d = Util::GetCharsAfterPrefix(name, "turnl_", 1);
         if (!d) d = Util::GetCharsAfterPrefix(name, "indicator_", 1);
+        // Keep valid ME positions; otherwise accept IVF's position suffix anywhere in the name.
+        if (!d || ((*d)[0] != 'L' && (*d)[0] != 'R') ||
+            (d->size() == 2 && (*d)[1] != 'F' && (*d)[1] != 'R' && (*d)[1] != 'M')) {
+            for (std::string_view suffix : {"_lf", "_rf", "_lr", "_rr", "_lm", "_rm"}) {
+                if (name.find(suffix) != std::string_view::npos) {
+                    d = std::string(suffix.substr(1));
+                    break;
+                }
+            }
+        }
         if (d) {
             DummyConfig c = LightManager::CreateBaseConfig(pVeh, pFrame);
             bool isLeft = (d.value()[0] == 'L' || d.value()[0] == 'l');
