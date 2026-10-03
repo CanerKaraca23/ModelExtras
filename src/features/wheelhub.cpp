@@ -5,6 +5,8 @@
 #include "utils/frame.h"
 #include <CAutomobile.h>
 #include <CBike.h>
+#include <CGeneral.h>
+#include <cmath>
 
 void WheelHub::Init()
 {
@@ -28,7 +30,8 @@ void WheelHub::Init()
     });
 
     const bool legacyPosition = gConfig.ReadBoolean("WHEELS", "UseLegacyHubPosition", false);
-    ModelInfoMgr::RegisterRender([legacyPosition](CVehicle *pVeh)
+    const bool legacyRotation = gConfig.ReadBoolean("WHEELS", "UseLegacyHubRotation", false);
+    ModelInfoMgr::RegisterRender([legacyPosition, legacyRotation](CVehicle *pVeh)
     {
         if (!CBaseFeature::IsEnabled(eFeatureMatrix::RotatingWheelHubs)) return;
         if (!pVeh || !pVeh->m_pRwClump || !pVeh->GetIsOnScreen()) {
@@ -39,11 +42,13 @@ void WheelHub::Init()
         bool modified = false;
         RwFrame *root = RpClumpGetFrame(pVeh->m_pRwClump);
         RwFrame *nativeWheels[6]{};
-        if (pVeh->m_nVehicleSubClass == VEHICLE_AUTOMOBILE || pVeh->m_nVehicleSubClass == VEHICLE_MTRUCK ||
-            pVeh->m_nVehicleSubClass == VEHICLE_QUAD || pVeh->m_nVehicleSubClass == VEHICLE_PLANE) {
+        const bool nativeCar = pVeh->m_nVehicleSubClass == VEHICLE_AUTOMOBILE || pVeh->m_nVehicleSubClass == VEHICLE_MTRUCK ||
+            pVeh->m_nVehicleSubClass == VEHICLE_QUAD || pVeh->m_nVehicleSubClass == VEHICLE_PLANE;
+        const bool nativeBike = pVeh->m_nVehicleSubClass == VEHICLE_BIKE || pVeh->m_nVehicleSubClass == VEHICLE_BMX;
+        if (nativeCar) {
             auto *nodes = static_cast<CAutomobile *>(pVeh)->m_aCarNodes;
             std::copy_n(nodes + CAR_WHEEL_RF, 6, nativeWheels);
-        } else if (pVeh->m_nVehicleSubClass == VEHICLE_BIKE || pVeh->m_nVehicleSubClass == VEHICLE_BMX) {
+        } else if (nativeBike) {
             auto *nodes = static_cast<CBike *>(pVeh)->m_aBikeNodes;
             nativeWheels[0] = nodes[BIKE_WHEEL_FRONT];
             nativeWheels[2] = nodes[BIKE_WHEEL_REAR];
@@ -56,11 +61,20 @@ void WheelHub::Init()
             if (!FrameUtil::ContainsFrame(root, ori)) ori = fallback;
             if (!FrameUtil::ContainsFrame(root, ori)) return;
 
-            RwV3d rightVec = ori->modelling.right;
-            if (isLeft) RwV3dNegate(&rightVec, &rightVec);
-
-            MatrixUtil::ForceRightVector(&tar->modelling, rightVec);
-            RwV3dNegate(&tar->modelling.up, &tar->modelling.up);
+            if (legacyRotation && (nativeCar || nativeBike)) {
+                float angle = CGeneral::GetATanOfXY(ori->modelling.right.x, ori->modelling.right.y);
+                if (isLeft && nativeCar) angle = static_cast<float>(static_cast<double>(angle) - 3.141592);
+                const float cosine = std::cos(angle), sine = std::sin(angle);
+                tar->modelling.right = {cosine, sine, 0.0f};
+                tar->modelling.up = {-sine, cosine, 0.0f};
+                tar->modelling.at = {0.0f, 0.0f, 1.0f};
+                RwMatrixUpdate(&tar->modelling);
+            } else {
+                RwV3d rightVec = ori->modelling.right;
+                if (isLeft) RwV3dNegate(&rightVec, &rightVec);
+                MatrixUtil::ForceRightVector(&tar->modelling, rightVec);
+                RwV3dNegate(&tar->modelling.up, &tar->modelling.up);
+            }
 
             if (legacyPosition) tar->modelling.pos = ori->modelling.pos;
             else tar->modelling.pos.z = ori->modelling.pos.z;
