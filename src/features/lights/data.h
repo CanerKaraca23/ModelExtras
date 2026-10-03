@@ -54,6 +54,7 @@ struct LightsConfig {
     bool bFoglightTiedToHeadlight = false;
     bool bPlayerIdleBrakeLights = false;
     bool bLegacyBrakeState = false;
+    bool bLegacyDayNightTimes = false;
     bool bLightsRequireEngine = false;
     bool bSirensRequireEngine = false;
     float fHighBeamPointLightMul = 2.0f;
@@ -99,6 +100,7 @@ struct LightsConfig {
         bFoglightTiedToHeadlight = gConfig.ReadBoolean("LIGHTS", "FoglightTiedToHeadlight", gConfig.ReadBoolean("TWEAKS", "FoglightTiedToHeadlight", false));
         bPlayerIdleBrakeLights = gConfig.ReadBoolean("LIGHTS", "PlayerIdleBrakeLights", gConfig.ReadBoolean("TWEAKS", "PlayerIdleBrakeLights", false));
         bLegacyBrakeState = gConfig.ReadBoolean("LIGHTS", "UseLegacyBrakeState", false);
+        bLegacyDayNightTimes = gConfig.ReadBoolean("LIGHTS", "UseLegacyDayNightTimes", false);
         bLightsRequireEngine = gConfig.ReadBoolean("LIGHTS", "LightsRequireEngine", gConfig.ReadBoolean("TWEAKS", "LightsRequireEngine", false));
         bSirensRequireEngine = gConfig.ReadBoolean("LIGHTS", "SirensRequireEngine", gConfig.ReadBoolean("TWEAKS", "SirensRequireEngine", false));
         

@@ -3,6 +3,7 @@
 #include "utils/util.h"
 #include "utils/render.h"
 #include "defines.h"
+#include <CClock.h>
 
 void DRLLightComponent::RegisterMaterials(std::unordered_map<uint32_t, eMaterialType>& matMap) {
     matMap[VEHCOL_ALLDAYLIGHT_1.ToInt()] = eMaterialType::AllDayLight;
@@ -43,17 +44,19 @@ bool DRLLightComponent::TryRegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const 
 
 void DRLLightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehLightData& data) {
     if (LightsConfig::Get().bLightsRequireEngine && Util::IsEngineOff(pControlVeh)) return;
+    const bool night = LightsConfig::Get().bLegacyDayNightTimes ? CClock::GetIsTimeInRange(21, 7) : Util::IsNightTime();
     LightManager::RenderLights(pControlVeh, pTowedVeh, data, eMaterialType::AllDayLight, true, "indicator", 1.85f);
-    if (!Util::IsNightTime()) {
+    if (!night) {
         LightManager::RenderLights(pControlVeh, pTowedVeh, data, eMaterialType::DayLight, true, "indicator", 1.85f);
     }
-    if (Util::IsNightTime()) {
+    if (night) {
         LightManager::RenderLights(pControlVeh, pTowedVeh, data, eMaterialType::NightLight, true, "indicator", 1.85f);
     }
 }
 
 void DRLLightComponent::ProcessPointLights(CVehicle* pVeh, VehLightData& data) {
     if (LightsConfig::Get().bLightsRequireEngine && Util::IsEngineOff(pVeh)) return;
+    const bool night = LightsConfig::Get().bLegacyDayNightTimes ? CClock::GetIsTimeInRange(21, 7) : Util::IsNightTime();
     auto renderDRLPointLight = [&](eMaterialType type) {
         if (!LightManager::IsDummyAvailable(data, type) || !data.bLightStates[type]) return;
         for (auto& dummy : data.dummies[type]) {
@@ -63,10 +66,10 @@ void DRLLightComponent::ProcessPointLights(CVehicle* pVeh, VehLightData& data) {
     };
 
     renderDRLPointLight(eMaterialType::AllDayLight);
-    if (!Util::IsNightTime()) {
+    if (!night) {
         renderDRLPointLight(eMaterialType::DayLight);
     }
-    if (Util::IsNightTime()) {
+    if (night) {
         renderDRLPointLight(eMaterialType::NightLight);
     }
 }
