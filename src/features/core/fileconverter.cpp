@@ -7,11 +7,6 @@
 
 int Helper_ImVehFtReadColor(std::string input)
 {
-    if (input.length() == 3)
-    {
-        return std::stoi(input);
-    }
-
     std::istringstream stream(input);
     int color = 0;
     stream >> std::hex >> color;
