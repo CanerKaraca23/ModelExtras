@@ -17,6 +17,7 @@ private:
     static inline std::vector<std::pair<std::string, ModelDataListener_t>> listeners;
 
     static void LoadBaseData();
+    static void LoadLegacyData();
     static void LoadModLoaderData();
 
 public:

@@ -136,6 +136,7 @@ void DataMgr::Init()
 
     // 2. Load Base Layer from ModelExtras/data/
     LoadBaseData();
+    LoadLegacyData();
 
     // 3. Scan ModLoader directory (if present) and apply configs based on pure ModLoader priority
     LoadModLoaderData();
@@ -201,6 +202,52 @@ void DataMgr::LoadBaseData()
     catch (const std::exception &ex)
     {
         LOG(ERROR) << std::format("Failed to iterate data directory: {}", ex.what());
+    }
+}
+
+void DataMgr::LoadLegacyData()
+{
+    for (const auto &root : {GetSelfDirectory() / "ImVehFt", std::filesystem::path("ImVehFt")})
+    {
+        for (const auto &[folder, extension] : {std::pair{"eml", ".eml"}, std::pair{"colors", ".ivfc"}})
+        {
+            std::error_code ec;
+            std::vector<std::filesystem::path> paths;
+            for (auto it = std::filesystem::directory_iterator(root / folder, std::filesystem::directory_options::skip_permission_denied, ec);
+                 !ec && it != std::filesystem::directory_iterator(); it.increment(ec))
+            {
+                std::error_code fileError;
+                if (!it->is_regular_file(fileError)) continue;
+                std::string ext = it->path().extension().string();
+                std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return std::tolower(c); });
+                if (ext == extension) paths.push_back(it->path());
+            }
+            std::sort(paths.begin(), paths.end());
+            for (const auto &path : paths)
+            {
+                try
+                {
+                    std::istringstream stream(ReadFileContent(path));
+                    nlohmann::json converted;
+                    int model = 0;
+                    const bool eml = std::string_view(extension) == ".eml";
+                    const bool parsed = eml ? Parse_EmlToMemory(stream, converted, model) : Parse_IvfcToMemory(stream, converted, model);
+                    if (!parsed || model <= 0 || model >= 20000) continue;
+                    const char *feature = eml ? "sirens" : "carcols";
+                    if (!converted.contains(feature) || !converted[feature].is_object()) continue;
+                    if (data.contains(model) && (!data[model].is_object() || data[model].contains(feature))) continue;
+                    auto &target = data[model];
+                    target[feature] = std::move(converted[feature]);
+                    if (!target.contains("metadata")) target["metadata"] = std::move(converted["metadata"]);
+                    if (!modelPath.contains(model)) modelPath[model] = path.string();
+                    LOG(INFO) << std::format("Loaded legacy IVF {} for model {} from '{}'", feature, model, path.string());
+                }
+                catch (const std::exception &ex)
+                {
+                    LOG(ERROR) << std::format("Failed to parse legacy IVF file '{}': {}", path.string(), ex.what());
+                }
+            }
+        }
     }
 }
 
