@@ -2,6 +2,7 @@
 #include "defines.h"
 #include "fileconverter.h"
 #include <sstream>
+#include <limits>
 
 #define DEFAULT_SIREN_SHADOW "round"
 
@@ -220,7 +221,7 @@ bool Parse_EmlToMemory(std::istream &infile, nlohmann::json &jsonData, int &outM
             catch (...) {}
         }
 
-        if (count == 0 || count > 64553)
+        if (count == 0 || count > static_cast<uint64_t>(std::numeric_limits<int>::max()))
         {
             starting = 1;
             pattern.clear();
