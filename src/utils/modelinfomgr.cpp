@@ -418,6 +418,8 @@ RpMaterial *ModelInfoMgr::SetEditableMaterialsCB(RpMaterial *material,
     MatStateColor matCol = FetchMaterialCol(pCurVeh, material, iLightIndex);
 
     RwRGBA *pColor = RpMaterialGetColor(material);
+    bool hideDaylightOff = iLightIndex == eMaterialType::DayLight &&
+        pColor->red == 0 && pColor->green == 18 && pColor->blue == 255;
     m_RestoreEntries.push_back({pColor, *reinterpret_cast<void **>(pColor)});
 
     if (lightOn) {
@@ -450,6 +452,7 @@ RpMaterial *ModelInfoMgr::SetEditableMaterialsCB(RpMaterial *material,
       pColor->red   = matCol.off.r;
       pColor->green = matCol.off.g;
       pColor->blue  = matCol.off.b;
+      if (hideDaylightOff) pColor->alpha = 0;
       if (RwTexture *pDamaged = FindDamagedLightTexture(pCurVeh, material, iLightIndex)) {
         m_RestoreEntries.push_back({&material->texture, material->texture});
         material->texture = pDamaged;
