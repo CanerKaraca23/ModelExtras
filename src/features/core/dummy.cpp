@@ -9,6 +9,7 @@
 #include <CBike.h>
 #include <CAutomobile.h>
 #include <CModelInfo.h>
+#include <cstdio>
 
 extern float gfGlobalCoronaSize;
 extern int gGlobalCoronaIntensity;
@@ -106,7 +107,19 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
     if (prmPos != std::string::npos)
     {
         const auto prm = name.substr(prmPos + 3);
-        if (prm.size() >= 6)
+        if (legacyDefaults) {
+            unsigned int red = data.corona.color.r, green = data.corona.color.g, blue = data.corona.color.b;
+            unsigned int mode = static_cast<unsigned int>(data.corona.lightingType);
+            unsigned int corona = name.starts_with("fogl") ? 6 : 3, shadow = data.shadow.render ? 5 : 0;
+            const int fields = std::sscanf(std::string(prm).c_str(), "%2X%2X%2X%1X%1X%1X", &red, &green, &blue, &mode, &corona, &shadow);
+            data.corona.color = {static_cast<unsigned char>(red), static_cast<unsigned char>(green), static_cast<unsigned char>(blue), data.corona.color.a};
+            data.shadow.color = {data.corona.color.r, data.corona.color.g, data.corona.color.b, data.shadow.color.a};
+            data.corona.lightingType = mode == 2 ? eLightingMode::NonDirectional : mode == 0 ? eLightingMode::Directional : eLightingMode::Inversed;
+            data.corona.size = corona == 0 ? 0.0f : static_cast<float>(corona / 15.0 - 0.05);
+            data.shadow.render = shadow > 0;
+            if (fields == 6) data.shadow.size = static_cast<float>(shadow) / 7.5f;
+        }
+        else if (prm.size() >= 6)
         {
             int red = ReadHex(prm[0], prm[1]);
             int green = ReadHex(prm[2], prm[3]);
@@ -122,7 +135,7 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
             LOG_VERBOSE("Model {} has issue with node `{}`: invalid color format", data.pVeh->m_nModelIndex, name);
         }
 
-        if (prm.size() > 6 && ReadHexDigit(prm[6]) >= 0)
+        if (!legacyDefaults && prm.size() > 6 && ReadHexDigit(prm[6]) >= 0)
         {
             int type = ReadHexDigit(prm[6]);
             if (type == 2)
@@ -133,18 +146,17 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
                 data.corona.lightingType = eLightingMode::Directional;
         }
 
-        if (prm.size() > 7 && ReadHexDigit(prm[7]) >= 0)
+        if (!legacyDefaults && prm.size() > 7 && ReadHexDigit(prm[7]) >= 0)
         {
-            const int size = ReadHexDigit(prm[7]);
-            data.corona.size = legacyDefaults ? (size == 0 ? 0.0f : static_cast<float>(size / 15.0 - 0.05)) : static_cast<float>(size) / 10.0f;
+            data.corona.size = static_cast<float>(ReadHexDigit(prm[7])) / 10.0f;
         }
 
-        if (prm.size() > 8 && ReadHexDigit(prm[8]) >= 0)
+        if (!legacyDefaults && prm.size() > 8 && ReadHexDigit(prm[8]) >= 0)
         {
             data.shadow.size = static_cast<float>(ReadHexDigit(prm[8])) / 7.5f;
 
-            if (legacyDefaults || data.shadow.size > 0.0f) {
-                data.shadow.render = data.shadow.size > 0.0f;
+            if (data.shadow.size > 0.0f) {
+                data.shadow.render = true;
             }
         }
     }
