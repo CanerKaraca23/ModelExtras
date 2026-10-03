@@ -92,15 +92,15 @@ void TailLightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehL
 
             if (indicatorOn) {
                 if (data.nIndicatorState == eIndicatorState::BothOn) {
-                    tailLightsRender(isLeftRearOk && !BlinkerState::Get().bIndicatorsDelay, isRightRearOk && !BlinkerState::Get().bIndicatorsDelay);
+                    tailLightsRender(isLeftRearOk && !data.IsIndicatorPhaseOn(), isRightRearOk && !data.IsIndicatorPhaseOn());
                 }
 
                 if (data.nIndicatorState == eIndicatorState::LeftOn) {
-                    tailLightsRender(isLeftRearOk && !BlinkerState::Get().bIndicatorsDelay, isRightRearOk && tailLightFlag);
+                    tailLightsRender(isLeftRearOk && !data.IsIndicatorPhaseOn(), isRightRearOk && tailLightFlag);
                 }
 
                 if (data.nIndicatorState == eIndicatorState::RightOn) {
-                    tailLightsRender(isLeftRearOk && tailLightFlag, isRightRearOk && !BlinkerState::Get().bIndicatorsDelay);
+                    tailLightsRender(isLeftRearOk && tailLightFlag, isRightRearOk && !data.IsIndicatorPhaseOn());
                 }
             } else {
                 tailLightsRender(isLeftRearOk, isRightRearOk);

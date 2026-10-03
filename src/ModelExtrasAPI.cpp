@@ -120,6 +120,7 @@ void ME_SetIndicatorState(CVehicle *pVeh, int state) {
   if (!pVeh) return;
   if (state < 0 || state > 3) return;
   auto &data = LightManager::m_VehData.Get(pVeh);
+  if (data.nIndicatorState != static_cast<eIndicatorState>(state)) data.ResetIndicatorPhase();
   data.nIndicatorState = static_cast<eIndicatorState>(state);
 }
 

@@ -105,6 +105,7 @@ void LightManager::Process(CVehicle* pVeh) {
     for (const auto& comp : m_Components) {
         comp->Process(pVeh, data);
     }
+    data.UpdateIndicatorPhase();
 }
 
 void LightManager::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh) {
@@ -383,14 +384,15 @@ bool LightManager::IsMaterialAvailable(CVehicle* pVeh, std::initializer_list<eMa
 }
 
 bool LightManager::IsIndicatorOn(CVehicle* pVeh) {
-    if (!pVeh || pVeh->m_fHealth <= 0.0f || !BlinkerState::Get().bIndicatorsDelay) {
+    if (!pVeh || pVeh->m_fHealth <= 0.0f ||
+        (!LightsConfig::Get().bLegacyIndicatorTiming && !BlinkerState::Get().bIndicatorsDelay)) {
         return false;
     }
     if ((pVeh->m_nVehicleSubClass != VEHICLE_AUTOMOBILE && pVeh->m_nVehicleSubClass != VEHICLE_MTRUCK) || CModelInfo::IsBikeModel(pVeh->m_nModelIndex)) {
         return false;
     }
     VehLightData& data = m_VehData.Get(pVeh);
-    if (data.nIndicatorState == eIndicatorState::Off) {
+    if (data.nIndicatorState == eIndicatorState::Off || !data.IsIndicatorPhaseOn()) {
         return false;
     }
     return data.bUsingGlobalIndicators ||

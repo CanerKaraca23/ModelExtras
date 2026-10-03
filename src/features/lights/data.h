@@ -48,6 +48,7 @@ struct LightsConfig {
     uint32_t nIndicatorRightKey = 'C';
     uint32_t nIndicatorBothKey = 'X';
     uint32_t nIndicatorDelay = 500;
+    bool bLegacyIndicatorTiming = false;
     bool bHeadLightBeams = true;
     bool bAutoIndicatorsOnSteer = false;
     bool bFoglightTiedToHeadlight = false;
@@ -91,6 +92,7 @@ struct LightsConfig {
         nIndicatorRightKey = gConfig.ReadInteger("KEYS", "IndicatorLightRightKey", gConfig.ReadInteger("CONTROL", "key_turnl_r", legacyInteger("CONTROL", "key_turnl_r", 'C')));
         nIndicatorBothKey = gConfig.ReadInteger("KEYS", "IndicatorLightBothKey", gConfig.ReadInteger("CONTROL", "key_turnl_2", legacyInteger("CONTROL", "key_turnl_2", 'X')));
         nIndicatorDelay = static_cast<uint32_t>(std::max(0, gConfig.ReadInteger("LIGHTS", "IndicatorLightDelay", gConfig.ReadInteger("MAIN", "turnlights_delay", legacyInteger("MAIN", "turnlights_delay", 500)))));
+        bLegacyIndicatorTiming = gConfig.ReadBoolean("LIGHTS", "UseLegacyIndicatorTiming", false);
         bHeadLightBeams = gConfig.ReadBoolean("LIGHTS", "HeadLightBeams", gConfig.ReadBoolean("TWEAKS", "HeadLightBeams", !gConfig.ReadBoolean("MAIN", "disable_beam_shape", legacyInteger("MAIN", "disable_beam_shape", 0) != 0)));
         bAutoIndicatorsOnSteer = gConfig.ReadBoolean("LIGHTS", "AutoIndicatorsOnSteer", gConfig.ReadBoolean("TWEAKS", "AutoIndicatorsOnSteer", false));
         bFoglightTiedToHeadlight = gConfig.ReadBoolean("LIGHTS", "FoglightTiedToHeadlight", gConfig.ReadBoolean("TWEAKS", "FoglightTiedToHeadlight", false));
@@ -142,6 +144,25 @@ struct VehLightData {
     bool bLongLightsOn = false;
     float fHighBeamFactor = 0.0f;
     eIndicatorState nIndicatorState = eIndicatorState::Off;
+    uint32_t nIndicatorStart = 0;
+    bool bIndicatorPhaseOn = false;
+
+    bool IsIndicatorPhaseOn() const {
+        return LightsConfig::Get().bLegacyIndicatorTiming ? bIndicatorPhaseOn : BlinkerState::Get().bIndicatorsDelay;
+    }
+
+    void ResetIndicatorPhase() {
+        nIndicatorStart = CTimer::m_snTimeInMilliseconds;
+        bIndicatorPhaseOn = LightsConfig::Get().nIndicatorDelay != 0;
+    }
+
+    void UpdateIndicatorPhase() {
+        if (!LightsConfig::Get().bLegacyIndicatorTiming) return;
+        const uint32_t now = CTimer::m_snTimeInMilliseconds;
+        const uint32_t elapsed = now - nIndicatorStart;
+        bIndicatorPhaseOn = elapsed < LightsConfig::Get().nIndicatorDelay;
+        if (static_cast<uint64_t>(elapsed) > 2ull * LightsConfig::Get().nIndicatorDelay) nIndicatorStart = now;
+    }
     bool bUsingGlobalIndicators = false;
     bool bWasAutoSteerActive = false;
     
@@ -175,6 +196,8 @@ struct VehLightData {
             bLongLightsOn = other.bLongLightsOn;
             fHighBeamFactor = other.fHighBeamFactor;
             nIndicatorState = other.nIndicatorState;
+            nIndicatorStart = other.nIndicatorStart;
+            bIndicatorPhaseOn = other.bIndicatorPhaseOn;
             bUsingGlobalIndicators = other.bUsingGlobalIndicators;
             bWasAutoSteerActive = other.bWasAutoSteerActive;
             bHasVehFuncsPopUp = other.bHasVehFuncsPopUp;

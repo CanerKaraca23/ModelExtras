@@ -125,15 +125,19 @@ void IndicatorComponent::Process(CVehicle* pVeh, VehLightData& data) {
     if (pPlayer && pVeh->IsDriver(pPlayer) &&
         (pVeh->m_nVehicleSubClass == VEHICLE_AUTOMOBILE || pVeh->m_nVehicleSubClass == VEHICLE_BIKE || pVeh->m_nVehicleSubClass == VEHICLE_QUAD || pVeh->m_nVehicleSubClass == VEHICLE_MTRUCK))
     {
-        if (InputMgr::IsKeyJustDown(LightsConfig::Get().nIndicatorNoneKey)) {
+        const auto keyDown = LightsConfig::Get().bLegacyIndicatorTiming ? InputMgr::IsKeyDown : InputMgr::IsKeyJustDown;
+        if (keyDown(LightsConfig::Get().nIndicatorNoneKey)) {
             data.nIndicatorState = eIndicatorState::Off;
-            BlinkerState::Get().Reset();
-        } else if (InputMgr::IsKeyJustDown(LightsConfig::Get().nIndicatorLeftKey)) {
+            if (!LightsConfig::Get().bLegacyIndicatorTiming) BlinkerState::Get().Reset();
+        } else if (keyDown(LightsConfig::Get().nIndicatorLeftKey)) {
             data.nIndicatorState = eIndicatorState::LeftOn;
-        } else if (InputMgr::IsKeyJustDown(LightsConfig::Get().nIndicatorRightKey)) {
+            data.ResetIndicatorPhase();
+        } else if (keyDown(LightsConfig::Get().nIndicatorRightKey)) {
             data.nIndicatorState = eIndicatorState::RightOn;
-        } else if (InputMgr::IsKeyJustDown(LightsConfig::Get().nIndicatorBothKey)) {
+            data.ResetIndicatorPhase();
+        } else if (keyDown(LightsConfig::Get().nIndicatorBothKey)) {
             data.nIndicatorState = eIndicatorState::BothOn;
+            data.ResetIndicatorPhase();
         }
 
         if (LightsConfig::Get().bAutoIndicatorsOnSteer && data.nIndicatorState != eIndicatorState::BothOn) {
@@ -189,7 +193,7 @@ void IndicatorComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehL
         return;
     }
 
-    if (!BlinkerState::Get().bIndicatorsDelay || data.nIndicatorState == eIndicatorState::Off) return;
+    if (!data.IsIndicatorPhaseOn() || data.nIndicatorState == eIndicatorState::Off) return;
 
     auto damage = LightDamageState::Get(pControlVeh, pTowedVeh);
     bool isLeftFrontOk = damage.isFrontLeftOk;
@@ -240,7 +244,7 @@ void IndicatorComponent::ProcessPointLights(CVehicle* pVeh, VehLightData& data) 
     if (data.nIndicatorState != eIndicatorState::Off) {
         float indRadius = 1.40f;
 
-        if (BlinkerState::Get().bIndicatorsDelay) {
+        if (data.IsIndicatorPhaseOn()) {
             auto renderIndPointLight = [&](eMaterialType type, bool isDamaged) {
                 if (isDamaged || !LightManager::IsDummyAvailable(data, type) || !data.bLightStates[type]) return;
                 for (auto& e : data.dummies[type]) {
