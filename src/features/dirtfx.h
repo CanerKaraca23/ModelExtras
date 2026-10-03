@@ -15,6 +15,7 @@ private:
 	// Dirttextures
 	static inline bool m_bEnabled = false;
 	static inline RwTexture **ms_aDirtTextures = (RwTexture **)0xC02BD0;
+	static inline RwTexture *m_LegacyGrunge256[16] = {};
 	static inline RwTexture *ms_aDirtTextures_2[16] = {};
 	static inline RwTexture *ms_aDirtTextures_3[16] = {};
 	static inline RwTexture *ms_aDirtTextures_4[16] = {};
@@ -38,6 +39,7 @@ private:
 	static void ShutdownHook();
 	static void InitialiseDirtTextures();
 	static void InitialiseLegacyTyreTextures();
+	static void InitialiseLegacyGrungeTextures();
 	static void InitialiseBlendTextureSingle(const char *CleanName, const char *DirtName, RwTexture **TextureArray);
 	static void InitialiseBlendTextureSingleEx(RwTexture *src, RwTexture *dest, bool overlay);
 	static void InitialiseDirtStage(RwTexture *src, RwTexture *dest, DirtStages &stages, int level);
@@ -45,7 +47,7 @@ private:
 	static void ReleaseDirtStage(DirtStages &stages, int level);
 	static void DestroyDirtStages(DirtStages &stages);
 	static void RegisterVehicleTextures(int model);
-	static void InitialiseDirtTextureSingle(const char *name, RwTexture **Array);
+	static void InitialiseDirtTextureSingle(const char *name, RwTexture **Array, RwTexture *source = nullptr);
 
 protected:
     void Init() override;

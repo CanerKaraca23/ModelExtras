@@ -336,7 +336,7 @@ void DirtFx::ProcessTextures(CVehicle *pVeh, RpMaterial *pMat, RwTexture *baseTe
 	if (first == 'v') {
 		std::string_view texName(rawName);
 		if (texName == "vehiclegrunge256") {
-			target = ms_aDirtTextures[dirtLvl];
+			target = m_LegacyGrunge256[dirtLvl] ? m_LegacyGrunge256[dirtLvl] : ms_aDirtTextures[dirtLvl];
 		}
 		if (texName == "vehicle_genericmud_truck" || texName == "vehiclegrunge_iv") {
 			target = ms_aDirtTextures_2[dirtLvl];
@@ -390,6 +390,7 @@ void DirtFx::ShutdownHook()
 		for (auto &[source, stages] : sources) DestroyDirtStages(stages);
 	for (int i = 0; i < 16; i++)
 	{
+		if (m_LegacyGrunge256[i]) { RwTextureDestroy(m_LegacyGrunge256[i]); m_LegacyGrunge256[i] = nullptr; }
 		if (ms_aDirtTextures_2[i]) { RwTextureDestroy(ms_aDirtTextures_2[i]); ms_aDirtTextures_2[i] = nullptr; }
 		if (ms_aDirtTextures_3[i]) { RwTextureDestroy(ms_aDirtTextures_3[i]); ms_aDirtTextures_3[i] = nullptr; }
 		if (ms_aDirtTextures_4[i]) { RwTextureDestroy(ms_aDirtTextures_4[i]); ms_aDirtTextures_4[i] = nullptr; }
@@ -544,9 +545,9 @@ void DirtFx::InitialiseBlendTextureSingle(const char *CleanName, const char *Dir
 	}
 }
 
-void DirtFx::InitialiseDirtTextureSingle(const char *name, RwTexture **dirtTextureArray)
+void DirtFx::InitialiseDirtTextureSingle(const char *name, RwTexture **dirtTextureArray, RwTexture *source)
 {
-	RwTexture *pTex = TextureMgr::Get(name);
+	RwTexture *pTex = source ? source : TextureMgr::Get(name);
 	if (!pTex || !pTex->raster)
 	{
 		return;
@@ -555,32 +556,67 @@ void DirtFx::InitialiseDirtTextureSingle(const char *name, RwTexture **dirtTextu
 
 	const int width = pTex->raster->width;
 	const int height = pTex->raster->height;
+	if (width <= 0 || height <= 0 || width > INT_MAX / 4) return;
+	RwUInt8 *sourcePixels = nullptr;
+	int sourceStride = 0;
+	if (source)
+	{
+		if (RwRasterGetDepth(pTex->raster) != 32) return;
+		sourcePixels = RwRasterLock(pTex->raster, 0, rwRASTERLOCKREAD);
+		if (!sourcePixels) return;
+		sourceStride = RwRasterGetStride(pTex->raster);
+		if (sourceStride < width * 4) { RwRasterUnlock(pTex->raster); return; }
+	}
 
 	for (int texid = 0; texid < 16; texid++)
 	{
-		dirtTextureArray[texid] = CClothesBuilder::CopyTexture(pTex);
-		if (!dirtTextureArray[texid])
+		RwTexture *texture = nullptr;
+		if (source)
+		{
+			RwRaster *raster = RwRasterCreate(width, height, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
+			if (raster)
+			{
+				texture = RwTextureCreate(raster);
+				if (!texture) RwRasterDestroy(raster);
+			}
+		}
+		else texture = CClothesBuilder::CopyTexture(pTex);
+		if (!texture)
 		{
 			continue;
 		}
 
-		RwTextureSetName(dirtTextureArray[texid], name);
-		dirtTextureArray[texid]->filterAddressing = rwFILTERLINEAR;
+		RwTextureSetName(texture, name);
+		texture->filterAddressing = rwFILTERLINEAR;
 
 		float factor = static_cast<float>(texid) / 15.0f;
-		RwRaster *dirtRaster = dirtTextureArray[texid]->raster;
+		RwRaster *dirtRaster = texture->raster;
+		if (!dirtRaster || dirtRaster->width != width || dirtRaster->height != height || RwRasterGetDepth(dirtRaster) != 32)
+		{
+			RwTextureDestroy(texture);
+			continue;
+		}
 		RwUInt8 *pixelsRaw = RwRasterLock(dirtRaster, 0, rwRASTERLOCKWRITE);
 		if (!pixelsRaw)
 		{
+			RwTextureDestroy(texture);
+			continue;
+		}
+		const int stride = RwRasterGetStride(dirtRaster);
+		if (stride < width * 4)
+		{
+			RwRasterUnlock(dirtRaster);
+			RwTextureDestroy(texture);
 			continue;
 		}
 
-		RwRGBA *pixels = reinterpret_cast<RwRGBA *>(pixelsRaw);
 		for (int y = 0; y < height; ++y)
 		{
+			RwRGBA *pixels = reinterpret_cast<RwRGBA *>(pixelsRaw + static_cast<size_t>(y) * stride);
 			for (int x = 0; x < width; ++x)
 			{
-				RwRGBA &pixel = pixels[y * width + x];
+				RwRGBA &pixel = pixels[x];
+				if (sourcePixels) pixel = reinterpret_cast<const RwRGBA *>(sourcePixels + static_cast<size_t>(y) * sourceStride)[x];
 				pixel.red   = static_cast<RwUInt8>(255 - static_cast<int>((255 - pixel.red)   * factor));
 				pixel.green = static_cast<RwUInt8>(255 - static_cast<int>((255 - pixel.green) * factor));
 				pixel.blue  = static_cast<RwUInt8>(255 - static_cast<int>((255 - pixel.blue)  * factor));
@@ -588,6 +624,48 @@ void DirtFx::InitialiseDirtTextureSingle(const char *name, RwTexture **dirtTextu
 			}
 		}
 		RwRasterUnlock(dirtRaster);
+		if (dirtTextureArray[texid]) RwTextureDestroy(dirtTextureArray[texid]);
+		dirtTextureArray[texid] = texture;
+	}
+	if (sourcePixels) RwRasterUnlock(pTex->raster);
+}
+
+void DirtFx::InitialiseLegacyGrungeTextures()
+{
+	const bool preferLegacy = gConfig.ReadBoolean("DIRT", "UseLegacyTextures", false);
+	const std::filesystem::path adjacent = PLUGIN_PATH((char *)"ImVehFt\\grunge");
+	const std::filesystem::path game = GAME_PATH((char *)"ImVehFt\\grunge");
+	const char *names[] = {"vehiclegrunge256", "vehiclegrunge512", "vehiclegrunge_iv"};
+	RwTexture **owned[] = {m_LegacyGrunge256, ms_aDirtTextures_3, ms_aDirtTextures_2};
+	RwTexture **defaults[] = {ms_aDirtTextures, ms_aDirtTextures_3, ms_aDirtTextures_2};
+	for (int index = 0; index < 3; ++index)
+	{
+		bool complete = true;
+		for (int level = 0; level < 16; ++level) complete &= defaults[index][level] || owned[index][level];
+		if (!preferLegacy && complete) continue;
+		for (const auto &root : {adjacent, game})
+		{
+			const auto path = root / (std::string(names[index]) + ".png");
+			std::error_code ec;
+			if (!std::filesystem::is_regular_file(path, ec)) continue;
+			RwTexture *source = TextureMgr::LoadFromFile(path.string().c_str());
+			if (!source) continue;
+			RwTexture *stages[16]{};
+			InitialiseDirtTextureSingle(names[index], stages, source);
+			RwTextureDestroy(source);
+			if (std::none_of(std::begin(stages), std::end(stages), [](RwTexture *texture) { return texture != nullptr; })) continue;
+			for (int level = 0; level < 16; ++level)
+			{
+				if (!stages[level]) continue;
+				if (!preferLegacy && (defaults[index][level] || owned[index][level])) RwTextureDestroy(stages[level]);
+				else
+				{
+					if (owned[index][level]) RwTextureDestroy(owned[index][level]);
+					owned[index][level] = stages[level];
+				}
+			}
+			break;
+		}
 	}
 }
 
@@ -621,6 +699,7 @@ void DirtFx::InitialiseDirtTextures()
 	// Dirt Textures which blend to white
 	InitialiseDirtTextureSingle("vehiclegrunge_iv", ms_aDirtTextures_2);
 	InitialiseDirtTextureSingle("vehiclegrunge512", ms_aDirtTextures_3);
+	InitialiseLegacyGrungeTextures();
 
 	// Textures which belnd between two images
 	InitialiseBlendTextureSingle("tyrewall_dirt", "tyrewall_dirt_dt", ms_aDirtTextures_4);
