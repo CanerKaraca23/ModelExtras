@@ -265,13 +265,13 @@ bool Parse_IvfcToMemory(std::istream &infile, nlohmann::json &jsonData, int &out
     int model = -1;
     while (std::getline(infile, line))
     {
-        if (line.empty() || line[0] == '#')
+        const auto start = line.find_first_not_of(" \t\r");
+        if (start == std::string::npos || line[start] == '#' || line[start] == ';')
             continue;
-        if (line.rfind("vehicle_id", 0) == 0)
+        std::istringstream iss(line);
+        std::string key;
+        if (iss >> key >> model)
         {
-            std::istringstream iss(line);
-            std::string key;
-            iss >> key >> model;
             break;
         }
     }
@@ -287,29 +287,49 @@ bool Parse_IvfcToMemory(std::istream &infile, nlohmann::json &jsonData, int &out
     jsonData["metadata"]["minver"] = 20000;
 
     bool parsingColors = false, parsingVariations = false;
+    int remaining = -1;
     while (std::getline(infile, line))
     {
-        if (line.empty() || line[0] == '#')
+        const auto start = line.find_first_not_of(" \t\r");
+        if (start == std::string::npos || line[start] == '#' || line[start] == ';')
             continue;
 
-        if (line.starts_with("num_colors"))
+        std::istringstream header(line);
+        std::string key;
+        header >> key;
+        bool genericHeader = key[0] != '-' && (key[0] < '0' || key[0] > '9');
+        if (key == "num_colors" || (genericHeader && !parsingColors && !parsingVariations))
+        {
             parsingColors = true, parsingVariations = false;
-        else if (line.starts_with("num_variations"))
+            remaining = -1;
+            header >> remaining;
+        }
+        else if (key == "num_variations" || (genericHeader && parsingColors && remaining == 0))
+        {
             parsingColors = false, parsingVariations = true;
-        else
+            remaining = -1;
+            header >> remaining;
+        }
+        else if (remaining != 0)
         {
             std::istringstream iss(line);
             if (parsingColors)
             {
                 int r = 0, g = 0, b = 0;
                 if (iss >> r >> g >> b)
+                {
                     jsonData["carcols"]["colors"].push_back({{"red", r}, {"green", g}, {"blue", b}});
+                    if (remaining > 0) --remaining;
+                }
             }
             else if (parsingVariations)
             {
                 int a = 0, b = 0, c = 0, d = 0;
                 if (iss >> a >> b >> c >> d)
+                {
                     jsonData["carcols"]["variations"].push_back({{"primary", a}, {"secondary", b}, {"tertiary", c}, {"quaternary", d}});
+                    if (remaining > 0) --remaining;
+                }
             }
         }
     }

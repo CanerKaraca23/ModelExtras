@@ -398,12 +398,12 @@ void DataMgr::LoadModLoaderData()
                 std::string line;
                 while (std::getline(peekFile, line))
                 {
-                    if (line.empty() || line[0] == '#') continue;
-                    if (line.rfind("vehicle_id", 0) == 0)
+                    const auto start = line.find_first_not_of(" \t\r");
+                    if (start == std::string::npos || line[start] == '#' || line[start] == ';') continue;
+                    std::istringstream iss(line);
+                    std::string key;
+                    if (iss >> key >> model)
                     {
-                        std::istringstream iss(line);
-                        std::string key;
-                        iss >> key >> model;
                         break;
                     }
                 }
