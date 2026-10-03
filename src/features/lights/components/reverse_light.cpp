@@ -35,6 +35,7 @@ bool ReverseLightComponent::TryRegisterDummy(CVehicle* pVeh, RwFrame* pFrame, co
 }
 
 void ReverseLightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehLightData& data) {
+    if (!pControlVeh || !pTowedVeh) return;
     bool isBike = CModelInfo::IsBikeModel(pControlVeh->m_nModelIndex);
     std::string shdwName = (isBike ? "taillight_bike" : "reverse");
     float shdwSz = 2.0f;
@@ -43,7 +44,9 @@ void ReverseLightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, V
         || pControlVeh->m_nVehicleSubClass == VEHICLE_QUAD || pControlVeh->m_nVehicleSubClass == VEHICLE_BIKE
         || pControlVeh->m_nVehicleSubClass == VEHICLE_TRAILER) 
     {
-        bool isRevlightSupportedByModel = LightManager::IsMaterialAvailable(pTowedVeh, {eMaterialType::ReverseLightLeft, eMaterialType::ReverseLightRight});
+        bool isRevlightSupportedByModel = LightManager::IsMaterialAvailable(pTowedVeh, {eMaterialType::ReverseLightLeft, eMaterialType::ReverseLightRight}) ||
+            LightManager::IsDummyAvailable(data, {eMaterialType::ReverseLightLeft, eMaterialType::ReverseLightRight}) ||
+            LightManager::IsDummyAvailable(LightManager::m_VehData.Get(pTowedVeh), {eMaterialType::ReverseLightLeft, eMaterialType::ReverseLightRight});
 
         bool reverseLightsOn = !isBike && isRevlightSupportedByModel && pControlVeh->m_nCurrentGear == 0 && (Util::GetVehicleSpeed(pControlVeh) >= 0.001f) && pControlVeh->m_pDriver;
         if (reverseLightsOn) {
