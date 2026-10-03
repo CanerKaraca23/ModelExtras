@@ -139,17 +139,19 @@ void Helper_UpdateAVSRecursive(nlohmann::json& j) {
 bool Parse_EmlToMemory(std::istream &infile, nlohmann::json &jsonData, int &outModel)
 {
     std::string line;
-    int model = -1;
+    int model = -1, declaredCount = -1;
 
     while (std::getline(infile, line))
     {
-        if (line.empty() || line[0] == '#')
+        const auto start = line.find_first_not_of(" \t\r");
+        if (start == std::string::npos || line[start] == '#' || line[start] == ';')
             continue;
         std::istringstream iss(line);
         if (!(iss >> model))
         {
             return false;
         }
+        iss >> declaredCount;
         break;
     }
 
@@ -164,9 +166,11 @@ bool Parse_EmlToMemory(std::istream &infile, nlohmann::json &jsonData, int &outM
     jsonData["sirens"]["imvehft"] = true;
     auto &extras = jsonData["sirens"]["states"]["1. modelextras"];
 
-    while (std::getline(infile, line))
+    int records = 0;
+    while ((declaredCount < 0 || records < declaredCount) && std::getline(infile, line))
     {
-        if (line.empty() || line[0] == '#')
+        const auto start = line.find_first_not_of(" \t\r");
+        if (start == std::string::npos || line[start] == '#' || line[start] == ';')
             continue;
 
         std::istringstream iss(line);
@@ -177,6 +181,7 @@ bool Parse_EmlToMemory(std::istream &infile, nlohmann::json &jsonData, int &outM
 
         if (!(iss >> id >> parent))
             continue;
+        ++records;
         if (!(iss >> tempColor))
             continue;
         red = Helper_ImVehFtReadColor(tempColor);
@@ -191,7 +196,9 @@ bool Parse_EmlToMemory(std::istream &infile, nlohmann::json &jsonData, int &outM
         alpha = Helper_ImVehFtReadColor(tempColor);
         if (!(iss >> type >> size >> shadow >> flash))
             continue;
-        if (!(iss >> switches >> starting))
+        if (!(iss >> switches) || switches < 0)
+            continue;
+        if (switches > 0 && !(iss >> starting))
             continue;
 
         std::vector<uint64_t> pattern;

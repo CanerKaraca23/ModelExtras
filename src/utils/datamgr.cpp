@@ -383,7 +383,8 @@ void DataMgr::LoadModLoaderData()
                 std::string line;
                 while (std::getline(peekFile, line))
                 {
-                    if (line.empty() || line[0] == '#') continue;
+                    const auto start = line.find_first_not_of(" \t\r");
+                    if (start == std::string::npos || line[start] == '#' || line[start] == ';') continue;
                     std::istringstream iss(line);
                     iss >> model;
                     break;
