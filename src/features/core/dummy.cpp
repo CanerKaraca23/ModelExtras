@@ -81,6 +81,22 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
         }
     }
 
+    if (LightsConfig::Get().bLegacyDummyDefaults) {
+        const bool indicator = name.starts_with("turnl") || name.starts_with("indicator");
+        const bool brake = name.starts_with("breakl");
+        const bool fog = name.starts_with("fogl");
+        const bool reverse = name.starts_with("revl") || name.starts_with("reversingl");
+        if (indicator || brake || fog || reverse) {
+            unsigned char red = 255, green = 255, blue = 255;
+            if (indicator) { red = 240; green = 180; blue = 0; }
+            else if (brake) { red = 200; green = 0; blue = 0; }
+            else if (fog) { red = 200; green = 200; blue = 220; }
+            data.corona.color = {red, green, blue, data.corona.color.a};
+            data.shadow.color = {red, green, blue, data.shadow.color.a};
+            data.corona.lightingType = (indicator || fog) ? eLightingMode::Directional : eLightingMode::Inversed;
+        }
+    }
+
     // Legacy support for ImVehFt vehicles
     size_t prmPos = name.find("prm");
     if (prmPos != std::string::npos)
