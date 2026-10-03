@@ -104,7 +104,7 @@ RwTexture *TextureMgr::FindOnTextureInDict(RpMaterial *pMat, RwTexDictionary *pD
     texBuf[baseLen + 1] = 'n';
     texBuf[baseLen + 2] = '\0';
 
-    RwTexture *pTex = TextureMgr::FindInDict(std::string_view(texBuf, baseLen + 2), pDict, fallback);
+    RwTexture *pTex = TextureMgr::FindInDict(std::string_view(texBuf, baseLen + 2), pDict);
     if (pTex != nullptr) {
         return pTex;
     }
@@ -115,7 +115,21 @@ RwTexture *TextureMgr::FindOnTextureInDict(RpMaterial *pMat, RwTexDictionary *pD
     texBuf[baseLen + 2] = 'n';
     texBuf[baseLen + 3] = '\0';
 
-    return TextureMgr::FindInDict(std::string_view(texBuf, baseLen + 3), pDict, fallback);
+    pTex = TextureMgr::FindInDict(std::string_view(texBuf, baseLen + 3), pDict);
+    if (pTex || !fallback) return pTex;
+
+    // Prefer either local spelling before searching shared dictionaries.
+    texBuf[baseLen] = 'o';
+    texBuf[baseLen + 1] = 'n';
+    texBuf[baseLen + 2] = '\0';
+    pTex = TextureMgr::FindInDict(std::string_view(texBuf, baseLen + 2), pDict, true, false);
+    if (pTex) return pTex;
+
+    texBuf[baseLen] = '_';
+    texBuf[baseLen + 1] = 'o';
+    texBuf[baseLen + 2] = 'n';
+    texBuf[baseLen + 3] = '\0';
+    return TextureMgr::FindInDict(std::string_view(texBuf, baseLen + 3), pDict, true, false);
 }
 
 void TextureMgr::SetAlpha(RwTexture *texture, RwUInt8 alpha)
@@ -160,7 +174,7 @@ void TextureMgr::SetAlpha(RwTexture *texture, RwUInt8 alpha)
 // 1. Vehicle's txd 
 // 2. ModelExtras txd
 // 3. vehicle.txd (Supports vehfuncs additional txds)
-RwTexture *TextureMgr::FindInDict(std::string_view name, RwTexDictionary *pDict, bool fallback)
+RwTexture *TextureMgr::FindInDict(std::string_view name, RwTexDictionary *pDict, bool fallback, bool useDefault)
 {
     if (name.empty()) return nullptr;
 
@@ -184,10 +198,11 @@ RwTexture *TextureMgr::FindInDict(std::string_view name, RwTexDictionary *pDict,
 
         if (!pTex) {
             LOG_VERBOSE("TextureMgr: Unable to find '{}' in the ModelExtras TXD file. Searching in the vehicle TXD file instead.", name);
-            pTex = RwTexDictionaryFindNamedTexture(CVehicleModelInfo::ms_pVehicleTxd, nameBuf);
+            if (CVehicleModelInfo::ms_pVehicleTxd)
+                pTex = RwTexDictionaryFindNamedTexture(CVehicleModelInfo::ms_pVehicleTxd, nameBuf);
         }
 
-        if (!pTex) {
+        if (!pTex && useDefault) {
             LOG_VERBOSE("TextureMgr: Unable to find '{}' in the vehicle TXD file. Using the default white texture", name);
             pTex = CVehicleModelInfo::ms_pWhiteTexture;
         }
