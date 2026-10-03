@@ -24,6 +24,21 @@
 
 using namespace plugin;
 
+static RwTexture *FindDamagedLightTexture(CVehicle *pVeh, RpMaterial *pMat, eMaterialType type) {
+  if (!pVeh || !pMat || !pMat->texture || !pMat->texture->dict ||
+      strcmp(pMat->texture->name, "vehiclelights") != 0) return nullptr;
+
+  eLights light;
+  switch (type) {
+  case eMaterialType::HeadLightLeft: light = eLights::LIGHT_FRONT_LEFT; break;
+  case eMaterialType::HeadLightRight: light = eLights::LIGHT_FRONT_RIGHT; break;
+  case eMaterialType::TailLightLeft: light = eLights::LIGHT_REAR_LEFT; break;
+  case eMaterialType::TailLightRight: light = eLights::LIGHT_REAR_RIGHT; break;
+  default: return nullptr;
+  }
+  return CarUtil::IsLightDamaged(pVeh, light) ? TextureMgr::FindInDict("vehiclelights_dam", pMat->texture->dict) : nullptr;
+}
+
 extern int GetSirenIndex(CVehicle *pVeh, RpMaterial *pMat);
 extern int GetStrobeIndex(CVehicle *pVeh, RpMaterial *pMat);
 
@@ -435,6 +450,10 @@ RpMaterial *ModelInfoMgr::SetEditableMaterialsCB(RpMaterial *material,
       pColor->red   = matCol.off.r;
       pColor->green = matCol.off.g;
       pColor->blue  = matCol.off.b;
+      if (RwTexture *pDamaged = FindDamagedLightTexture(pCurVeh, material, iLightIndex)) {
+        m_RestoreEntries.push_back({&material->texture, material->texture});
+        material->texture = pDamaged;
+      }
     }
   } else {
     CRGBA col = {255, 255, 255, 255};
