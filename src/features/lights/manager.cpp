@@ -440,6 +440,8 @@ bool LightManager::IsBraking(CVehicle* pVeh) {
         return false;
     }
 
+    if (LightsConfig::Get().bLegacyBrakeState) return pVeh->m_fBreakPedal > 0.0f;
+
     if (pVeh->m_fBreakPedal > 0.05f) {
         return true;
     }
