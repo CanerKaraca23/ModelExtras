@@ -247,6 +247,37 @@ void LicensePlate::LoadLegacyPlateTextures()
     }
 }
 
+RwTexture *LicensePlate::LoadLegacyPlateCharset()
+{
+    const std::filesystem::path adjacent = PLUGIN_PATH((char *)"ImVehFt\\plates\\platecharset.png");
+    const std::filesystem::path game = GAME_PATH((char *)"ImVehFt\\plates\\platecharset.png");
+    for (const auto &path : {adjacent, game})
+    {
+        std::error_code ec;
+        if (!std::filesystem::is_regular_file(path, ec)) continue;
+        RwImage *image = RtPNGImageRead(path.string().c_str());
+        if (!image) continue;
+        const int width = RwImageGetWidth(image), height = RwImageGetHeight(image);
+        RwRaster *raster = width >= static_cast<int>(CHARSET_COL_WIDTH) && height >= static_cast<int>(10 * CHARSET_CHAR_HEIGHT)
+            ? RwRasterCreate(width, height, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888) : nullptr;
+        if (raster && !RwRasterSetFromImage(raster, image))
+        {
+            RwRasterDestroy(raster);
+            raster = nullptr;
+        }
+        RwImageDestroy(image);
+        if (!raster) continue;
+        RwTexture *texture = RwTextureCreate(raster);
+        if (texture)
+        {
+            RwTextureSetName(texture, "plate_char");
+            return texture;
+        }
+        RwRasterDestroy(raster);
+    }
+    return nullptr;
+}
+
 void __cdecl LicensePlate::CCustomCarPlateMgr_Shudown()
 {
     if (pCharSetTex)
@@ -272,12 +303,13 @@ void __cdecl LicensePlate::CCustomCarPlateMgr_Shudown()
 bool __cdecl LicensePlate::CCustomCarPlateMgr_Initialise()
 {
     LoadLegacyPlateTextures();
-    pCharSetTex = TextureMgr::Get("plate_char");
+    const bool legacyCharset = gConfig.ReadBoolean("PLATES", "UseLegacyCharset", false);
+    pCharSetTex = legacyCharset ? LoadLegacyPlateCharset() : TextureMgr::Get("plate_char");
+    if (!pCharSetTex) pCharSetTex = legacyCharset ? TextureMgr::Get("plate_char") : LoadLegacyPlateCharset();
     if (!pCharSetTex || !RwTextureGetRaster(pCharSetTex)) return false;
     RwTextureSetFilterMode(pCharSetTex, rwFILTERLINEAR);
     RwTextureSetAddressingU(pCharSetTex, rwTEXTUREADDRESSCLAMP);
     RwTextureSetAddressingV(pCharSetTex, rwTEXTUREADDRESSCLAMP);
-    pCharSetTex->raster->stride = 512;
 
     m_Plates[DAY_CS] = TextureMgr::Get("plate_cs");
     m_Plates[DAY_LS] = TextureMgr::Get("plate_ls");
@@ -463,11 +495,10 @@ std::pair<unsigned int, unsigned int> GetCharacterPositionInCharSet(char c)
 
 bool LicensePlate::CCustomCarPlateMgr_RenderLicenseplateTextToRaster(const char *text, RwRaster *charsRaster, RwRaster *plateRaster)
 {
-    assert(text);
-    assert(charsRaster);
-    assert(plateRaster);
-
-    if (!pCharsetLockedData)
+    if (!text || !charsRaster || !plateRaster || !pCharsetLockedData ||
+        RwRasterGetDepth(charsRaster) != 32 || RwRasterGetDepth(plateRaster) != 32 ||
+        RwRasterGetWidth(charsRaster) < static_cast<int>(CHARSET_COL_WIDTH) || RwRasterGetHeight(charsRaster) < static_cast<int>(10 * CHARSET_CHAR_HEIGHT) ||
+        RwRasterGetWidth(plateRaster) < static_cast<int>(MAX_TEXT_LENGTH * CHARSET_CHAR_WIDTH) || RwRasterGetHeight(plateRaster) < static_cast<int>(CHARSET_CHAR_HEIGHT))
         return false;
 
     const auto lockedPlateRaster = RwRasterLock(plateRaster, 0, rwRASTERLOCKNOFETCH | rwRASTERLOCKWRITE);
@@ -475,14 +506,14 @@ bool LicensePlate::CCustomCarPlateMgr_RenderLicenseplateTextToRaster(const char 
         return false;
 
     const auto plateRasterStride = RwRasterGetStride(plateRaster);
-    if (!plateRasterStride)
+    if (plateRasterStride < static_cast<int>(MAX_TEXT_LENGTH * CHARSET_CHAR_WIDTH * 4))
     {
         RwRasterUnlock(plateRaster);
         return false;
     }
 
     const auto charsRasterStride = RwRasterGetStride(charsRaster);
-    if (!charsRasterStride)
+    if (charsRasterStride < static_cast<int>(CHARSET_COL_WIDTH * 4))
     {
         RwRasterUnlock(plateRaster);
         return false;
@@ -492,10 +523,13 @@ bool LicensePlate::CCustomCarPlateMgr_RenderLicenseplateTextToRaster(const char 
     // Going from left to right
 
     auto plateRasterCharIter = lockedPlateRaster; // Always points to the top left corner of each character
+    bool padding = false;
     for (auto letter = 0; letter < MAX_TEXT_LENGTH; letter++)
     {
         unsigned int charCol, charRow;
-        auto t = GetCharacterPositionInCharSet(text[letter]);
+        const char character = padding ? ' ' : text[letter];
+        if (!character) padding = true;
+        auto t = GetCharacterPositionInCharSet(character);
         charCol = t.first;
         charRow = t.second;
 
@@ -505,7 +539,7 @@ bool LicensePlate::CCustomCarPlateMgr_RenderLicenseplateTextToRaster(const char 
         constexpr auto texelSize = 4;
 
         // Character's top left corner in charset raster
-        auto charRasterIt = &pCharsetLockedData[(CHARSET_COL_WIDTH * CHARSET_ROW_HEIGHT * charRow + CHARSET_CHAR_WIDTH * charCol) * texelSize];
+        auto charRasterIt = &pCharsetLockedData[charsRasterStride * CHARSET_CHAR_HEIGHT * charRow + CHARSET_CHAR_WIDTH * charCol * texelSize];
 
         // Character's top left corner in target (plate) raster
         auto plateRasterIt = plateRasterCharIter;
