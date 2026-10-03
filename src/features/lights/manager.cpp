@@ -73,9 +73,12 @@ void LightManager::RegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const std::str
 
     VehLightData& data = m_VehData.Get(pVeh);
 
-    if (!rwLinkListEmpty(&pFrame->objectList)) {
+    bool isLegacyLight = name.starts_with("turnl") || name.starts_with("indicator") ||
+        name.starts_with("revl") || name.starts_with("reversingl") || name.starts_with("breakl") ||
+        name.starts_with("fogl") || name.starts_with("light_a") || name.starts_with("light_d") || name.starts_with("light_n");
+    if (!rwLinkListEmpty(&pFrame->objectList) && !isLegacyLight) {
         // Pop-up headlights are animated geometry frames (RpAtomic attached), not empty dummies.
-        // Only HeadlightComponent inspects non-empty frames to detect pop-up lights.
+        // Keep the modern geometry filter while accepting explicit IVF light names.
         for (const auto& comp : m_Components) {
             if (dynamic_cast<HeadlightComponent*>(comp.get())) {
                 comp->TryRegisterDummy(pVeh, pFrame, name, data);

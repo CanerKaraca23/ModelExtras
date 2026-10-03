@@ -800,7 +800,8 @@ void Sirens::Init()
 
 	ModelInfoMgr::RegisterDummy([](CVehicle *vehicle, RwFrame *frame, const std::string_view nodeName)
 	{
-		if (frame && !rwLinkListEmpty(&frame->objectList)) {
+		if (!vehicle || !frame) return;
+		if (!rwLinkListEmpty(&frame->objectList) && !nodeName.starts_with("light_em")) {
 			return;
 		}
 		if (!modelData.contains(vehicle->m_nModelIndex)) {
