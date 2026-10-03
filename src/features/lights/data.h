@@ -48,6 +48,7 @@ struct LightsConfig {
     uint32_t nIndicatorRightKey = 'C';
     uint32_t nIndicatorBothKey = 'X';
     uint32_t nIndicatorDelay = 500;
+    bool bHeadLightBeams = true;
     bool bAutoIndicatorsOnSteer = false;
     bool bFoglightTiedToHeadlight = false;
     bool bPlayerIdleBrakeLights = false;
@@ -58,6 +59,12 @@ struct LightsConfig {
     float fSirenPointLightMul = 1.0f;
 
     void InitConfig() {
+        const std::string legacyPath = PLUGIN_PATH((char *)"ImVehFt\\ImVehFt.ini");
+        const std::string gameLegacyPath = GAME_PATH((char *)"ImVehFt\\ImVehFt.ini");
+        auto legacyInteger = [&](const char *section, const char *key, int fallback) {
+            fallback = static_cast<int>(GetPrivateProfileIntA(section, key, fallback, gameLegacyPath.c_str()));
+            return static_cast<int>(GetPrivateProfileIntA(section, key, fallback, legacyPath.c_str()));
+        };
         gbGlobalIndicatorLights = gConfig.ReadBoolean("LIGHTS", "StandardLights_GlobalIndicatorLights", gConfig.ReadBoolean("FEATURES", "StandardLights_GlobalIndicatorLights", false));
         gbLightCoronasFeature = gConfig.ReadBoolean("LIGHTS", "LightCoronas", gConfig.ReadBoolean("FEATURES", "LightCoronas", false));
         gbLightPointLights = ::gbLightPointLights = gConfig.ReadBoolean("LIGHTS", "PointLights", gConfig.ReadBoolean("LIGHTS", "LightPointLights", gConfig.ReadBoolean("FEATURES", "PointLights", true)));
@@ -77,13 +84,14 @@ struct LightsConfig {
         gTailLightShadowIntensity = gConfig.ReadInteger("LIGHTS", "TailLightShadowIntensity", gGlobalShadowIntensity);
         gfTailLightShadowSize = gConfig.ReadFloat("LIGHTS", "TailLightShadowSize", 1.0f);
 
-        nFogLightKey = gConfig.ReadInteger("KEYS", "FogLightKey", gConfig.ReadInteger("CONTROL", "key_fog", 'J'));
-        nLongLightKey = gConfig.ReadInteger("KEYS", "LongLightKey", gConfig.ReadInteger("CONTROL", "key_headlight", 'G'));
-        nIndicatorNoneKey = gConfig.ReadInteger("KEYS", "IndicatorLightNoneKey", gConfig.ReadInteger("CONTROL", "key_turnl_0", VK_SHIFT));
-        nIndicatorLeftKey = gConfig.ReadInteger("KEYS", "IndicatorLightLeftKey", gConfig.ReadInteger("CONTROL", "key_turnl_l", 'Z'));
-        nIndicatorRightKey = gConfig.ReadInteger("KEYS", "IndicatorLightRightKey", gConfig.ReadInteger("CONTROL", "key_turnl_r", 'C'));
-        nIndicatorBothKey = gConfig.ReadInteger("KEYS", "IndicatorLightBothKey", gConfig.ReadInteger("CONTROL", "key_turnl_2", 'X'));
-        nIndicatorDelay = static_cast<uint32_t>(std::max(0, gConfig.ReadInteger("LIGHTS", "IndicatorLightDelay", gConfig.ReadInteger("MAIN", "turnlights_delay", 500))));
+        nFogLightKey = gConfig.ReadInteger("KEYS", "FogLightKey", gConfig.ReadInteger("CONTROL", "key_fog", legacyInteger("CONTROL", "key_fog", 'J')));
+        nLongLightKey = gConfig.ReadInteger("KEYS", "LongLightKey", gConfig.ReadInteger("CONTROL", "key_headlight", legacyInteger("CONTROL", "key_headlight", 'G')));
+        nIndicatorNoneKey = gConfig.ReadInteger("KEYS", "IndicatorLightNoneKey", gConfig.ReadInteger("CONTROL", "key_turnl_0", legacyInteger("CONTROL", "key_turnl_0", VK_SHIFT)));
+        nIndicatorLeftKey = gConfig.ReadInteger("KEYS", "IndicatorLightLeftKey", gConfig.ReadInteger("CONTROL", "key_turnl_l", legacyInteger("CONTROL", "key_turnl_l", 'Z')));
+        nIndicatorRightKey = gConfig.ReadInteger("KEYS", "IndicatorLightRightKey", gConfig.ReadInteger("CONTROL", "key_turnl_r", legacyInteger("CONTROL", "key_turnl_r", 'C')));
+        nIndicatorBothKey = gConfig.ReadInteger("KEYS", "IndicatorLightBothKey", gConfig.ReadInteger("CONTROL", "key_turnl_2", legacyInteger("CONTROL", "key_turnl_2", 'X')));
+        nIndicatorDelay = static_cast<uint32_t>(std::max(0, gConfig.ReadInteger("LIGHTS", "IndicatorLightDelay", gConfig.ReadInteger("MAIN", "turnlights_delay", legacyInteger("MAIN", "turnlights_delay", 500)))));
+        bHeadLightBeams = gConfig.ReadBoolean("LIGHTS", "HeadLightBeams", gConfig.ReadBoolean("TWEAKS", "HeadLightBeams", !gConfig.ReadBoolean("MAIN", "disable_beam_shape", legacyInteger("MAIN", "disable_beam_shape", 0) != 0)));
         bAutoIndicatorsOnSteer = gConfig.ReadBoolean("LIGHTS", "AutoIndicatorsOnSteer", gConfig.ReadBoolean("TWEAKS", "AutoIndicatorsOnSteer", false));
         bFoglightTiedToHeadlight = gConfig.ReadBoolean("LIGHTS", "FoglightTiedToHeadlight", gConfig.ReadBoolean("TWEAKS", "FoglightTiedToHeadlight", false));
         bPlayerIdleBrakeLights = gConfig.ReadBoolean("LIGHTS", "PlayerIdleBrakeLights", gConfig.ReadBoolean("TWEAKS", "PlayerIdleBrakeLights", false));
