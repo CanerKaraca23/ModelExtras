@@ -100,8 +100,11 @@ void LicensePlate::ProcessTextures(CVehicle *pVeh, RpMaterial *pMat)
     pCurrentVeh = pVeh;
     const char *texName = pMat->texture->name;
     PlateData &data = m_VehData.Get(pVeh);
+    int legacyPlate = !_stricmp(texName, "plateback1") ? 0 :
+                      !_stricmp(texName, "plateback2") ? 1 :
+                      !_stricmp(texName, "plateback3") ? 2 : -1;
 
-    bool isPlateMat = !_stricmp("carpback", texName) ||
+    bool isPlateMat = legacyPlate >= 0 || !_stricmp("carpback", texName) ||
                       !_stricmp("carplate", texName) ||
                       !_strnicmp(texName, "plate_", 6) ||
                       (data.m_pCustomPlateTex && pMat->texture == data.m_pCustomPlateTex) ||
@@ -128,7 +131,7 @@ void LicensePlate::ProcessTextures(CVehicle *pVeh, RpMaterial *pMat)
             {
                 RwRaster *r = pMat->texture->raster;
                 if (r->width == 256 && r->height == 64 &&
-                    strncmp(texName, "plate_", 6) != 0 && _stricmp(texName, "carpback") != 0)
+                    legacyPlate < 0 && strncmp(texName, "plate_", 6) != 0 && _stricmp(texName, "carpback") != 0)
                 {
                     isPlateTextMat = true;
                 }
@@ -161,6 +164,17 @@ void LicensePlate::ProcessTextures(CVehicle *pVeh, RpMaterial *pMat)
         if (!_stricmp("carpback", texName))
         {
             CCustomCarPlateMgr_SetupMaterialPlatebackTexture(pMat, -1);
+        }
+        else if (legacyPlate >= 0 && pVeh->m_fHealth > 0.0f && CarUtil::AreLightsOn(pVeh))
+        {
+            static const char *nightNames[] = {"plateback1_l", "plateback2_l", "plateback3_l"};
+            if (RwTexture *pNight = TextureMgr::FindInDict(nightNames[legacyPlate], pMat->texture->dict, true, false))
+            {
+                ModelInfoMgr::RegisterRestore(&pMat->texture, pMat->texture);
+                RpMaterialSetTexture(pMat, pNight);
+            }
+            ModelInfoMgr::RegisterRestoreSurfProps(pMat);
+            pMat->surfaceProps = *reinterpret_cast<RwSurfaceProperties *>(0x8A645C);
         }
     }
 
