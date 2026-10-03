@@ -81,12 +81,14 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
         }
     }
 
+    bool legacyDefaults = false;
     if (LightsConfig::Get().bLegacyDummyDefaults) {
         const bool indicator = name.starts_with("turnl") || name.starts_with("indicator");
         const bool brake = name.starts_with("breakl");
         const bool fog = name.starts_with("fogl");
         const bool reverse = name.starts_with("revl") || name.starts_with("reversingl");
         if (indicator || brake || fog || reverse) {
+            legacyDefaults = true;
             unsigned char red = 255, green = 255, blue = 255;
             if (indicator) { red = 240; green = 180; blue = 0; }
             else if (brake) { red = 200; green = 0; blue = 0; }
@@ -94,6 +96,8 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
             data.corona.color = {red, green, blue, data.corona.color.a};
             data.shadow.color = {red, green, blue, data.shadow.color.a};
             data.corona.lightingType = (indicator || fog) ? eLightingMode::Directional : eLightingMode::Inversed;
+            data.corona.size = static_cast<float>((fog ? 6.0 : 3.0) / 15.0 - 0.05);
+            data.shadow.render = indicator;
         }
     }
 
@@ -131,15 +135,16 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
 
         if (prm.size() > 7 && ReadHexDigit(prm[7]) >= 0)
         {
-            data.corona.size = static_cast<float>(ReadHexDigit(prm[7])) / 10.0f;
+            const int size = ReadHexDigit(prm[7]);
+            data.corona.size = legacyDefaults ? (size == 0 ? 0.0f : static_cast<float>(size / 15.0 - 0.05)) : static_cast<float>(size) / 10.0f;
         }
 
         if (prm.size() > 8 && ReadHexDigit(prm[8]) >= 0)
         {
             data.shadow.size = static_cast<float>(ReadHexDigit(prm[8])) / 7.5f;
 
-            if (data.shadow.size > 0.0f) {
-                data.shadow.render = true;
+            if (legacyDefaults || data.shadow.size > 0.0f) {
+                data.shadow.render = data.shadow.size > 0.0f;
             }
         }
     }
@@ -178,8 +183,8 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
                     data.corona.color.b = coronaSec["color"].value("blue", data.corona.color.b);
                     data.corona.color.a = coronaSec["color"].value("alpha", gGlobalCoronaIntensity);
                 }
-                data.corona.size = coronaSec.value("size", prmPos != std::string_view::npos ? data.corona.size : gfGlobalCoronaSize);
-                if (coronaSec.contains("type") || prmPos == std::string_view::npos)
+                data.corona.size = coronaSec.value("size", prmPos != std::string_view::npos || legacyDefaults ? data.corona.size : gfGlobalCoronaSize);
+                if (coronaSec.contains("type") || (prmPos == std::string_view::npos && !legacyDefaults))
                     data.corona.lightingType = GetLightingMode(coronaSec.value("type", "directional"));
             }
 
