@@ -99,6 +99,8 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
             data.corona.lightingType = (indicator || fog) ? eLightingMode::Directional : eLightingMode::Inversed;
             data.corona.size = static_cast<float>((fog ? 6.0 : 3.0) / 15.0 - 0.05);
             data.shadow.render = indicator;
+            data.shadow.legacySize = indicator ? 5 : 0;
+            data.shadow.legacyMode = (indicator || fog) ? 0 : 1;
         }
     }
 
@@ -117,6 +119,8 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
             data.corona.lightingType = mode == 2 ? eLightingMode::NonDirectional : mode == 0 ? eLightingMode::Directional : eLightingMode::Inversed;
             data.corona.size = corona == 0 ? 0.0f : static_cast<float>(corona / 15.0 - 0.05);
             data.shadow.render = shadow > 0;
+            data.shadow.legacySize = static_cast<uint8_t>(shadow);
+            data.shadow.legacyMode = static_cast<uint8_t>(mode);
             if (fields == 6) data.shadow.size = static_cast<float>(shadow) / 7.5f;
         }
         else if (prm.size() >= 6)
@@ -203,6 +207,7 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
             if (lights.contains("shadow"))
             {
                 auto &shadow = lights["shadow"];
+                data.shadow.legacySize = 0; // Explicit shadow settings retain the ME renderer.
                 if (shadow.contains("color"))
                 {
                     data.shadow.color.r = shadow["color"].value("red", data.shadow.color.r);

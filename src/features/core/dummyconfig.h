@@ -41,6 +41,8 @@ struct DummyConfig {
 
     struct {
         bool render = true;
+        uint8_t legacySize = 0;
+        uint8_t legacyMode = 0;
         bool rotationChecks = true;
         std::string texture;
         CRGBA color = {255, 255, 255, 100};

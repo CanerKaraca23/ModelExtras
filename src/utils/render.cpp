@@ -11,6 +11,7 @@
 #include "features/core/dummy.h"
 #include "features/lights/data.h"
 #include <CPointLights.h>
+#include <CWeather.h>
 
 inline CVector2D GetPerpRight(const CVector2D &vec)
 {
@@ -528,7 +529,7 @@ void RenderUtil::RegisterShadowDirectional(const DummyConfig *pConfig, const std
     const float SHDW_SZ_MUL = 2.0f;
     const float SHDW_MAX_DIST = gfLightShadowDistance;
     const float SHDW_FADE_DIST = gfLightShadowDistance * 0.60f;
-    if (!pConfig || !pConfig->pVeh || shdwSz == 0.0f || !gbLightShadows)
+    if (!pConfig || !pConfig->pVeh || !pConfig->frame || shdwSz == 0.0f || !gbLightShadows)
     {
         return;
     }
@@ -544,6 +545,36 @@ void RenderUtil::RegisterShadowDirectional(const DummyConfig *pConfig, const std
     extern bool gbLightPointLights;
     if (gbProperShadersDetected && (gbLightPointLights || pConfig->lightType == eMaterialType::HeadLightLeft || pConfig->lightType == eMaterialType::HeadLightRight || pConfig->lightType == eMaterialType::HighBeamLeft || pConfig->lightType == eMaterialType::HighBeamRight))
     {
+        return;
+    }
+
+    if (pConfig->shadow.legacySize > 0) {
+        const auto &matrix = pConfig->frame->ltm;
+        const auto mode = pConfig->shadow.legacyMode;
+        RwTexture *texture = TextureMgr::Get(mode == 2 ? "pointlight" : "taillight");
+        if (!texture) return;
+        const float offset = mode == 0 ? 0.7f : mode == 1 ? -0.7f : 0.0f;
+        CVector position(matrix.pos.x + matrix.up.x * offset,
+                         matrix.pos.y + matrix.up.y * offset,
+                         matrix.pos.z + matrix.up.z * offset);
+        float angle = static_cast<float>(CGeneral::GetATanOfXY(matrix.up.x, matrix.up.y) * 57.2957763671875 - 90.0);
+        if (!std::isfinite(angle)) return;
+        while (angle < 0.0f) angle += 360.0f;
+        angle += 180.0f;
+        const float radians = static_cast<float>(angle * 0.01745329238474369);
+        const float perpendicular = static_cast<float>((angle + 90.0) * 0.01745329238474369);
+        const float sizeY = static_cast<float>(pConfig->shadow.legacySize * 0.3);
+        const float sizeX = static_cast<float>(pConfig->shadow.legacySize * 0.3 * (mode == 2 ? 1.0f : 1.1f));
+        const float brightness = std::max(CWeather::TrafficLightsBrightness, 0.2f);
+        if (!std::isfinite(brightness)) return;
+        auto channel = [brightness](unsigned char value) {
+            return static_cast<unsigned char>(std::fmod(value * static_cast<double>(brightness) * 0.25, 256.0));
+        };
+        CShadows::StoreShadowToBeRendered(2, texture, &position,
+            static_cast<float>(cos(perpendicular) * sizeY * 0.5), static_cast<float>(sin(perpendicular) * sizeY * 0.5),
+            static_cast<float>(cos(radians) * sizeX * 0.5), static_cast<float>(sin(radians) * sizeX * 0.5),
+            1, channel(pConfig->shadow.color.r), channel(pConfig->shadow.color.g), channel(pConfig->shadow.color.b),
+            2.0f, false, 1.0f, 0, true);
         return;
     }
 
