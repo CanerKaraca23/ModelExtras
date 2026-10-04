@@ -288,7 +288,7 @@ void HeadlightComponent::ProcessPointLights(CVehicle* pVeh, VehLightData& data) 
     bool isHeadlightsOn = CarUtil::AreLightsOn(pVeh);
 
     if (isHeadlightsOn && AreHeadlightsOpen(pVeh, data)) {
-        float rangeMul = data.bLongLightsOn ? LightsConfig::Get().fHighBeamPointLightMul : 1.0f;
+        float rangeMul = data.bLongLightsOn ? (LightsConfig::Get().bLegacyHighBeamRange ? 1.75f : LightsConfig::Get().fHighBeamPointLightMul) : 1.0f;
 
         for (eMaterialType type : {eMaterialType::HeadLightLeft, eMaterialType::HeadLightRight}) {
             if (!LightManager::IsDummyAvailable(data, type) || !data.bLightStates[type]) {
