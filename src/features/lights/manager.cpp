@@ -214,7 +214,7 @@ void LightManager::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh) {
                         vData.fLightFactor[eMaterialType::HeadLightLeft] <= 0.001f &&
                         vData.fLightFactor[eMaterialType::HeadLightRight] <= 0.001f) {
                         vData.fHighBeamFactor = 0.0f;
-                        vData.bLongLightsOn = false;
+                        if (!LightsConfig::Get().bLegacyLongLightControls) vData.bLongLightsOn = false;
                     }
                 }
             }
