@@ -101,6 +101,7 @@ static inline float GetZAngleForPoint(CVector2D const &point) {
 }
 
 void IndicatorComponent::Process(CVehicle* pVeh, VehLightData& data) {
+    if (!pVeh) return;
     static bool bSAMP = SAMP::IsPresent();
 
     bool hasIndicatorMats = LightManager::IsMaterialAvailable(pVeh, INDICATOR_LIGHTS_TYPE) ||
@@ -121,6 +122,9 @@ void IndicatorComponent::Process(CVehicle* pVeh, VehLightData& data) {
         return;
     }
 
+    const bool legacy = LightsConfig::Get().bLegacyIndicatorTiming;
+    if (legacy && (!pVeh->m_pDriver || !pVeh->bEngineOn)) return;
+
     CPed* pPlayer = FindPlayerPed();
     if (pPlayer && pVeh->IsDriver(pPlayer) &&
         (pVeh->m_nVehicleSubClass == VEHICLE_AUTOMOBILE || pVeh->m_nVehicleSubClass == VEHICLE_BIKE || pVeh->m_nVehicleSubClass == VEHICLE_QUAD || pVeh->m_nVehicleSubClass == VEHICLE_MTRUCK))
@@ -129,11 +133,14 @@ void IndicatorComponent::Process(CVehicle* pVeh, VehLightData& data) {
         if (keyDown(LightsConfig::Get().nIndicatorNoneKey)) {
             data.nIndicatorState = eIndicatorState::Off;
             if (!LightsConfig::Get().bLegacyIndicatorTiming) BlinkerState::Get().Reset();
-        } else if (keyDown(LightsConfig::Get().nIndicatorLeftKey)) {
-            data.nIndicatorState = eIndicatorState::LeftOn;
+        } else if (legacy && keyDown(LightsConfig::Get().nIndicatorBothKey)) {
+            data.nIndicatorState = eIndicatorState::BothOn;
             data.ResetIndicatorPhase();
-        } else if (keyDown(LightsConfig::Get().nIndicatorRightKey)) {
-            data.nIndicatorState = eIndicatorState::RightOn;
+        } else if (keyDown(legacy ? LightsConfig::Get().nIndicatorRightKey : LightsConfig::Get().nIndicatorLeftKey)) {
+            data.nIndicatorState = legacy ? eIndicatorState::RightOn : eIndicatorState::LeftOn;
+            data.ResetIndicatorPhase();
+        } else if (keyDown(legacy ? LightsConfig::Get().nIndicatorLeftKey : LightsConfig::Get().nIndicatorRightKey)) {
+            data.nIndicatorState = legacy ? eIndicatorState::LeftOn : eIndicatorState::RightOn;
             data.ResetIndicatorPhase();
         } else if (keyDown(LightsConfig::Get().nIndicatorBothKey)) {
             data.nIndicatorState = eIndicatorState::BothOn;
