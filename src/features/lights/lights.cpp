@@ -5,6 +5,8 @@
 #include "utils/meevents.h"
 #include "utils/datamgr.h"
 #include "utils/car.h"
+#include "utils/render.h"
+#include "utils/texmgr.h"
 #include "ModelExtrasAPI.h"
 #include "utils/samp.h"
 #include "components/fog_light.h"
@@ -45,6 +47,66 @@ static void __fastcall Hooked_DoHeadLightBeam(CVehicle *pVeh, void *, int dummyI
 	g_HeadLightBeamColor = LightManager::GetMaterialColor(pVeh, isRight ? eMaterialType::HeadLightRight : eMaterialType::HeadLightLeft).on;
 	pVeh->DoHeadLightBeam(dummyId, matrix, isRight);
 	g_HeadLightBeamColor = previousColor;
+}
+
+static RwTexture *g_LegacyHeadShadowTextures[2]{};
+static bool g_LegacyHeadShadowReady = false;
+
+// Borrow textures outside rendering; TextureMgr retains their ownership.
+static void PrepareLegacyHeadShadows()
+{
+    if (!g_LegacyHeadShadowReady) return;
+    if (LightsConfig::Get().bLegacyHeadShadows) {
+        g_LegacyHeadShadowTextures[0] = TextureMgr::Get("headlight_short");
+        g_LegacyHeadShadowTextures[1] = TextureMgr::Get("headlight_long");
+        RenderUtil::ReloadConfig();
+    } else {
+        g_LegacyHeadShadowTextures[0] = g_LegacyHeadShadowTextures[1] = nullptr;
+    }
+}
+
+static void __fastcall Hooked_DoHeadLightReflection(CVehicle *veh, void *, CMatrix &matrix,
+    unsigned int flags, unsigned char first, unsigned char second)
+{
+    const auto &cfg = LightsConfig::Get();
+    if (!cfg.bLegacyHeadShadows || !Lights::m_bEnabled || !g_LegacyHeadShadowReady
+        || !veh || !CPools::ms_pVehiclePool || !CPools::ms_pVehiclePool->IsObjectValid(veh)
+        || !veh->m_pRwClump || !(veh->m_fHealth > 0.0f) || (cfg.bLightsRequireEngine && Util::IsEngineOff(veh))) return;
+    const int modelId = veh->m_nModelIndex;
+    const auto family = veh->m_nVehicleSubClass;
+    if (family == VEHICLE_BMX || family == VEHICLE_BOAT || family == VEHICLE_TRAILER
+        || family == VEHICLE_HELI || family == VEHICLE_PLANE) return;
+    if (CModelInfo::IsBmxModel(modelId) || CModelInfo::IsBoatModel(modelId) || CModelInfo::IsTrailerModel(modelId)
+        || CModelInfo::IsHeliModel(modelId) || CModelInfo::IsPlaneModel(modelId)) return;
+    auto *model = static_cast<CVehicleModelInfo *>(CModelInfo::GetModelInfo(modelId));
+    if (!model || !model->m_pVehicleStruct) return;
+    auto &data = LightManager::m_VehData.Get(veh);
+    if (!HeadlightComponent::AreHeadlightsOpen(veh, data)) return;
+    auto *texture = g_LegacyHeadShadowTextures[data.bLongLightsOn ? 1 : 0];
+    if (!texture) return;
+    const CVector dummy = model->m_pVehicleStruct->m_avDummyPos[0];
+    auto available = [&](bool right) {
+        const float x = right ? dummy.x : -dummy.x;
+        return (x > 0.0f || (data.bLightStates[eMaterialType::HeadLightLeft]
+            && !LightManager::IsDummyAvailable(data, {eMaterialType::HeadLightLeft, eMaterialType::HighBeamLeft})))
+            && (x < 0.0f || (data.bLightStates[eMaterialType::HeadLightRight]
+                && !LightManager::IsDummyAvailable(data, {eMaterialType::HeadLightRight, eMaterialType::HighBeamRight})));
+    };
+    const bool a = available(false) && ((flags & 1) ? first != 0 : modelId == 532);
+    const bool b = available(true) && ((flags & 1) ? second != 0 : true);
+    if (!a && !b) return;
+    auto color = [&](bool right) {
+        const auto type = (right ? dummy.x : -dummy.x) > 0.0f ? eMaterialType::HeadLightRight : eMaterialType::HeadLightLeft;
+        return DataMgr::Find(modelId) ? LightManager::GetMaterialColor(veh, type).on : DEFAULT_MAT_COL;
+    };
+    const CRGBA colorA = a ? color(false) : DEFAULT_MAT_COL;
+    const CRGBA colorB = b ? color(true) : DEFAULT_MAT_COL;
+    if (a && b && colorA == colorB) {
+        RenderUtil::RegisterLegacyHeadlightShadow(veh, matrix, dummy, true, true, texture, colorA);
+    } else {
+        if (a) RenderUtil::RegisterLegacyHeadlightShadow(veh, matrix, dummy, false, false, texture, colorA);
+        if (b) RenderUtil::RegisterLegacyHeadlightShadow(veh, matrix, dummy, false, true, texture, colorB);
+    }
 }
 
 static void __cdecl RegisterHeadCorona(unsigned int id, CEntity *attach,
@@ -135,7 +197,8 @@ void Lights::Init() {
 
     LightManager::Init();
 
-    patch::Nop(0x6E2722, 19);	  // CVehicle::DoHeadLightReflection
+    // Keep the native argument setup at 0x6E2722; the wrapper replaces its former no-op.
+    patch::ReplaceFunctionCall(0x6E2730, reinterpret_cast<void *>(Hooked_DoHeadLightReflection));
 	patch::SetUChar(0x6E1A22, 0); // CVehicle::DoTailLightEffect
     patch::ReplaceFunctionCall(0x6E1A2D, reinterpret_cast<void *>(RegisterTailCorona));
 
@@ -166,6 +229,14 @@ void Lights::Init() {
 	{
 		LightsConfig::Get().InitConfig();
 	};
+    Events::initGameEvent.after += [] {
+        g_LegacyHeadShadowReady = true;
+        PrepareLegacyHeadShadows();
+    };
+    Events::shutdownRwEvent += [] {
+        g_LegacyHeadShadowReady = false;
+        g_LegacyHeadShadowTextures[0] = g_LegacyHeadShadowTextures[1] = nullptr;
+    };
 
     ModelInfoMgr::RegisterMaterial([](CVehicle *pVeh, RpMaterial *pMat) {
         if (!m_bEnabled) return eMaterialType::UnknownMaterial;
@@ -210,6 +281,7 @@ void Lights::ReloadConfig() {
 	CBaseFeature::ReloadConfig();
 	m_bEnabled = m_bActive;
 	LightsConfig::Get().InitConfig();
+    PrepareLegacyHeadShadows();
 }
 
 void Lights::Reload(CVehicle* pVeh) {
