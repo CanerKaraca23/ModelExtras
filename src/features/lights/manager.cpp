@@ -144,6 +144,15 @@ void LightManager::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh) {
     // Fix for park car alarm lights
     // Allow through if lights, indicators, or alarm are explicitly on
     if (pControlVeh->m_fHealth <= 0.0f || ((Util::IsEngineOff(pControlVeh) && indState == eIndicatorState::Off && !isAlarmActive) && !CarUtil::IsLightsForcedOn(pControlVeh) && !pControlVeh->bLightsOn)) {
+        if (pControlVeh->m_fHealth > 0.0f && LightsConfig::Get().bLegacyFogState &&
+            data.bFogLightsOn && !LightsConfig::Get().bLightsRequireEngine) {
+            for (const auto& comp : m_Components) {
+                if (auto* fog = dynamic_cast<FogLightComponent*>(comp.get())) {
+                    fog->Render(pControlVeh, pTowedVeh, data);
+                    break;
+                }
+            }
+        }
         return;
     }
 
