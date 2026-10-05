@@ -205,7 +205,7 @@ void LightManager::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh) {
 
                         if (c.shadow.render && factor > 0.01f) {
                             std::string tex = c.shadow.texture.empty() ? (type == eMaterialType::HeadLightLeft || type == eMaterialType::HeadLightRight ? ((vData.fHighBeamFactor > 0.3f) ? "headlight_long" : "headlight_short") : "") : c.shadow.texture;
-                            if (!tex.empty()) {
+                            if (!tex.empty() || c.shadow.legacySize > 0) {
                                 float sz = (type == eMaterialType::HeadLightLeft || type == eMaterialType::HeadLightRight) ? LightsConfig::Get().headlightSz : 1.0f;
                                 RenderUtil::RegisterShadowDirectional(&dummy->Get(), tex, sz * c.shadow.size, factor);
                             }
@@ -343,7 +343,7 @@ void LightManager::RenderLight(CVehicle* pVeh, VehLightData& data, eMaterialType
                 if ((type == eMaterialType::HeadLightLeft || type == eMaterialType::HeadLightRight) && data.fHighBeamFactor > 0.3f) {
                     tex = "headlight_long";
                 }
-                if (!tex.empty()) {
+                if (!tex.empty() || c.shadow.legacySize > 0) {
                     RenderUtil::RegisterShadowDirectional(&dummy->Get(), tex, sz * c.shadow.size, factor);
                 }
             }
