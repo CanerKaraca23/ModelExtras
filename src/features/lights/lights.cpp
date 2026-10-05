@@ -64,7 +64,8 @@ static void __cdecl RegisterTailCorona(unsigned int id, CEntity *attach,
                 eMaterialType::BrakeLightLeft, eMaterialType::STTLightLeft, eMaterialType::NABrakeLightLeft}))
                 || (right && LightManager::IsDummyAvailable(data, {eMaterialType::TailLightRight,
                     eMaterialType::BrakeLightRight, eMaterialType::STTLightRight, eMaterialType::NABrakeLightRight}));
-            if (!owned) {
+            if (!owned && (!left || data.bLightStates[eMaterialType::TailLightLeft])
+                && (!right || data.bLightStates[eMaterialType::TailLightRight])) {
                 const auto brakeTypes = {eMaterialType::BrakeLightLeft, eMaterialType::BrakeLightRight,
                     eMaterialType::STTLightLeft, eMaterialType::STTLightRight,
                     eMaterialType::NABrakeLightLeft, eMaterialType::NABrakeLightRight};
