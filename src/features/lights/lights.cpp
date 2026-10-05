@@ -57,7 +57,7 @@ static void __cdecl RegisterTailCorona(unsigned int id, CEntity *attach,
     if (cfg.bLegacyTailCoronas && Lights::m_bEnabled && cfg.gbLightCoronasFeature) {
         auto *veh = static_cast<CVehicle *>(attach); // Only CVehicle::DoTailLightEffect calls this hook.
         if (veh && CPools::ms_pVehiclePool && CPools::ms_pVehiclePool->IsObjectValid(veh) && veh->m_pRwClump
-            && veh->m_fHealth > 0.0f && (!cfg.bLightsRequireEngine || !Util::IsEngineOff(veh))) {
+            && !veh->m_pTrailer && veh->m_fHealth > 0.0f && (!cfg.bLightsRequireEngine || !Util::IsEngineOff(veh))) {
             auto &data = LightManager::m_VehData.Get(veh);
             const bool left = pos.x <= 0.0f;
             const bool right = pos.x >= 0.0f;
