@@ -8,6 +8,7 @@
 #include "ModelExtrasAPI.h"
 #include "utils/samp.h"
 #include "components/fog_light.h"
+#include "components/headlight.h"
 #include <CWeather.h>
 #include <CCoronas.h>
 
@@ -44,6 +45,49 @@ static void __fastcall Hooked_DoHeadLightBeam(CVehicle *pVeh, void *, int dummyI
 	g_HeadLightBeamColor = LightManager::GetMaterialColor(pVeh, isRight ? eMaterialType::HeadLightRight : eMaterialType::HeadLightLeft).on;
 	pVeh->DoHeadLightBeam(dummyId, matrix, isRight);
 	g_HeadLightBeamColor = previousColor;
+}
+
+static void __cdecl RegisterHeadCorona(unsigned int id, CEntity *attach,
+    unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha,
+    const CVector &pos, float radius, float farClip, eCoronaType type, eCoronaFlareType flare,
+    bool reflection, bool obstacles, int unused, float angle, bool longDistance,
+    float nearClip, unsigned char fadeState, float fadeSpeed, bool onlyFromBelow, bool reflectionDelay)
+{
+    auto &cfg = LightsConfig::Get();
+    if (cfg.bLegacyHeadCoronas && Lights::m_bEnabled && cfg.gbLightCoronasFeature) {
+        auto *veh = static_cast<CVehicle *>(attach); // Only CVehicle::DoHeadLightEffect calls this hook.
+        if (veh && CPools::ms_pVehiclePool && CPools::ms_pVehiclePool->IsObjectValid(veh) && veh->m_pRwClump
+            && veh->m_fHealth > 0.0f && (!cfg.bLightsRequireEngine || !Util::IsEngineOff(veh))) {
+            // Native IDs are vehicle + 2 * dummyId + side; the corona position has a heading-dependent offset.
+            const auto lightId = id - static_cast<unsigned int>(reinterpret_cast<uintptr_t>(veh));
+            auto *model = static_cast<CVehicleModelInfo *>(CModelInfo::GetModelInfo(veh->m_nModelIndex));
+            if (lightId >= 4 || !model || !model->m_pVehicleStruct) {
+                CCoronas::RegisterCorona(id, attach, red, green, blue, alpha, pos, radius, farClip, type, flare,
+                    reflection, obstacles, unused, angle, longDistance, nearClip, fadeState, fadeSpeed, onlyFromBelow, reflectionDelay);
+                return;
+            }
+            const float x = model->m_pVehicleStruct->m_avDummyPos[lightId / 2].x * (lightId & 1 ? 1.0f : -1.0f);
+            auto &data = LightManager::m_VehData.Get(veh);
+            const bool left = x <= 0.0f;
+            const bool right = x >= 0.0f;
+            const bool owned = (left && LightManager::IsDummyAvailable(data, {eMaterialType::HeadLightLeft, eMaterialType::HighBeamLeft}))
+                || (right && LightManager::IsDummyAvailable(data, {eMaterialType::HeadLightRight, eMaterialType::HighBeamRight}));
+            if (!owned && (!left || data.bLightStates[eMaterialType::HeadLightLeft])
+                && (!right || data.bLightStates[eMaterialType::HeadLightRight]) && HeadlightComponent::AreHeadlightsOpen(veh, data)) {
+                const auto lightType = right && !left ? eMaterialType::HeadLightRight : eMaterialType::HeadLightLeft;
+                // Missing model data needs no color lookup (or lazy empty-JSON allocation).
+                const auto color = DataMgr::Find(veh->m_nModelIndex) ? LightManager::GetMaterialColor(veh, lightType).on : DEFAULT_MAT_COL;
+                red = red * color.r / 255;
+                green = green * color.g / 255;
+                blue = blue * color.b / 255;
+                alpha = 128 * color.a / 255;
+                radius = static_cast<float>(static_cast<double>(CWeather::Foggyness) + static_cast<double>(radius)
+                    + (data.bLongLightsOn ? 1.0 : 0.0));
+            }
+        }
+    }
+    CCoronas::RegisterCorona(id, attach, red, green, blue, alpha, pos, radius, farClip, type, flare,
+        reflection, obstacles, unused, angle, longDistance, nearClip, fadeState, fadeSpeed, onlyFromBelow, reflectionDelay);
 }
 
 // The native caller keeps its camera-facing gate, local position and corona ID.
@@ -98,6 +142,7 @@ void Lights::Init() {
 	// CVehicle::DoHeadLightEffect
 	patch::SetUChar(0x6E0CF8, 0);
 	patch::SetUChar(0x6E0DEE, 0);
+    patch::ReplaceFunctionCall(0x6E0DF7, reinterpret_cast<void *>(RegisterHeadCorona));
 
 	// CVehicle::DoVehicleLights (native headlight coronas)
 	patch::SetUChar(0x6E2193, 0);
