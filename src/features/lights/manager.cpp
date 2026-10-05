@@ -18,6 +18,7 @@
 #include "components/drl_light.h"
 #include "components/side_light.h"
 #include "components/spot_light.h"
+#include <spanstream>
 
 void LightManager::Init() {
     m_Components.clear();
@@ -612,19 +613,20 @@ float LightManager::GetLightInertia(CVehicle* pVeh, VehLightData& data, eMateria
 
 static std::optional<CRGBA> Helper_ParseLightColor(const nlohmann::json& val, const nlohmann::json* pRoot = nullptr) {
     if (val.is_string()) {
-        std::string str = val.get<std::string>();
+        const auto& str = val.get_ref<const std::string&>();
         if (pRoot && pRoot->contains("colors") && (*pRoot)["colors"].contains(str)) {
             return Helper_ParseLightColor((*pRoot)["colors"][str], pRoot);
         }
-        std::string hexStr = str;
+        std::string_view hexStr = str;
         if (hexStr.length() >= 6) {
-            if (hexStr[0] == '#') hexStr = hexStr.substr(1);
-            else if (hexStr.rfind("0x", 0) == 0 || hexStr.rfind("0X", 0) == 0) hexStr = hexStr.substr(2);
+            if (hexStr[0] == '#') hexStr.remove_prefix(1);
+            else if (hexStr.rfind("0x", 0) == 0 || hexStr.rfind("0X", 0) == 0) hexStr.remove_prefix(2);
             if (hexStr.length() == 6 || hexStr.length() == 8) {
                 unsigned int hexVal = 0;
-                std::stringstream ss;
-                ss << std::hex << hexStr;
-                if (ss >> hexVal) {
+                std::array<char, 8> buffer{};
+                std::copy(hexStr.begin(), hexStr.end(), buffer.begin());
+                std::ispanstream ss(std::span<char>(buffer.data(), hexStr.size()));
+                if (ss >> std::hex >> hexVal) {
                     if (hexStr.length() == 6) {
                         return CRGBA((hexVal >> 16) & 0xFF, (hexVal >> 8) & 0xFF, hexVal & 0xFF, 255);
                     } else {
