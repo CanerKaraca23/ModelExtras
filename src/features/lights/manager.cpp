@@ -186,10 +186,12 @@ void LightManager::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh) {
                     int id = static_cast<int>(type) * 1000;
                     for (auto& dummy : vData.dummies[type]) {
                         const DummyConfig& c = dummy->GetRef();
+                        const bool legacy = c.UsesLegacyLighting();
+                        if (legacy && CarUtil::IsDummyDamaged(pVeh, c)) continue;
                         dummy->Update();
                         RwFrame *parent = RwFrameGetParent(dummy->Get().frame);
                         bool isBike = pVeh->m_nVehicleSubClass == VEHICLE_BIKE;
-                        bool isDamaged = Util::IsFrameDamaged(pVeh, parent) || !FrameUtil::IsOkAtomicVisible(parent);
+                        bool isDamaged = (!legacy && Util::IsFrameDamaged(pVeh, parent)) || !FrameUtil::IsOkAtomicVisible(parent);
                         bool atomicCheck = !isBike && pVeh->GetIsOnScreen() && isDamaged;
                         if (atomicCheck || (c.dummyPos == eDummyPos::Rear && pVeh->m_pTrailer)) continue;
 
@@ -278,13 +280,15 @@ void LightManager::RenderLight(CVehicle* pVeh, VehLightData& data, eMaterialType
     if (isAvailable) {
         for (auto& dummy : data.dummies[type]) {
             const DummyConfig& c = dummy->GetRef();
+            const bool legacy = c.UsesLegacyLighting();
+            if (legacy && CarUtil::IsDummyDamaged(pVeh, c)) continue;
             dummy->Update();
             RwFrame *parent = RwFrameGetParent(dummy->Get().frame);
             bool isBike = pVeh->m_nVehicleSubClass == VEHICLE_BIKE;
             bool isDamaged = false;
-            if (c.damagePanel != -1 || c.damageDoor != -1) {
+            if (!legacy && (c.damagePanel != -1 || c.damageDoor != -1)) {
                 isDamaged = CarUtil::IsDummyDamaged(pVeh, c);
-            } else if (parent) {
+            } else if (!legacy && parent) {
                 isDamaged = Util::IsFrameDamaged(pVeh, parent);
             }
             if (!isDamaged && parent) {

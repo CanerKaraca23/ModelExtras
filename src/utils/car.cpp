@@ -207,6 +207,11 @@ bool CarUtil::IsLegacyParentDamaged(CVehicle *pVeh, RwFrame *frame) {
 }
 
 bool CarUtil::IsDummyDamaged(CVehicle *pVeh, const DummyConfig &c) {
+    if (c.UsesLegacyLighting()) {
+        if (!pVeh || !pVeh->m_pRwClump ||
+            !FrameUtil::ContainsFrame(RpClumpGetFrame(pVeh->m_pRwClump), c.frame)) return true;
+        return IsLegacyParentDamaged(pVeh, c.frame);
+    }
     if (!pVeh || pVeh->m_nVehicleSubClass != VEHICLE_AUTOMOBILE) {
         return false;
     }

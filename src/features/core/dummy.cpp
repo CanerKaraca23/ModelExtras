@@ -251,6 +251,8 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
 
 void VehicleDummy::Update() {
     if (!data.frame || !data.pVeh) return;
+    if (data.UsesLegacyLighting() && (!data.pVeh->m_pRwClump ||
+        !FrameUtil::ContainsFrame(RpClumpGetFrame(data.pVeh->m_pRwClump), data.frame))) return;
     RwFrameGetLTM(data.frame);
 
     // The corona is expanded again through the entity matrix, so the offset has to be

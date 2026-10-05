@@ -59,6 +59,10 @@ struct DummyConfig {
     } strobe;
 
 
+    bool UsesLegacyLighting() const {
+        return corona.legacyMode != 255 || shadow.legacySize > 0;
+    }
+
     static inline int gId = 0;
     int id = 0;
 

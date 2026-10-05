@@ -190,13 +190,15 @@ void RenderUtil::RegisterHeadlightPointLight(const DummyConfig *pConfig, float r
     }
 
     bool isBike = pConfig->pVeh->m_nVehicleSubClass == VEHICLE_BIKE;
+    const bool legacy = pConfig->UsesLegacyLighting();
+    if (legacy && CarUtil::IsDummyDamaged(pConfig->pVeh, *pConfig)) return;
     if (!isBike && pConfig->pVeh->GetIsOnScreen())
     {
         RwFrame *parent = pConfig->frame ? RwFrameGetParent(pConfig->frame) : nullptr;
         bool isDamaged = false;
-        if (pConfig->damagePanel != -1 || pConfig->damageDoor != -1) {
+        if (!legacy && (pConfig->damagePanel != -1 || pConfig->damageDoor != -1)) {
             isDamaged = CarUtil::IsDummyDamaged(pConfig->pVeh, *pConfig);
-        } else if (parent) {
+        } else if (!legacy && parent) {
             isDamaged = Util::IsFrameDamaged(pConfig->pVeh, parent);
         }
         if (!isDamaged && parent) {
@@ -272,13 +274,15 @@ void RenderUtil::RegisterPointLight(const DummyConfig *pConfig, CRGBA col, float
     }
 
     bool isBike = pConfig->pVeh->m_nVehicleSubClass == VEHICLE_BIKE;
+    const bool legacy = pConfig->UsesLegacyLighting();
+    if (legacy && CarUtil::IsDummyDamaged(pConfig->pVeh, *pConfig)) return;
     if (!isBike && pConfig->pVeh->GetIsOnScreen())
     {
         RwFrame *parent = pConfig->frame ? RwFrameGetParent(pConfig->frame) : nullptr;
         bool isDamaged = false;
-        if (pConfig->damagePanel != -1 || pConfig->damageDoor != -1) {
+        if (!legacy && (pConfig->damagePanel != -1 || pConfig->damageDoor != -1)) {
             isDamaged = CarUtil::IsDummyDamaged(pConfig->pVeh, *pConfig);
-        } else if (parent) {
+        } else if (!legacy && parent) {
             isDamaged = Util::IsFrameDamaged(pConfig->pVeh, parent);
         }
         if (!isDamaged && parent) {
@@ -449,6 +453,7 @@ void RenderUtil::RegisterCoronaDirectional(const DummyConfig *pConfig, float ang
     if (!pConfig || !pConfig->pVeh || !pConfig->frame) return;
     if (pConfig->corona.legacyMode != 255) {
         EnsureConfigLoaded();
+        if (CarUtil::IsDummyDamaged(pConfig->pVeh, *pConfig)) return;
         if (!gbLightCoronas || pConfig->corona.size <= 0.0f) return;
         unsigned char alpha = 80;
         if (pConfig->corona.legacyMode != 2) {
@@ -573,6 +578,7 @@ void RenderUtil::RegisterShadowDirectional(const DummyConfig *pConfig, const std
     }
 
     if (pConfig->shadow.legacySize > 0) {
+        if (CarUtil::IsDummyDamaged(pConfig->pVeh, *pConfig)) return;
         const auto &matrix = pConfig->frame->ltm;
         const auto mode = pConfig->shadow.legacyMode;
         RwTexture *texture = TextureMgr::Get(mode == 2 ? "pointlight" : "taillight");
