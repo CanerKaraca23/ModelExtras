@@ -6,6 +6,8 @@
 #include "enums/materialtype.h"
 
 class CEntity;
+class CVehicle;
+class CMatrix;
 class CRGBA;
 enum class eDummyPos;
 struct DummyConfig;
@@ -21,6 +23,8 @@ public:
     static void RegisterCoronaDirectional(const DummyConfig *pConfig, float angle, float radius, float szMul = 1.0f, bool inversed = false, bool skipCheck = true);
     static void RegisterShadow(CEntity *pEntity, CVector position, CRGBA col, float angle, eDummyPos dummyPos, const std::string &shadwTexName, CVector2D shdwSz = {1.0f, 1.0f}, CVector2D shdwOffset = {0.0f, 0.0f}, RwTexture *pTexture = nullptr);
     static void RegisterShadowDirectional(const DummyConfig *pConfig, const std::string &shadwTexName, float shdwSz, float alphaMul = 1.0f);
+    static void RegisterLegacyHeadlightShadow(CVehicle *vehicle, const CMatrix &matrix, CVector dummy,
+        bool twin, bool right, RwTexture *texture, CRGBA color);
     static void ReloadConfig();
     static float GetCoronaDistanceMul();
     static float GetHeadLightCoronaDistanceMul();

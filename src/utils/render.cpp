@@ -698,6 +698,41 @@ void RenderUtil::RegisterShadowDirectional(const DummyConfig *pConfig, const std
         true);
 }
 
+void RenderUtil::RegisterLegacyHeadlightShadow(CVehicle *vehicle, const CMatrix &matrix, CVector dummy,
+    bool twin, bool right, RwTexture *texture, CRGBA color)
+{
+    if (!vehicle || !vehicle->m_pRwClump || !texture) return;
+    EnsureConfigLoaded();
+    extern bool gbProperShadersDetected;
+    if (!gbLightShadows || gbProperShadersDetected) return;
+
+    auto normalize = [](CVector v) {
+        const double length = std::sqrt(static_cast<double>(v.x) * v.x + static_cast<double>(v.y) * v.y);
+        return CVector(length > 0.0 ? static_cast<float>(v.x / length) : 0.0f,
+            length > 0.0 ? static_cast<float>(v.y / length) : 0.0f, 0.0f);
+    };
+    const CVector forward = normalize(matrix.up);
+    const CVector lateral = normalize(matrix.right);
+    const double width = twin ? static_cast<double>(dummy.x) * 16.0
+        : (vehicle->m_nVehicleSubClass == VEHICLE_BIKE || vehicle->m_nModelIndex == 471
+            ? 8.0 : std::abs(static_cast<double>(dummy.x)) * 16.0);
+    const double top = twin ? width : width * 2.0;
+    const double offset = dummy.y + (twin ? 1.0 : 0.35) + top;
+    const float x = right ? dummy.x : -dummy.x;
+    const CVector &origin = vehicle->GetPosition();
+    CVector position(static_cast<float>(origin.x + forward.x * offset + (twin ? 0.0 : static_cast<double>(lateral.x) * x)),
+        static_cast<float>(origin.y + forward.y * offset + (twin ? 0.0 : static_cast<double>(lateral.y) * x)), origin.z + 2.0f);
+    const float topX = static_cast<float>(forward.x * top), topY = static_cast<float>(forward.y * top);
+    const float sideX = static_cast<float>(forward.y * width), sideY = static_cast<float>(-forward.x * width);
+    if (!std::isfinite(dummy.x) || !std::isfinite(dummy.y) || !std::isfinite(matrix.up.x) || !std::isfinite(matrix.up.y)
+        || !std::isfinite(matrix.right.x) || !std::isfinite(matrix.right.y) || !std::isfinite(position.x)
+        || !std::isfinite(position.y) || !std::isfinite(position.z) || !std::isfinite(topX) || !std::isfinite(topY)
+        || !std::isfinite(sideX) || !std::isfinite(sideY)) return;
+    CShadows::StoreShadowToBeRendered(2, texture, &position, topX, topY, sideX, sideY, 255,
+        60 * color.r * color.a / (255 * 255), 60 * color.g * color.a / (255 * 255), 60 * color.b * color.a / (255 * 255),
+        6.0f, false, 1.0f, nullptr, vehicle == FindPlayerVehicle(-1, false));
+}
+
 void RenderUtil::RegisterShadow(CEntity *pEntity, CVector position, CRGBA col, float angle,
                                 eDummyPos dummyPos, const std::string &shadwTexName,
                                 CVector2D shdwSz, CVector2D shdwOffset, RwTexture *pTexture)
