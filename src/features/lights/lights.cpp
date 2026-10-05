@@ -7,6 +7,8 @@
 #include "ModelExtrasAPI.h"
 #include "utils/samp.h"
 #include "components/fog_light.h"
+#include <CWeather.h>
+#include <CCoronas.h>
 
 
 float gfGlobalCoronaSize = 0.3f;
@@ -43,6 +45,42 @@ static void __fastcall Hooked_DoHeadLightBeam(CVehicle *pVeh, void *, int dummyI
 	g_HeadLightBeamColor = previousColor;
 }
 
+// The native caller keeps its camera-facing gate, local position and corona ID.
+static void __cdecl RegisterTailCorona(unsigned int id, CEntity *attach,
+    unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha,
+    const CVector &pos, float radius, float farClip, eCoronaType type, eCoronaFlareType flare,
+    bool reflection, bool obstacles, int unused, float angle, bool longDistance,
+    float nearClip, unsigned char fadeState, float fadeSpeed, bool onlyFromBelow, bool reflectionDelay)
+{
+    auto &cfg = LightsConfig::Get();
+    if (cfg.bLegacyTailCoronas && Lights::m_bEnabled && cfg.gbLightCoronasFeature) {
+        auto *veh = static_cast<CVehicle *>(attach); // Only CVehicle::DoTailLightEffect calls this hook.
+        if (veh && CPools::ms_pVehiclePool && CPools::ms_pVehiclePool->IsObjectValid(veh) && veh->m_pRwClump
+            && veh->m_fHealth > 0.0f && (!cfg.bLightsRequireEngine || !Util::IsEngineOff(veh))) {
+            auto &data = LightManager::m_VehData.Get(veh);
+            const bool left = pos.x <= 0.0f;
+            const bool right = pos.x >= 0.0f;
+            const bool owned = (left && LightManager::IsDummyAvailable(data, {eMaterialType::TailLightLeft,
+                eMaterialType::BrakeLightLeft, eMaterialType::STTLightLeft, eMaterialType::NABrakeLightLeft}))
+                || (right && LightManager::IsDummyAvailable(data, {eMaterialType::TailLightRight,
+                    eMaterialType::BrakeLightRight, eMaterialType::STTLightRight, eMaterialType::NABrakeLightRight}));
+            if (!owned) {
+                const auto brakeTypes = {eMaterialType::BrakeLightLeft, eMaterialType::BrakeLightRight,
+                    eMaterialType::STTLightLeft, eMaterialType::STTLightRight,
+                    eMaterialType::NABrakeLightLeft, eMaterialType::NABrakeLightRight};
+                const bool dedicatedBrake = LightManager::IsDummyAvailable(data, brakeTypes)
+                    || LightManager::IsMaterialAvailable(veh, brakeTypes);
+                red = red ? 100 : 0;
+                alpha = !dedicatedBrake && veh->m_fBreakPedal > 0.0f && veh->m_pDriver && !veh->bIsHandbrakeOn ? 200 : 120;
+                radius = static_cast<float>(static_cast<double>(radius) * 1.5
+                    + static_cast<double>(CWeather::Foggyness) * 1.7999999523162842);
+            }
+        }
+    }
+    CCoronas::RegisterCorona(id, attach, red, green, blue, alpha, pos, radius, farClip, type, flare,
+        reflection, obstacles, unused, angle, longDistance, nearClip, fadeState, fadeSpeed, onlyFromBelow, reflectionDelay);
+}
+
 void Lights::Init() {
     ReloadConfig();
     if (!m_bEnabled) {
@@ -53,6 +91,7 @@ void Lights::Init() {
 
     patch::Nop(0x6E2722, 19);	  // CVehicle::DoHeadLightReflection
 	patch::SetUChar(0x6E1A22, 0); // CVehicle::DoTailLightEffect
+    patch::ReplaceFunctionCall(0x6E1A2D, reinterpret_cast<void *>(RegisterTailCorona));
 
 	// CVehicle::DoHeadLightEffect
 	patch::SetUChar(0x6E0CF8, 0);
