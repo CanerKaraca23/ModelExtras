@@ -4,6 +4,7 @@
 #include "manager.h"
 #include "utils/meevents.h"
 #include "utils/datamgr.h"
+#include "utils/car.h"
 #include "ModelExtrasAPI.h"
 #include "utils/samp.h"
 #include "components/fog_light.h"
@@ -71,7 +72,7 @@ static void __cdecl RegisterTailCorona(unsigned int id, CEntity *attach,
                     eMaterialType::NABrakeLightLeft, eMaterialType::NABrakeLightRight};
                 const bool dedicatedBrake = LightManager::IsDummyAvailable(data, brakeTypes)
                     || LightManager::IsMaterialAvailable(veh, brakeTypes);
-                red = red ? 100 : 0;
+                red = red && (!dedicatedBrake || CarUtil::AreLightsOn(veh)) ? 100 : 0;
                 alpha = !dedicatedBrake && veh->m_fBreakPedal > 0.0f && veh->m_pDriver && !veh->bIsHandbrakeOn ? 200 : 120;
                 radius = static_cast<float>(static_cast<double>(radius) * 1.5
                     + static_cast<double>(CWeather::Foggyness) * 1.7999999523162842);
