@@ -36,6 +36,7 @@ struct DummyConfig {
     struct {
         CRGBA color = {255, 255, 255, 100};
         float size = 0.35f;
+        uint8_t legacyMode = 255;
         eLightingMode lightingType = eLightingMode::NonDirectional;
     } corona;
 

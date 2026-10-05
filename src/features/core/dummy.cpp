@@ -101,6 +101,7 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
             data.shadow.render = indicator;
             data.shadow.legacySize = indicator ? 5 : 0;
             data.shadow.legacyMode = (indicator || fog) ? 0 : 1;
+            data.corona.legacyMode = data.shadow.legacyMode;
         }
     }
 
@@ -121,6 +122,7 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
             data.shadow.render = shadow > 0;
             data.shadow.legacySize = static_cast<uint8_t>(shadow);
             data.shadow.legacyMode = static_cast<uint8_t>(mode);
+            data.corona.legacyMode = data.shadow.legacyMode;
             if (fields == 6) data.shadow.size = static_cast<float>(shadow) / 7.5f;
         }
         else if (prm.size() >= 6)
@@ -191,6 +193,8 @@ VehicleDummy::VehicleDummy(const DummyConfig& config)
             if (lights.contains("corona"))
             {
                 auto &coronaSec = lights["corona"];
+                if (coronaSec.contains("color") || coronaSec.contains("size") || coronaSec.contains("type"))
+                    data.corona.legacyMode = 255; // Explicit corona settings retain the ME renderer.
                 if (coronaSec.contains("color"))
                 {
                     data.hasCustomColor = true;

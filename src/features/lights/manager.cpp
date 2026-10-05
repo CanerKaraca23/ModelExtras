@@ -228,11 +228,12 @@ void LightManager::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh) {
 }
 
 void LightManager::EnableDummy(int id, VehicleDummy *dummy, CVehicle *pVeh, float szMul, float alphaMul) {
+    if (!dummy || !pVeh) return;
     if (LightsConfig::Get().gbLightCoronasFeature && alphaMul > 0.01f) {
         DummyConfig &c = dummy->Get();
         CRGBA origColor = c.corona.color;
         c.corona.color.a = static_cast<unsigned char>(std::clamp(static_cast<float>(origColor.a) * alphaMul, 0.0f, 255.0f));
-        if (c.corona.lightingType == eLightingMode::NonDirectional) {
+        if (c.corona.legacyMode == 255 && c.corona.lightingType == eLightingMode::NonDirectional) {
             RenderUtil::RegisterCorona(pVeh, (reinterpret_cast<unsigned int>(pVeh) * 255) + 255 + id, c.position, c.corona.color, c.corona.size * szMul, c.lightType);
         } else {
             RenderUtil::RegisterCoronaDirectional(&dummy->Get(), c.rotation.angle, 180.0f, szMul, c.corona.lightingType == eLightingMode::Inversed, false);

@@ -446,6 +446,30 @@ void RenderUtil::RegisterPointLight(const DummyConfig *pConfig, CRGBA col, float
 
 void RenderUtil::RegisterCoronaDirectional(const DummyConfig *pConfig, float angle, float radius, float szMul, bool inversed, bool skipCheck)
 {
+    if (!pConfig || !pConfig->pVeh || !pConfig->frame) return;
+    if (pConfig->corona.legacyMode != 255) {
+        EnsureConfigLoaded();
+        if (!gbLightCoronas || pConfig->corona.size <= 0.0f) return;
+        unsigned char alpha = 80;
+        if (pConfig->corona.legacyMode != 2) {
+            if (TheCamera.m_nActiveCam >= std::size(TheCamera.m_aCams)) return;
+            const auto &matrix = pConfig->frame->ltm;
+            CVector position(matrix.pos.x, matrix.pos.y, matrix.pos.z);
+            CVector direction = VectorSub(TheCamera.m_aCams[TheCamera.m_nActiveCam].m_vecSource, position);
+            plugin::CallMethod<0x59C910>(&direction); // Native normalization, including the zero-vector fallback.
+            RwMatrix inverse;
+            if (!RwMatrixInvert(&inverse, &pConfig->frame->ltm)) return;
+            float facing = Multiply3x3(*reinterpret_cast<const CMatrix *>(&inverse), direction).y;
+            if (pConfig->corona.legacyMode != 0) facing = -facing;
+            if (!std::isfinite(facing) || facing <= 0.0f) return;
+            alpha = static_cast<unsigned char>(std::min(static_cast<double>(facing) * 160.0, 80.0));
+        }
+        const auto &color = pConfig->corona.color;
+        CCoronas::RegisterCorona(reinterpret_cast<unsigned int>(pConfig), pConfig->pVeh,
+            color.r, color.g, color.b, alpha, pConfig->position, pConfig->corona.size,
+            150.0f, CORONATYPE_HEADLIGHT, FLARETYPE_NONE, true, false, 0, 0.0f, false, 0.5f, 0, 50.0f, false, false);
+        return;
+    }
     float sz = pConfig->corona.size * szMul;
     CRGBA col = pConfig->corona.color;
 
