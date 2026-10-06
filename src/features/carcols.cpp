@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "utils/datamgr.h"
-#include "utils/samp.h"
 #include "carcols.h"
 #include <rwcore.h>
 #include <rpworld.h>
@@ -79,7 +78,7 @@ void Carcols::ReloadConfig()
 {
     CBaseFeature::ReloadConfig();
     m_bEnabled = m_bActive;
-    m_bMultiplayer = SAMP::IsPresent();
+    m_bMultiplayer = GetModuleHandleA("samp.dll") || GetModuleHandleA("omp-client.dll");
     if (!m_bEnabled || m_bMultiplayer) RestoreModelVariations();
     else for (const auto &[model, palette] : indexedPalettes) {
         const auto *config = DataMgr::Find(model);
@@ -199,7 +198,7 @@ bool Carcols::GetColor(CVehicle *pVeh, RpMaterial *pMat, CRGBA &col)
 
 void Carcols::Parse(const nlohmann::json &data, int model)
 {
-    m_bMultiplayer = SAMP::IsPresent();
+    m_bMultiplayer = GetModuleHandleA("samp.dll") || GetModuleHandleA("omp-client.dll");
     variations.erase(model);
     indexedPalettes.erase(model);
     if (data.contains("carcols"))
