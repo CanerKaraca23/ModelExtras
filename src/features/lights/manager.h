@@ -15,7 +15,7 @@ public:
     static inline std::unordered_map<uint32_t, eMaterialType> m_MaterialMap;
 
     static void Init();
-    static eMaterialType GetMatType(RpMaterial* pMat);
+    static eMaterialType GetMatType(RpMaterial* pMat, bool legacyFilter = false);
     static void RegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const std::string_view name);
     
     static void Process(CVehicle* pVeh);

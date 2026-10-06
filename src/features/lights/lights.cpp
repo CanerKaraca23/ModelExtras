@@ -309,7 +309,14 @@ void Lights::Init() {
 
     ModelInfoMgr::RegisterMaterial([](CVehicle *pVeh, RpMaterial *pMat) {
         if (!m_bEnabled) return eMaterialType::UnknownMaterial;
-        return LightManager::GetMatType(pMat); 
+        bool legacyFilter = false;
+        const auto *config = pVeh ? DataMgr::Find(pVeh->m_nModelIndex) : nullptr;
+        if (config && config->contains("lights") && (*config)["lights"].is_object()) {
+            const auto &lights = (*config)["lights"];
+            auto flag = lights.find("legacy_filter");
+            if (flag != lights.end() && flag->is_boolean()) legacyFilter = flag->get<bool>();
+        }
+        return LightManager::GetMatType(pMat, legacyFilter);
     });
 
 	ModelInfoMgr::RegisterDummy([](CVehicle *pVeh, RwFrame *pFrame, const std::string_view nodeName) {

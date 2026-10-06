@@ -5,6 +5,7 @@
 #include "utils/util.h"
 #include "utils/car.h"
 #include "utils/datamgr.h"
+#include "utils/texmgr.h"
 #include "defines.h"
 #include "components/headlight.h"
 #include "components/indicator.h"
@@ -53,10 +54,14 @@ DummyConfig LightManager::CreateBaseConfig(CVehicle* pVeh, RwFrame* pFrame) {
     return c;
 }
 
-eMaterialType LightManager::GetMatType(RpMaterial* pMat) {
-    if (Util::IsAntiPatternLightMaterial(pMat)) {
+eMaterialType LightManager::GetMatType(RpMaterial* pMat, bool legacyFilter) {
+    if (!pMat || Util::IsAntiPatternLightMaterial(pMat)) {
         return eMaterialType::UnknownMaterial;
     }
+    if (legacyFilter && (!pMat->texture ||
+        (pMat->texture != CVehicleModelInfo::ms_pLightsTexture &&
+         pMat->texture != TextureMgr::FindInDict("vehiclelights", pMat->texture->dict))))
+        return eMaterialType::UnknownMaterial;
 
     CRGBA matCol = *reinterpret_cast<CRGBA*>(RpMaterialGetColor(pMat));
     matCol.a = 255;
