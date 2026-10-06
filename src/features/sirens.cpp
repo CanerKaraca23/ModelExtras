@@ -781,19 +781,22 @@ void Sirens::Init()
 
 	ModelInfoMgr::RegisterMaterial([](CVehicle *pVeh, RpMaterial *pMat)
 								   {
-		if (!m_bEnabled) {
+		if (!m_bEnabled || !pVeh || !pMat) {
 			return eMaterialType::UnknownMaterial;
 		}
 		CRGBA col = *reinterpret_cast<CRGBA *>(RpMaterialGetColor(pMat));
 
-		if (pMat && pMat->texture && pMat->texture->name && modelData.contains(pVeh->m_nModelIndex)) {
-			std::string_view texName(pMat->texture->name);
-			bool isSirenTex = (texName.find("siren") != 0 || texName.find("vehiclelights128") != 0);
+		if (pMat->texture && modelData.contains(pVeh->m_nModelIndex) && modelData[pVeh->m_nModelIndex]) {
 			bool isIVFSiren = modelData[pVeh->m_nModelIndex]->isImVehFtSiren;
 
 			if (isIVFSiren) {
-				if (isSirenTex && (col.r >= 240 && col.g == 0 && col.b == 0)) {
-					return eMaterialType::SirenLight;
+				// IVF also accepts EML materials outside the vehiclelights texture path.
+				if (col.r >= 240 && col.g == 0 && col.b == 0) {
+					for (auto *state : modelData[pVeh->m_nModelIndex]->States) {
+						if (state && state->Materials.contains(256 - col.r)) {
+							return eMaterialType::SirenLight;
+						}
+					}
 				}
 			} else {
 				// The red channel carries the siren index, so a plain white material
@@ -810,7 +813,7 @@ void Sirens::Init()
 					}
 
 					for (auto* state : modelData[pVeh->m_nModelIndex]->States) {
-						if (state->Materials.contains(255)) {
+						if (state && state->Materials.contains(255)) {
 							return eMaterialType::SirenLight;
 						}
 					}
