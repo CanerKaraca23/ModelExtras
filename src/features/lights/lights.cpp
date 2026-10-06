@@ -13,6 +13,7 @@
 #include "components/headlight.h"
 #include <CWeather.h>
 #include <CCoronas.h>
+#include <CPointLights.h>
 
 
 float gfGlobalCoronaSize = 0.3f;
@@ -47,6 +48,74 @@ static void __fastcall Hooked_DoHeadLightBeam(CVehicle *pVeh, void *, int dummyI
 	g_HeadLightBeamColor = LightManager::GetMaterialColor(pVeh, isRight ? eMaterialType::HeadLightRight : eMaterialType::HeadLightLeft).on;
 	pVeh->DoHeadLightBeam(dummyId, matrix, isRight);
 	g_HeadLightBeamColor = previousColor;
+}
+
+static void __cdecl RegisterNativeHeadPointLight(CVehicle *veh, unsigned char type, CVector point, CVector direction,
+    float radius, float red, float green, float blue, unsigned char fog, bool shadows, CEntity *affected)
+{
+    const auto &cfg = LightsConfig::Get();
+    if (!cfg.bLegacyHeadPointLights || !Lights::m_bEnabled || !gbLightPointLights || !veh
+        || !CPools::ms_pVehiclePool || !CPools::ms_pVehiclePool->IsObjectValid(veh) || !veh->m_pRwClump
+        || !(veh->m_fHealth > 0.0f) || (cfg.bLightsRequireEngine && Util::IsEngineOff(veh))) return;
+    if (veh->m_nModelIndex < 0) return;
+    auto *model = static_cast<CVehicleModelInfo *>(CModelInfo::GetModelInfo(veh->m_nModelIndex));
+    if (!model || !model->m_pVehicleStruct) return;
+    const auto family = veh->m_nVehicleSubClass;
+    if (family == VEHICLE_BMX || family == VEHICLE_BOAT || family == VEHICLE_TRAILER || family == VEHICLE_HELI || family == VEHICLE_PLANE
+        || CModelInfo::IsBmxModel(veh->m_nModelIndex) || CModelInfo::IsBoatModel(veh->m_nModelIndex)
+        || CModelInfo::IsTrailerModel(veh->m_nModelIndex) || CModelInfo::IsHeliModel(veh->m_nModelIndex)
+        || CModelInfo::IsPlaneModel(veh->m_nModelIndex)) return;
+    auto &data = LightManager::m_VehData.Get(veh);
+    if (!HeadlightComponent::AreHeadlightsOpen(veh, data)) return;
+    const bool left = data.bLightStates[eMaterialType::HeadLightLeft]
+        && !LightManager::IsDummyAvailable(data, {eMaterialType::HeadLightLeft, eMaterialType::HighBeamLeft})
+        && !Util::IsLightDamaged(veh, eLights::LIGHT_FRONT_LEFT) && !Util::IsPanelDamaged(veh, ePanels::WING_FRONT_LEFT);
+    const bool right = data.bLightStates[eMaterialType::HeadLightRight]
+        && !LightManager::IsDummyAvailable(data, {eMaterialType::HeadLightRight, eMaterialType::HighBeamRight})
+        && !Util::IsLightDamaged(veh, eLights::LIGHT_FRONT_RIGHT) && !Util::IsPanelDamaged(veh, ePanels::WING_FRONT_RIGHT);
+    if (!left && !right) return;
+    if (data.bLongLightsOn) radius = cfg.bLegacyHighBeamRange ? 35.0f : radius * cfg.fHighBeamPointLightMul;
+    auto color = [&](eMaterialType type) {
+        return DataMgr::Find(veh->m_nModelIndex) ? LightManager::GetMaterialColor(veh, type).on : DEFAULT_MAT_COL;
+    };
+    const CRGBA a = left ? color(eMaterialType::HeadLightLeft) : DEFAULT_MAT_COL;
+    const CRGBA b = right ? color(eMaterialType::HeadLightRight) : DEFAULT_MAT_COL;
+    auto emit = [&](CVector position, CRGBA tint) {
+        if (!std::isfinite(radius) || radius <= 0.0f || !std::isfinite(position.x) || !std::isfinite(position.y)
+            || !std::isfinite(position.z) || !std::isfinite(direction.x) || !std::isfinite(direction.y) || !std::isfinite(direction.z)) return;
+        const float intensity = cfg.fPointLightIntensity * (tint.a / 255.0f);
+        CPointLights::AddLight(type, position, direction, radius, red * (tint.r / 255.0f) * intensity,
+            green * (tint.g / 255.0f) * intensity, blue * (tint.b / 255.0f) * intensity, fog, shadows, affected);
+    };
+    if (left && right && a == b) {
+        emit(point, a);
+    } else {
+        CVector dummy = model->m_pVehicleStruct->m_avDummyPos[0];
+        if (!std::isfinite(dummy.x) || !std::isfinite(dummy.y) || !std::isfinite(dummy.z)) return;
+        const float x = std::abs(dummy.x);
+        if (left) { dummy.x = -x; emit(veh->TransformFromObjectSpace(dummy), a); }
+        if (right) { dummy.x = x; emit(veh->TransformFromObjectSpace(dummy), b); }
+    }
+}
+
+// The original caller retains its 14-word AddLight stack; ESI is its vehicle.
+static void __declspec(naked) NativeHeadPointLightBridge()
+{
+    __asm {
+        push ebp
+        mov ebp, esp
+        lea edx, [ebp + 60]
+        mov ecx, 14
+    copyArgument:
+        push dword ptr [edx]
+        sub edx, 4
+        loop copyArgument
+        push esi
+        call RegisterNativeHeadPointLight
+        add esp, 60
+        pop ebp
+        ret
+    }
 }
 
 static RwTexture *g_LegacyHeadShadowTextures[2]{};
@@ -213,8 +282,8 @@ void Lights::Init() {
 	patch::SetUChar(0x6E2532, 0);
 	patch::SetUChar(0x6E2627, 0);
 
-	// Disable native hardcoded white pointlights in CVehicle::DoVehicleLights
-	patch::Nop(0x6E27E6, 5);
+    // Front headlight spotlight and the separate rear brake spotlight.
+    patch::ReplaceFunctionCall(0x6E27E6, reinterpret_cast<void *>(NativeHeadPointLightBridge));
 	patch::Nop(0x6E28E7, 5);
 
 	SAMP::PatchVehicleLights();

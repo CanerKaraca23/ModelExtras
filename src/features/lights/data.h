@@ -62,6 +62,7 @@ struct LightsConfig {
     bool bLegacyTailCoronas = false;
     bool bLegacyHeadCoronas = false;
     bool bLegacyHeadShadows = false;
+    bool bLegacyHeadPointLights = false;
     bool bLightsRequireEngine = false;
     bool bSirensRequireEngine = false;
     float fHighBeamPointLightMul = 2.0f;
@@ -115,6 +116,7 @@ struct LightsConfig {
         bLegacyTailCoronas = gConfig.ReadBoolean("LIGHTS", "UseLegacyTailCoronas", false);
         bLegacyHeadCoronas = gConfig.ReadBoolean("LIGHTS", "UseLegacyHeadCoronas", false);
         bLegacyHeadShadows = gConfig.ReadBoolean("LIGHTS", "UseLegacyHeadShadows", false);
+        bLegacyHeadPointLights = gConfig.ReadBoolean("LIGHTS", "UseLegacyHeadPointLights", false);
         bLightsRequireEngine = gConfig.ReadBoolean("LIGHTS", "LightsRequireEngine", gConfig.ReadBoolean("TWEAKS", "LightsRequireEngine", false));
         bSirensRequireEngine = gConfig.ReadBoolean("LIGHTS", "SirensRequireEngine", gConfig.ReadBoolean("TWEAKS", "SirensRequireEngine", false));
         
