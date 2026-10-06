@@ -136,6 +136,7 @@ void DataMgr::Init()
 
     // 2. Load Base Layer from ModelExtras/data/
     LoadBaseData();
+    RestoreLegacySirenMetadata();
     LoadLegacyData();
 
     // 3. Scan ModLoader directory (if present) and apply configs based on pure ModLoader priority
@@ -202,6 +203,51 @@ void DataMgr::LoadBaseData()
     catch (const std::exception &ex)
     {
         LOG(ERROR) << std::format("Failed to iterate data directory: {}", ex.what());
+    }
+}
+
+void DataMgr::RestoreLegacySirenMetadata()
+{
+    std::unordered_map<int, nlohmann::json> backups;
+    std::error_code ec;
+    const std::filesystem::path folder = MOD_DATA_PATH("data/backup/");
+    for (auto it = std::filesystem::directory_iterator(folder, std::filesystem::directory_options::skip_permission_denied, ec);
+         !ec && it != std::filesystem::directory_iterator(); it.increment(ec)) {
+        std::error_code fileError;
+        if (!it->is_regular_file(fileError) || it->path().extension() != ".eml") continue;
+        try {
+            std::istringstream stream(ReadFileContent(it->path()));
+            nlohmann::json converted;
+            int model = 0;
+            if (!Parse_EmlToMemory(stream, converted, model) || model <= 0 || model >= 20000) continue;
+            auto [entry, inserted] = backups.try_emplace(model, std::move(converted["sirens"]));
+            if (!inserted && entry->second != converted["sirens"]) entry->second = nullptr;
+        } catch (const std::exception &ex) {
+            LOG(WARNING) << std::format("Failed to read legacy siren backup '{}': {}", it->path().string(), ex.what());
+        }
+    }
+    if (ec) return;
+    for (const auto &[model, source] : backups) {
+        auto target = data.find(model);
+        if (source.is_null() || target == data.end() || !target->second.is_object()) continue;
+        const auto &json = target->second;
+        if (!json.contains("metadata") || !json["metadata"].is_object() ||
+            !json["metadata"].contains("desc") || json["metadata"]["desc"] != "Converted from ImVehFt" ||
+            !json.contains("sirens") || !json["sirens"].is_object() ||
+            !json["sirens"].contains("imvehft") || json["sirens"]["imvehft"] != true ||
+            !json["sirens"].contains("states") || !json["sirens"]["states"].is_object() ||
+            !json["sirens"]["states"].contains("1. modelextras")) continue;
+        auto &rows = target->second["sirens"]["states"]["1. modelextras"];
+        if (!rows.is_object()) continue;
+        for (const auto &[id, row] : source["states"]["1. modelextras"].items()) {
+            if (!row.contains("legacy_type") || !rows.contains(id)) continue;
+            auto previous = row;
+            previous.erase("legacy_type");
+            previous.erase("legacy_nearclip");
+            previous.erase("legacy_shadow_size");
+            if (row["legacy_type"] == 4) previous["shadow"]["type"] = "round";
+            if (rows[id] == previous) rows[id] = row;
+        }
     }
 }
 
