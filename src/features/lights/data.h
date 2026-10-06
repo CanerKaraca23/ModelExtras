@@ -55,6 +55,7 @@ struct LightsConfig {
     bool bPlayerIdleBrakeLights = false;
     bool bLegacyBrakeState = false;
     bool bLegacyDayNightTimes = false;
+    bool bLegacyDRLState = false;
     bool bLegacyDummyDefaults = false;
     bool bLegacyLongLightControls = false;
     bool bLegacyFogState = false;
@@ -109,6 +110,7 @@ struct LightsConfig {
         bPlayerIdleBrakeLights = gConfig.ReadBoolean("LIGHTS", "PlayerIdleBrakeLights", gConfig.ReadBoolean("TWEAKS", "PlayerIdleBrakeLights", false));
         bLegacyBrakeState = gConfig.ReadBoolean("LIGHTS", "UseLegacyBrakeState", false);
         bLegacyDayNightTimes = gConfig.ReadBoolean("LIGHTS", "UseLegacyDayNightTimes", false);
+        bLegacyDRLState = gConfig.ReadBoolean("LIGHTS", "UseLegacyDRLState", false);
         bLegacyDummyDefaults = gConfig.ReadBoolean("LIGHTS", "UseLegacyDummyDefaults", false);
         bLegacyLongLightControls = gConfig.ReadBoolean("LIGHTS", "UseLegacyLongLightControls", false);
         bLegacyFogState = gConfig.ReadBoolean("LIGHTS", "UseLegacyFogState", false);
