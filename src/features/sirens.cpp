@@ -539,6 +539,9 @@ VehicleSirenMaterial::VehicleSirenMaterial(std::string_view state, int material,
 			LOG_VERBOSE("Model {} siren configuration exception! State '{}' material {}, ImVehFt property is not a boolean or number!", Sirens::CurrentModel, state, material);
 	}
 
+    if (json.contains("legacy_type") && json["legacy_type"].is_number_integer() &&
+        (json["legacy_type"] == 3 || json["legacy_type"] == 4))
+        LegacyType = json["legacy_type"].get<uint8_t>();
 	Validate = true;
 };
 
@@ -1260,10 +1263,13 @@ void Sirens::hkRegisterCorona(unsigned int id, CEntity *attachTo, unsigned char 
 
 void Sirens::EnableDummy(int id, VehicleDummy *dummy, CVehicle *vehicle, VehicleSirenMaterial *material, eCoronaFlareType type, uint64_t time)
 {
+    if (!dummy || !vehicle || !vehicle->m_pRwClump || !material) return;
+    if (!dummy->Get().frame) return;
+    if ((material->LegacyType == 3 || material->LegacyType == 4) &&
+        !FrameUtil::ContainsFrame(RpClumpGetFrame(vehicle->m_pRwClump), dummy->Get().frame)) return;
 	auto &data = m_VehData.Get(vehicle);
 	data.nLastTickFrame = CTimer::m_FrameCounter;
 	dummy->Update();
-	CVector position = reinterpret_cast<CVehicleModelInfo *>(CModelInfo__ms_modelInfoPtrs[vehicle->m_nModelIndex])->m_pVehicleStruct->m_avDummyPos[0];
 	CRGBA activeColor = material->Color;
 
 	if (material->Inertia > 0.0001f)
@@ -1276,7 +1282,16 @@ void Sirens::EnableDummy(int id, VehicleDummy *dummy, CVehicle *vehicle, Vehicle
 	pDummyConfig->corona.size = material->Size;
 	float dummyAngle = Util::NormalizeAngle(pDummyConfig->rotation.angle + material->Shadow.AngleOffset);
 
-	if (material->Type != eLightingMode::NonDirectional)
+    if (material->LegacyType == 3 || material->LegacyType == 4) {
+        const auto previousMode = pDummyConfig->corona.legacyMode;
+        const bool previousBidirectional = pDummyConfig->corona.legacySirenBidirectional;
+        pDummyConfig->corona.legacyMode = material->LegacyType;
+        pDummyConfig->corona.legacySirenBidirectional = true;
+        RenderUtil::RegisterCoronaDirectional(pDummyConfig, dummyAngle, material->Radius, 1.0f, false);
+        pDummyConfig->corona.legacyMode = previousMode;
+        pDummyConfig->corona.legacySirenBidirectional = previousBidirectional;
+    }
+	else if (material->Type != eLightingMode::NonDirectional)
 	{
 		if (material->Type == eLightingMode::Rotator)
 		{

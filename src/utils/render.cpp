@@ -455,7 +455,8 @@ void RenderUtil::RegisterCoronaDirectional(const DummyConfig *pConfig, float ang
         EnsureConfigLoaded();
         if (CarUtil::IsDummyDamaged(pConfig->pVeh, *pConfig)) return;
         if (!gbLightCoronas || pConfig->corona.size <= 0.0f) return;
-        unsigned char alpha = 80;
+        const bool bidirectional = pConfig->corona.legacySirenBidirectional;
+        unsigned char alpha = bidirectional ? pConfig->corona.color.a : 80;
         if (pConfig->corona.legacyMode != 2) {
             if (TheCamera.m_nActiveCam >= std::size(TheCamera.m_aCams)) return;
             const auto &matrix = pConfig->frame->ltm;
@@ -465,9 +466,13 @@ void RenderUtil::RegisterCoronaDirectional(const DummyConfig *pConfig, float ang
             RwMatrix inverse;
             if (!RwMatrixInvert(&inverse, &pConfig->frame->ltm)) return;
             float facing = Multiply3x3(*reinterpret_cast<const CMatrix *>(&inverse), direction).y;
-            if (pConfig->corona.legacyMode != 0) facing = -facing;
-            if (!std::isfinite(facing) || facing <= 0.0f) return;
-            alpha = static_cast<unsigned char>(std::min(static_cast<double>(facing) * 160.0, 80.0));
+            if (bidirectional) facing = std::abs(facing);
+            else if (pConfig->corona.legacyMode != 0) facing = -facing;
+            if (!std::isfinite(facing) || (!bidirectional && facing <= 0.0f)) return;
+            if (bidirectional)
+                alpha = static_cast<unsigned char>(std::min(facing * (2.0f * alpha), static_cast<float>(alpha)));
+            else
+                alpha = static_cast<unsigned char>(std::min(static_cast<double>(facing) * 160.0, 80.0));
         }
         const auto &color = pConfig->corona.color;
         CCoronas::RegisterCorona(reinterpret_cast<unsigned int>(pConfig), pConfig->pVeh,

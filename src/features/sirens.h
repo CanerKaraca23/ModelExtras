@@ -107,6 +107,7 @@ public:
     uint64_t Delay = 0;
     eLightingMode Type = eLightingMode::Directional;
     bool ImVehFt = false;
+    uint8_t LegacyType = 255;
     VehicleSirenShadow Shadow;
     VehicleSirenRotator *Rotator = nullptr;
 
