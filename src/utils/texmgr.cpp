@@ -13,6 +13,8 @@ static const char *g_ShadowNames[] = {"headlight_short", "headlight_long", "tail
 static const char *g_ShadowFiles[] = {"headlight_s.png", "headlight_l.png", "taillight.png", "pointlight.png", "backfire.png"};
 static RwTexture *g_LegacyShadows[5]{};
 static bool g_UseLegacyShadows = false;
+static RwTexDictionary *g_ModelExtrasTxd = nullptr;
+static bool g_TxdLoadAttempted = false;
 
 void TextureMgr::Init()
 {
@@ -38,6 +40,10 @@ void TextureMgr::Init()
         }
     };
     Events::shutdownRwEvent += [] {
+        Textures.clear();
+        if (g_ModelExtrasTxd) RwTexDictionaryDestroy(g_ModelExtrasTxd);
+        g_ModelExtrasTxd = nullptr;
+        g_TxdLoadAttempted = false;
         for (auto &texture : g_LegacyShadows) {
             if (texture) RwTextureDestroy(texture);
             texture = nullptr;
@@ -118,13 +124,16 @@ RwTexture *TextureMgr::Get(std::string_view name, RwUInt8 alpha)
         }
     }
 
-    static auto pDict = CFileLoader::LoadTexDictionary(MOD_DATA_PATH("ME_TEXDB.TXD"));
+    if (!g_TxdLoadAttempted) {
+        g_TxdLoadAttempted = true;
+        g_ModelExtrasTxd = CFileLoader::LoadTexDictionary(MOD_DATA_PATH("ME_TEXDB.TXD"));
+    }
     char nameBuf[64];
     size_t copyLen = std::min(name.size(), sizeof(nameBuf) - 1);
     std::memcpy(nameBuf, name.data(), copyLen);
     nameBuf[copyLen] = '\0';
 
-    RwTexture *pTex = pDict ? RwTexDictionaryFindNamedTexture(pDict, nameBuf) : nullptr;
+    RwTexture *pTex = g_ModelExtrasTxd ? RwTexDictionaryFindNamedTexture(g_ModelExtrasTxd, nameBuf) : nullptr;
     if (pTex == nullptr) {
         return legacy;
     }

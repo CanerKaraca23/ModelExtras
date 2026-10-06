@@ -302,24 +302,30 @@ void __cdecl LicensePlate::CCustomCarPlateMgr_Shudown()
 
 bool __cdecl LicensePlate::CCustomCarPlateMgr_Initialise()
 {
+    // Shutdown releases these references; TextureMgr keeps the dictionary's own.
+    auto getTexture = [](const char *name) {
+        RwTexture *texture = TextureMgr::Get(name);
+        if (texture) RwTextureAddRef(texture);
+        return texture;
+    };
     LoadLegacyPlateTextures();
     const bool legacyCharset = gConfig.ReadBoolean("PLATES", "UseLegacyCharset", false);
-    pCharSetTex = legacyCharset ? LoadLegacyPlateCharset() : TextureMgr::Get("plate_char");
-    if (!pCharSetTex) pCharSetTex = legacyCharset ? TextureMgr::Get("plate_char") : LoadLegacyPlateCharset();
+    pCharSetTex = legacyCharset ? LoadLegacyPlateCharset() : getTexture("plate_char");
+    if (!pCharSetTex) pCharSetTex = legacyCharset ? getTexture("plate_char") : LoadLegacyPlateCharset();
     if (!pCharSetTex || !RwTextureGetRaster(pCharSetTex)) return false;
     RwTextureSetFilterMode(pCharSetTex, rwFILTERLINEAR);
     RwTextureSetAddressingU(pCharSetTex, rwTEXTUREADDRESSCLAMP);
     RwTextureSetAddressingV(pCharSetTex, rwTEXTUREADDRESSCLAMP);
 
-    m_Plates[DAY_CS] = TextureMgr::Get("plate_cs");
-    m_Plates[DAY_LS] = TextureMgr::Get("plate_ls");
-    m_Plates[DAY_LV] = TextureMgr::Get("plate_lv");
-    m_Plates[DAY_SF] = TextureMgr::Get("plate_sf");
+    m_Plates[DAY_CS] = getTexture("plate_cs");
+    m_Plates[DAY_LS] = getTexture("plate_ls");
+    m_Plates[DAY_LV] = getTexture("plate_lv");
+    m_Plates[DAY_SF] = getTexture("plate_sf");
 
-    m_Plates[NIGHT_CS] = TextureMgr::Get("plate_cs_l");
-    m_Plates[NIGHT_LS] = TextureMgr::Get("plate_ls_l");
-    m_Plates[NIGHT_LV] = TextureMgr::Get("plate_lv_l");
-    m_Plates[NIGHT_SF] = TextureMgr::Get("plate_sf_l");
+    m_Plates[NIGHT_CS] = getTexture("plate_cs_l");
+    m_Plates[NIGHT_LS] = getTexture("plate_ls_l");
+    m_Plates[NIGHT_LV] = getTexture("plate_lv_l");
+    m_Plates[NIGHT_SF] = getTexture("plate_sf_l");
 
     for (int i = 0; i < ePlateType::TOTAL_SZ; i++)
     {

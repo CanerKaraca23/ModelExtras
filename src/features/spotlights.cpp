@@ -27,6 +27,7 @@ static inline CVector2D GetPerpRight(const CVector2D &vec)
 void SpotLights::Init()
 {
 	ReloadConfig();
+	Events::shutdownRwEvent += [] { pSpotlightTex = nullptr; };
 	ModelInfoMgr::RegisterDummy([](CVehicle *pVeh, RwFrame *pFrame, const std::string_view nodeName)
 	{
 		SpotlightData &data = m_VehData.Get(pVeh);
