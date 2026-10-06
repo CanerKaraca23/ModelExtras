@@ -45,6 +45,22 @@ extern int GetStrobeIndex(CVehicle *pVeh, RpMaterial *pMat);
 
 static CVehicle *pCurVeh = nullptr;
 
+static RwTexture *FindLightOnTexture(RpMaterial *material) {
+  if (!material || !material->texture) return nullptr;
+  RwTexture *texture = material->texture;
+  RwTexture *on = nullptr;
+  const std::string_view name(texture->name, strnlen(texture->name, sizeof(texture->name)));
+  if (name == "vehiclelights128" ||
+      texture == TextureMgr::FindInDict("vehiclelights128", texture->dict, true, false)) {
+    on = TextureMgr::FindInDict("vehiclelightson128", texture->dict, true, false);
+  } else {
+    on = TextureMgr::FindOnTextureInDict(material, texture->dict, true);
+  }
+  if (!on && texture == CVehicleModelInfo::ms_pLightsTexture)
+    on = CVehicleModelInfo::ms_pLightsOnTexture;
+  return on;
+}
+
 static constexpr uint32_t RwFrameForAllObjectsAddr = 0x7F1200;
 static constexpr uint32_t RwFrameAddChildAddr = 0x7F0B00;
 static constexpr uint32_t GetCurrentAtomicObjectCBAddr = 0x6D33B0;
@@ -432,20 +448,11 @@ RpMaterial *ModelInfoMgr::SetEditableMaterialsCB(RpMaterial *material,
       m_RestoreEntries.push_back({&material->texture, material->texture});
 
       if (material->texture) {
-        const char *matTexName = material->texture->name;
-        if (matTexName && strcmp(matTexName, "vehiclelights128") == 0) {
-          material->texture = TextureMgr::FindInDict("vehiclelightson128", material->texture->dict, true);
-        } else if (material->texture == TextureMgr::FindInDict("vehiclelights128", material->texture->dict, true)) {
-          material->texture = TextureMgr::FindInDict("vehiclelightson128", material->texture->dict, true);
+        if (RwTexture *on = FindLightOnTexture(material)) {
+          material->texture = on;
         } else {
-          RwTexture *pTex = TextureMgr::FindOnTextureInDict(
-              material, material->texture->dict, true);
-          if (pTex) {
-            material->texture = pTex;
-          } else {
-            LOG_VERBOSE("Expected an 'on' texture for {} but none found",
-                        material->texture->name);
-          }
+          LOG_VERBOSE("Expected an 'on' texture for {} but none found",
+                      material->texture->name);
         }
       }
       RwSurfaceProperties origProps = material->surfaceProps;
