@@ -240,7 +240,10 @@ bool Parse_EmlToMemory(std::istream &infile, nlohmann::json &jsonData, int &outM
         state["shadow"]["size"] = shadow / 1.5f;
         state["inertia"] = flash / 100.0f;
         state["shadow"]["type"] = (type == 2 || type == 4) ? "pointlight" : "round";
-        if (type == 3 || type == 4) state["legacy_type"] = type;
+        if (type == 3 || type == 4) {
+            state["legacy_type"] = type;
+            state["legacy_nearclip"] = flash;
+        }
         state["type"] = type == 0 ? "directional" : (type == 1 ? "inversed-directional" : "non-directional");
     }
 

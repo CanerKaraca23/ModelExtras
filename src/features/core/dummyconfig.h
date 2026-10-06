@@ -38,6 +38,7 @@ struct DummyConfig {
         float size = 0.35f;
         uint8_t legacyMode = 255;
         bool legacySirenBidirectional = false;
+        float legacySirenNearClip = 0.5f;
         eLightingMode lightingType = eLightingMode::NonDirectional;
     } corona;
 

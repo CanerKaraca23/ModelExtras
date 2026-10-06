@@ -477,7 +477,8 @@ void RenderUtil::RegisterCoronaDirectional(const DummyConfig *pConfig, float ang
         const auto &color = pConfig->corona.color;
         CCoronas::RegisterCorona(reinterpret_cast<unsigned int>(pConfig), pConfig->pVeh,
             color.r, color.g, color.b, alpha, pConfig->position, pConfig->corona.size,
-            150.0f, CORONATYPE_HEADLIGHT, FLARETYPE_NONE, true, false, 0, 0.0f, false, 0.5f, 0, 50.0f, false, false);
+            150.0f, CORONATYPE_HEADLIGHT, FLARETYPE_NONE, true, false, 0, 0.0f, false,
+            bidirectional ? pConfig->corona.legacySirenNearClip : 0.5f, 0, 50.0f, false, false);
         return;
     }
     float sz = pConfig->corona.size * szMul;

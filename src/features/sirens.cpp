@@ -542,6 +542,10 @@ VehicleSirenMaterial::VehicleSirenMaterial(std::string_view state, int material,
     if (json.contains("legacy_type") && json["legacy_type"].is_number_integer() &&
         (json["legacy_type"] == 3 || json["legacy_type"] == 4))
         LegacyType = json["legacy_type"].get<uint8_t>();
+    if (LegacyType != 255 && json.contains("legacy_nearclip") && json["legacy_nearclip"].is_number()) {
+        const float nearClip = json["legacy_nearclip"].get<float>();
+        if (std::isfinite(nearClip) && nearClip >= 0.0f) LegacyNearClip = nearClip;
+    }
 	Validate = true;
 };
 
@@ -1285,11 +1289,14 @@ void Sirens::EnableDummy(int id, VehicleDummy *dummy, CVehicle *vehicle, Vehicle
     if (material->LegacyType == 3 || material->LegacyType == 4) {
         const auto previousMode = pDummyConfig->corona.legacyMode;
         const bool previousBidirectional = pDummyConfig->corona.legacySirenBidirectional;
+        const float previousNearClip = pDummyConfig->corona.legacySirenNearClip;
         pDummyConfig->corona.legacyMode = material->LegacyType;
         pDummyConfig->corona.legacySirenBidirectional = true;
+        pDummyConfig->corona.legacySirenNearClip = material->LegacyNearClip;
         RenderUtil::RegisterCoronaDirectional(pDummyConfig, dummyAngle, material->Radius, 1.0f, false);
         pDummyConfig->corona.legacyMode = previousMode;
         pDummyConfig->corona.legacySirenBidirectional = previousBidirectional;
+        pDummyConfig->corona.legacySirenNearClip = previousNearClip;
     }
 	else if (material->Type != eLightingMode::NonDirectional)
 	{
