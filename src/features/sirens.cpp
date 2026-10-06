@@ -700,10 +700,10 @@ void Sirens::EventCtor(CVehicle *pVeh)
 
 int GetSirenIndex(CVehicle *pVeh, RpMaterial *pMat)
 {
-	int model = pVeh->m_nModelIndex;
-	if (Sirens::modelData.contains(model))
+	if (!pVeh || !pMat) return -1;
+	if (auto *model = Sirens::GetModelData(pVeh->m_nModelIndex))
 	{
-		if (Sirens::modelData[model]->isImVehFtSiren)
+		if (model->isImVehFtSiren)
 		{
 			return 256 - pMat->color.red; // 256 is correct, not 255
 		}
@@ -831,7 +831,7 @@ void Sirens::Init()
 				auto &data = m_VehData.Get(pVeh);
 				data.vehicle = pVeh;
 				if (auto *state = data.GetStateForVehicle(GetModelData(pVeh->m_nModelIndex))) {
-					if (state->Materials.contains(matIdx)) {
+					if (state->Materials.contains(matIdx) && state->Materials[matIdx]) {
 						CRGBA onCol = state->Materials[matIdx]->Color;
 						CRGBA offCol = state->Materials[matIdx]->ColorOff.value_or(
 							modelData[pVeh->m_nModelIndex]->isImVehFtSiren ? state->Materials[matIdx]->Color : DEFAULT_MAT_COL
