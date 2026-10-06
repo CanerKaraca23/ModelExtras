@@ -145,10 +145,8 @@ RwTexture *TextureMgr::RwReadTexture(const char *name, char *Maskname)
 RwTexture *TextureMgr::Get(std::string_view name, RwUInt8 alpha)
 {
     RwTexture *legacy = nullptr;
-    if (alpha == 255) {
-        for (size_t i = 0; i < 5; ++i) if (name == g_ShadowNames[i]) { legacy = g_LegacyShadows[i]; break; }
-    }
-    if (g_UseLegacyShadows && legacy) return legacy;
+    for (size_t i = 0; i < 5; ++i) if (name == g_ShadowNames[i]) { legacy = g_LegacyShadows[i]; break; }
+    if (alpha == 255 && g_UseLegacyShadows && legacy) return legacy;
     auto it = Textures.find(name);
     if (it != Textures.end())
     {
@@ -159,7 +157,7 @@ RwTexture *TextureMgr::Get(std::string_view name, RwUInt8 alpha)
         }
     }
 
-    if (!g_TxdLoadAttempted) {
+    if (!g_TxdLoadAttempted && !(g_UseLegacyShadows && legacy)) {
         g_TxdLoadAttempted = true;
         g_ModelExtrasTxd = CFileLoader::LoadTexDictionary(MOD_DATA_PATH("ME_TEXDB.TXD"));
     }
@@ -168,10 +166,10 @@ RwTexture *TextureMgr::Get(std::string_view name, RwUInt8 alpha)
     std::memcpy(nameBuf, name.data(), copyLen);
     nameBuf[copyLen] = '\0';
 
-    RwTexture *pTex = g_ModelExtrasTxd ? RwTexDictionaryFindNamedTexture(g_ModelExtrasTxd, nameBuf) : nullptr;
-    if (pTex == nullptr) {
-        return legacy;
-    }
+    RwTexture *pTex = g_UseLegacyShadows && legacy ? legacy :
+        (g_ModelExtrasTxd ? RwTexDictionaryFindNamedTexture(g_ModelExtrasTxd, nameBuf) : nullptr);
+    if (!pTex) pTex = legacy;
+    if (!pTex) return nullptr;
 
     if (alpha != 255)
     {
