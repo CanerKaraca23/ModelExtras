@@ -14,9 +14,11 @@
 #include "utils/meevents.h"
 #include <CPools.h>
 #include <CAEVehicleAudioEntity.h>
+#include "utils/texmgr.h"
 
 static bool g_bSirensRequireEngine = false;
 static uint64_t g_SirenDataRevision = 0;
+static RwTexture *g_LegacySirenShadowTexture = nullptr;
 
 std::shared_ptr<VehicleSirenData> VehicleSirenData::CloneForVehicle() const
 {
@@ -546,6 +548,10 @@ VehicleSirenMaterial::VehicleSirenMaterial(std::string_view state, int material,
         const float nearClip = json["legacy_nearclip"].get<float>();
         if (std::isfinite(nearClip) && nearClip >= 0.0f) LegacyNearClip = nearClip;
     }
+    if (LegacyType == 4 && json.contains("legacy_shadow_size") && json["legacy_shadow_size"].is_number()) {
+        const float size = json["legacy_shadow_size"].get<float>();
+        if (std::isfinite(size) && size >= 0.0f) LegacyShadowSize = size;
+    }
 	Validate = true;
 };
 
@@ -759,6 +765,8 @@ void __fastcall Sirens::hkServiceHornOrSiren(CAEVehicleAudioEntity* pThis, void*
 
 void Sirens::Init()
 {
+    Events::initGameEvent.after += [] { g_LegacySirenShadowTexture = TextureMgr::Get("pointlight"); };
+    Events::shutdownRwEvent += [] { g_LegacySirenShadowTexture = nullptr; };
 	DataMgr::RegisterListener("sirens", [](int model, const nlohmann::json &data) {
 		Sirens::Parse(data, model);
 	});
@@ -1333,7 +1341,12 @@ void Sirens::EnableDummy(int id, VehicleDummy *dummy, CVehicle *vehicle, Vehicle
 		RenderUtil::RegisterCorona(vehicle, (reinterpret_cast<unsigned int>(vehicle) * 255) + 255 + id, pDummyConfig->position, activeColor, material->Size);
 	}
 
-	if (material->Type == eLightingMode::Directional)
+    if (material->LegacyType == 4 && material->LegacyShadowSize >= 0.0f &&
+        material->Shadow.Type == "pointlight" && material->Shadow.Size == material->LegacyShadowSize / 1.5f &&
+        material->Shadow.Offset == 0.0f && material->Shadow.AngleOffset == 0.0f) {
+        RenderUtil::RegisterLegacySirenShadow(pDummyConfig, material->LegacyShadowSize, g_LegacySirenShadowTexture);
+    }
+	else if (material->Type == eLightingMode::Directional)
 	{
 		RenderUtil::RegisterShadowDirectional(pDummyConfig, material->Shadow.Type, material->Shadow.Size, material->InertiaMultiplier);
 	}

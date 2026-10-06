@@ -558,6 +558,40 @@ static int GetShadowIntensity(eMaterialType lightType)
     return std::clamp(intensity, 0, 255);
 }
 
+void RenderUtil::RegisterLegacySirenShadow(const DummyConfig *pConfig, float size, RwTexture *texture)
+{
+    if (!pConfig || !pConfig->pVeh || !pConfig->pVeh->m_pRwClump || !pConfig->frame || !texture ||
+        !(size > 0.0f) || !std::isfinite(size)) return;
+    EnsureConfigLoaded();
+    extern bool gbProperShadersDetected, gbLightPointLights;
+    if (!gbLightShadows || (gbProperShadersDetected && gbLightPointLights) ||
+        CarUtil::IsDummyDamaged(pConfig->pVeh, *pConfig)) return;
+    const float distSq = MathUtil::DistanceSquared(pConfig->pVeh->GetPosition(), TheCamera.GetPosition());
+    if (!std::isfinite(distSq) || distSq > gfLightShadowDistance * gfLightShadowDistance) return;
+    const auto &matrix = pConfig->frame->ltm;
+    CVector position(matrix.pos.x + matrix.up.x * 0.7f,
+                     matrix.pos.y + matrix.up.y * 0.7f,
+                     matrix.pos.z + matrix.up.z * 0.7f);
+    if (!std::isfinite(position.x) || !std::isfinite(position.y) || !std::isfinite(position.z)) return;
+    float angle = static_cast<float>(CGeneral::GetATanOfXY(matrix.up.x, matrix.up.y) * 57.2957763671875 - 90.0);
+    if (!std::isfinite(angle)) return;
+    while (angle < 0.0f) angle += 360.0f;
+    angle += 180.0f;
+    const float radians = static_cast<float>(angle * 0.01745329238474369);
+    const float perpendicular = static_cast<float>((angle + 90.0) * 0.01745329238474369);
+    const float extent = size - 1.0f;
+    const float brightness = std::max(CWeather::TrafficLightsBrightness, 0.2f);
+    if (!std::isfinite(brightness)) return;
+    const auto &color = pConfig->shadow.color;
+    auto channel = [brightness, &color](unsigned char value) {
+        return static_cast<unsigned char>(std::fmod(value * static_cast<double>(brightness) * 0.25 * color.a / 255.0, 256.0));
+    };
+    CShadows::StoreShadowToBeRendered(2, texture, &position,
+        static_cast<float>(cos(perpendicular) * extent * 0.5), static_cast<float>(sin(perpendicular) * extent * 0.5),
+        static_cast<float>(cos(radians) * extent * 0.5), static_cast<float>(sin(radians) * extent * 0.5),
+        1, channel(color.r), channel(color.g), channel(color.b), 2.0f, false, 1.0f, 0, true);
+}
+
 void RenderUtil::RegisterShadowDirectional(const DummyConfig *pConfig, const std::string &shadwTexName, float shdwSz, float alphaMul)
 {
     EnsureConfigLoaded();
