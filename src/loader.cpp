@@ -59,7 +59,7 @@ void ModelExtras::Init()
 
         if (SAMP::IsPresent())
         {
-            LOG(INFO) << "SAMP detected, disabling Carcols feature.";
+            LOG(INFO) << "SAMP detected, using indexed Carcols palettes without random color overrides.";
         }
 
         if (GetModuleHandle("SilentPatchSA.asi") == nullptr)
@@ -123,9 +123,7 @@ void ModelExtras::Init()
     RegisterFeature<ExhaustFx>();
     RegisterFeature<ExtraWheel>();
     RegisterFeature<LicensePlate>();
-    if (!SAMP::IsPresent()) {
-        RegisterFeature<Carcols>();
-    }
+    RegisterFeature<Carcols>();
     RegisterFeature<RollbackBed>();
     RegisterFeature<WheelHub>();
     RegisterFeature<Lights>();

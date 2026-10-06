@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "utils/datamgr.h"
+#include "utils/samp.h"
 #include "carcols.h"
 #include <rwcore.h>
 #include <rpworld.h>
@@ -15,6 +16,7 @@ void Carcols::ReloadConfig()
 {
     CBaseFeature::ReloadConfig();
     m_bEnabled = m_bActive;
+    m_bMultiplayer = SAMP::IsPresent();
 }
 
 void Carcols::Init()
@@ -27,16 +29,23 @@ void Carcols::Init()
 
 bool Carcols::GetColor(CVehicle *pVeh, RpMaterial *pMat, CRGBA &col)
 {
+    if (!pMat || !CVehicleModelInfo::ms_currentCol) return false;
     CRGBA *colorTable = *reinterpret_cast<CRGBA **>(0x4C8390);
+    if (!colorTable) return false;
     CRGBA type = *reinterpret_cast<CRGBA *>(RpMaterialGetColor(pMat));
     type.a = 255;
 
-    if (pVeh && m_bEnabled && variations.contains(pVeh->m_nModelIndex) && !variations[pVeh->m_nModelIndex].empty())
+    const auto *config = pVeh ? DataMgr::Find(pVeh->m_nModelIndex) : nullptr;
+    const bool hasCarcols = config && config->contains("carcols");
+    if (pVeh && m_bEnabled && !m_bMultiplayer && hasCarcols &&
+        !indexedPalettes.contains(pVeh->m_nModelIndex) &&
+        variations.contains(pVeh->m_nModelIndex) && !variations[pVeh->m_nModelIndex].empty())
     {
         int model = pVeh->m_nModelIndex;
         auto &data = m_VehData.Get(pVeh);
-        if (data.randId == -1)
+        if (data.randId < 0 || static_cast<size_t>(data.randId) >= variations[model].size())
         {
+            data.m_bPri = data.m_bSec = data.m_bTer = data.m_bQuat = false;
             data.randId = rand() % variations[model].size();
         }
         auto storeCol = variations[model][data.randId];
@@ -105,6 +114,14 @@ bool Carcols::GetColor(CVehicle *pVeh, RpMaterial *pMat, CRGBA &col)
         {
             return false;
         }
+        if (pVeh && m_bEnabled && hasCarcols) {
+            auto palette = indexedPalettes.find(pVeh->m_nModelIndex);
+            if (palette != indexedPalettes.end() && static_cast<size_t>(idx) < palette->second.size()) {
+                col = palette->second[idx];
+                return true;
+            }
+        }
+        if (idx >= 128 && colorTable == CVehicleModelInfo::ms_vehicleColourTable) return false;
         col = colorTable[idx];
     }
 
@@ -113,9 +130,31 @@ bool Carcols::GetColor(CVehicle *pVeh, RpMaterial *pMat, CRGBA &col)
 
 void Carcols::Parse(const nlohmann::json &data, int model)
 {
+    m_bMultiplayer = SAMP::IsPresent();
+    variations.erase(model);
+    indexedPalettes.erase(model);
     if (data.contains("carcols"))
     {
+        const auto &carcols = data["carcols"];
+        if (!carcols.is_object() || !carcols.contains("colors") || !carcols["colors"].is_array()) return;
         auto &cols = data["carcols"]["colors"];
+        const bool converted = data.contains("metadata") && data["metadata"].is_object() &&
+            data["metadata"].contains("desc") && data["metadata"]["desc"] == "Converted from IVF";
+        const bool indexed = carcols.contains("use_game_indices") ?
+            (carcols["use_game_indices"].is_boolean() && carcols["use_game_indices"].get<bool>()) : (converted && m_bMultiplayer);
+        if (indexed) {
+            std::vector<CRGBA> palette;
+            palette.reserve(cols.size());
+            for (const auto &color : cols) {
+                if (!color.is_object() || !color.contains("red") || !color["red"].is_number_integer() ||
+                    !color.contains("green") || !color["green"].is_number_integer() ||
+                    !color.contains("blue") || !color["blue"].is_number_integer()) return;
+                palette.emplace_back(color["red"], color["green"], color["blue"], 255);
+            }
+            indexedPalettes[model] = std::move(palette);
+            return;
+        }
+        if (m_bMultiplayer || !carcols.contains("variations") || !carcols["variations"].is_array()) return;
         auto &var = data["carcols"]["variations"];
 
         for (auto &e : var)
