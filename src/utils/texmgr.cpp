@@ -16,6 +16,38 @@ static bool g_UseLegacyShadows = false;
 static RwTexDictionary *g_ModelExtrasTxd = nullptr;
 static bool g_TxdLoadAttempted = false;
 
+static RwRaster *CreateAlphaRaster(RwRaster *source, RwUInt8 alpha)
+{
+    if (!source) return nullptr;
+    const int width = RwRasterGetWidth(source), height = RwRasterGetHeight(source);
+    if (width <= 0 || height <= 0) return nullptr;
+    RwImage *image = RwImageCreate(width, height, 32);
+    if (!image) return nullptr;
+    RwRaster *raster = nullptr;
+    if (RwImageAllocatePixels(image) && RwImageSetFromRaster(image, source)) {
+        auto *pixels = RwImageGetPixels(image);
+        const int stride = RwImageGetStride(image);
+        if (pixels && stride > 0 && width <= stride / 4) {
+            for (int y = 0; y < height; ++y) {
+                auto *row = reinterpret_cast<RwRGBA *>(pixels + static_cast<size_t>(y) * stride);
+                for (int x = 0; x < width; ++x) {
+                    row[x].red = (row[x].red * alpha) / 255;
+                    row[x].green = (row[x].green * alpha) / 255;
+                    row[x].blue = (row[x].blue * alpha) / 255;
+                    row[x].alpha = alpha;
+                }
+            }
+            raster = RwRasterCreate(width, height, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
+            if (raster && !RwRasterSetFromImage(raster, image)) {
+                RwRasterDestroy(raster);
+                raster = nullptr;
+            }
+        }
+    }
+    RwImageDestroy(image);
+    return raster;
+}
+
 void TextureMgr::Init()
 {
     Events::initGameEvent.after += [] {
@@ -40,6 +72,9 @@ void TextureMgr::Init()
         }
     };
     Events::shutdownRwEvent += [] {
+        for (const auto &[name, variants] : Textures)
+            for (const auto &[alpha, texture] : variants)
+                if (alpha != 255 && texture) RwTextureDestroy(texture);
         Textures.clear();
         if (g_ModelExtrasTxd) RwTexDictionaryDestroy(g_ModelExtrasTxd);
         g_ModelExtrasTxd = nullptr;
@@ -138,14 +173,22 @@ RwTexture *TextureMgr::Get(std::string_view name, RwUInt8 alpha)
         return legacy;
     }
 
-    std::string keyStr(name);
-    Textures[keyStr][alpha] = pTex;
-
     if (alpha != 255)
     {
-        SetAlpha(Textures[keyStr][alpha], alpha);
+        RwRaster *raster = CreateAlphaRaster(RwTextureGetRaster(pTex), alpha);
+        if (!raster) return nullptr;
+        RwTexture *variant = RwTextureCreate(raster);
+        if (!variant) {
+            RwRasterDestroy(raster);
+            return nullptr;
+        }
+        std::memcpy(variant->name, pTex->name, sizeof(variant->name));
+        std::memcpy(variant->mask, pTex->mask, sizeof(variant->mask));
+        variant->filterAddressing = pTex->filterAddressing;
+        pTex = variant;
     }
-    return Textures[keyStr][alpha];
+    Textures[std::string(name)][alpha] = pTex;
+    return pTex;
 }
 
 RwTexture *TextureMgr::FindOnTextureInDict(RpMaterial *pMat, RwTexDictionary *pDict, bool fallback)
@@ -197,40 +240,12 @@ RwTexture *TextureMgr::FindOnTextureInDict(RpMaterial *pMat, RwTexDictionary *pD
 
 void TextureMgr::SetAlpha(RwTexture *texture, RwUInt8 alpha)
 {
-    if (texture == nullptr) {
-        return;
-    }
-
+    if (!texture) return;
     RwRaster *oldRaster = RwTextureGetRaster(texture);
-    if (oldRaster == nullptr) {
-        return;
-    }
-
-    int width = RwRasterGetWidth(oldRaster);
-    int height = RwRasterGetHeight(oldRaster);
-
-    RwImage *image = RwImageCreate(width, height, 32); // 32-bit = supports RGBA
-    RwImageAllocatePixels(image);
-    RwImageSetFromRaster(image, oldRaster);
-
-    RwRGBA *pixels = (RwRGBA *)RwImageGetPixels(image);
-    for (int y = 0; y < height; ++y)
-    {
-        for (int x = 0; x < width; ++x)
-        {
-            RwRGBA *pixel = &pixels[y * width + x];
-            pixel->red = (pixel->red * alpha) / 255;
-            pixel->green = (pixel->green * alpha) / 255;
-            pixel->blue = (pixel->blue * alpha) / 255;
-            pixel->alpha = alpha;
-        }
-    }
-
+    RwRaster *raster = CreateAlphaRaster(oldRaster, alpha);
+    if (!raster) return;
+    texture->raster = raster;
     RwRasterDestroy(oldRaster);
-    RwRaster *newRaster = RwRasterCreate(width, height, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
-    RwRasterSetFromImage(newRaster, image);
-    texture->raster = newRaster;
-    RwImageDestroy(image);
 }
 
 // Priority
