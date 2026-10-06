@@ -2,6 +2,7 @@
 #include "defines.h"
 #include "utils/datamgr.h"
 #include "features/core/fileconverter.h"
+#include "features/carcols.h"
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -128,6 +129,7 @@ static std::unordered_map<std::string, int> ParseModLoaderPriorities(const std::
 
 void DataMgr::Init()
 {
+    Carcols::RestoreModelVariations();
     data.clear();
     modelPath.clear();
 

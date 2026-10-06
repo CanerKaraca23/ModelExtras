@@ -6,6 +6,69 @@
 #include <rpworld.h>
 #include <RenderWare.h>
 #include "core/colors.h"
+#include <CModelInfo.h>
+
+static std::array<unsigned char, 33> ReadModelColors(CVehicleModelInfo *info)
+{
+    std::array<unsigned char, 33> colors;
+    const unsigned char *channels[] = {info->m_anPrimaryColors, info->m_anSecondaryColors,
+        info->m_anTertiaryColors, info->m_anQuaternaryColors};
+    for (size_t channel = 0; channel < 4; ++channel)
+        std::copy_n(channels[channel], 8, colors.begin() + channel * 8);
+    colors[32] = info->m_nNumColorVariations;
+    return colors;
+}
+
+static void WriteModelColors(CVehicleModelInfo *info, const std::array<unsigned char, 33> &colors)
+{
+    unsigned char *channels[] = {info->m_anPrimaryColors, info->m_anSecondaryColors,
+        info->m_anTertiaryColors, info->m_anQuaternaryColors};
+    for (size_t channel = 0; channel < 4; ++channel)
+        std::copy_n(colors.begin() + channel * 8, 8, channels[channel]);
+    info->m_nNumColorVariations = colors[32];
+    if (info->m_nLastColorVariation >= colors[32]) info->m_nLastColorVariation = 0;
+}
+
+void Carcols::RestoreModelVariations()
+{
+    for (const auto &[model, saved] : modelColorOverrides) {
+        auto *info = CModelInfo::GetModelInfo(model);
+        if (info == saved.info && info && info->GetModelType() == MODEL_INFO_VEHICLE &&
+            ReadModelColors(saved.info) == saved.after) WriteModelColors(saved.info, saved.before);
+    }
+    modelColorOverrides.clear();
+}
+
+bool Carcols::ApplyModelVariations(int model, const nlohmann::json &carcols, size_t paletteSize)
+{
+    if (!carcols.contains("variations") || !carcols["variations"].is_array()) return false;
+    const auto &rows = carcols["variations"];
+    if (rows.empty() || rows.size() > 8 || model <= 0 || model >= 20000) return false;
+    std::array<unsigned char, 33> colors{};
+    const char *keys[] = {"primary", "secondary", "tertiary", "quaternary"};
+    for (size_t row = 0; row < rows.size(); ++row) {
+        if (!rows[row].is_object()) return false;
+        for (size_t channel = 0; channel < 4; ++channel) {
+            const auto value = rows[row].value(keys[channel], nlohmann::json(0));
+            if (!value.is_number_integer() || value < 0 || value > 255 || value >= paletteSize) return false;
+            colors[channel * 8 + row] = value.get<unsigned char>();
+        }
+    }
+    if (!m_bEnabled || m_bMultiplayer) return true;
+    auto *base = CModelInfo::GetModelInfo(model);
+    if (!base || base->GetModelType() != MODEL_INFO_VEHICLE) return false;
+    auto *info = static_cast<CVehicleModelInfo *>(base);
+    auto existing = modelColorOverrides.find(model);
+    if (existing != modelColorOverrides.end()) return ReadModelColors(info) == existing->second.after;
+    const auto before = ReadModelColors(info);
+    for (size_t channel = 0; channel < 4; ++channel)
+        std::copy(before.begin() + channel * 8 + rows.size(), before.begin() + (channel + 1) * 8,
+            colors.begin() + channel * 8 + rows.size());
+    colors[32] = static_cast<unsigned char>(rows.size());
+    modelColorOverrides.emplace(model, ModelColorOverride{info, before, colors});
+    WriteModelColors(info, colors);
+    return true;
+}
 
 #define IS_SAME_COLOR(type, VEHCOL) \
     ((type.r == VEHCOL.r) &&        \
@@ -17,11 +80,17 @@ void Carcols::ReloadConfig()
     CBaseFeature::ReloadConfig();
     m_bEnabled = m_bActive;
     m_bMultiplayer = SAMP::IsPresent();
+    if (!m_bEnabled || m_bMultiplayer) RestoreModelVariations();
+    else for (const auto &[model, palette] : indexedPalettes) {
+        const auto *config = DataMgr::Find(model);
+        if (config && config->contains("carcols")) ApplyModelVariations(model, (*config)["carcols"], palette.size());
+    }
 }
 
 void Carcols::Init()
 {
     ReloadConfig();
+    Events::initGameEvent.before += [] { modelColorOverrides.clear(); };
     DataMgr::RegisterListener("carcols", [](int model, const nlohmann::json &data) {
         Carcols::Parse(data, model);
     });
@@ -140,8 +209,9 @@ void Carcols::Parse(const nlohmann::json &data, int model)
         auto &cols = data["carcols"]["colors"];
         const bool converted = data.contains("metadata") && data["metadata"].is_object() &&
             data["metadata"].contains("desc") && data["metadata"]["desc"] == "Converted from IVF";
-        const bool indexed = carcols.contains("use_game_indices") ?
-            (carcols["use_game_indices"].is_boolean() && carcols["use_game_indices"].get<bool>()) : (converted && m_bMultiplayer);
+        const bool explicitMode = carcols.contains("use_game_indices");
+        const bool indexed = explicitMode ?
+            (carcols["use_game_indices"].is_boolean() && carcols["use_game_indices"].get<bool>()) : converted;
         if (indexed) {
             std::vector<CRGBA> palette;
             palette.reserve(cols.size());
@@ -151,14 +221,22 @@ void Carcols::Parse(const nlohmann::json &data, int model)
                     !color.contains("blue") || !color["blue"].is_number_integer()) return;
                 palette.emplace_back(color["red"], color["green"], color["blue"], 255);
             }
-            indexedPalettes[model] = std::move(palette);
-            return;
+            const bool ready = ApplyModelVariations(model, carcols, palette.size());
+            if (explicitMode || m_bMultiplayer || ready) {
+                indexedPalettes[model] = std::move(palette);
+                return;
+            }
         }
         if (m_bMultiplayer || !carcols.contains("variations") || !carcols["variations"].is_array()) return;
         auto &var = data["carcols"]["variations"];
 
         for (auto &e : var)
         {
+            if (!e.is_object() ||
+                (e.contains("primary") && !e["primary"].is_number_integer()) ||
+                (e.contains("secondary") && !e["secondary"].is_number_integer()) ||
+                (e.contains("tertiary") && !e["tertiary"].is_number_integer()) ||
+                (e.contains("quaternary") && !e["quaternary"].is_number_integer())) continue;
             int pIdx = e.value("primary", 0);
             int sIdx = e.value("secondary", 0);
             int tIdx = e.value("tertiary", 0);
