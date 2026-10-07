@@ -49,14 +49,16 @@ void BrakeLightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, Veh
 
             bool sttInstalled = LightManager::IsMaterialAvailable(pTowedVeh, {eMaterialType::STTLightLeft, eMaterialType::STTLightRight});
             if (!sttInstalled) {
-                if (LightManager::IsMaterialAvailable(pTowedVeh, {eMaterialType::BrakeLightLeft, eMaterialType::BrakeLightRight}) || LightManager::IsDummyAvailable(data, {eMaterialType::BrakeLightLeft, eMaterialType::BrakeLightRight})) {
+                if (LightManager::IsMaterialAvailable(pTowedVeh, {eMaterialType::BrakeLightLeft, eMaterialType::BrakeLightRight}) || LightManager::IsDummyAvailable(data, {eMaterialType::BrakeLightLeft, eMaterialType::BrakeLightRight}) ||
+                    LightManager::IsDummyAvailable(LightManager::m_VehData.Get(pTowedVeh), {eMaterialType::BrakeLightLeft, eMaterialType::BrakeLightRight})) {
                     if (isLeftRearOk) {
                         LightManager::RenderLights(pControlVeh, pTowedVeh, data, eMaterialType::BrakeLightLeft, true, shdwName, shdwSz, false, isLeftRearOk);
                     }
                     if (isRightRearOk) {
                         LightManager::RenderLights(pControlVeh, pTowedVeh, data, eMaterialType::BrakeLightRight, true, shdwName, shdwSz, false, isRightRearOk);
                     }
-                } else if (LightManager::IsMaterialAvailable(pTowedVeh, {eMaterialType::TailLightLeft, eMaterialType::TailLightRight}) || LightManager::IsDummyAvailable(data, {eMaterialType::TailLightLeft, eMaterialType::TailLightRight})) {
+                } else if (LightManager::IsMaterialAvailable(pTowedVeh, {eMaterialType::TailLightLeft, eMaterialType::TailLightRight}) || LightManager::IsDummyAvailable(data, {eMaterialType::TailLightLeft, eMaterialType::TailLightRight}) ||
+                    LightManager::IsDummyAvailable(LightManager::m_VehData.Get(pTowedVeh), {eMaterialType::TailLightLeft, eMaterialType::TailLightRight})) {
                     if (isLeftRearOk) {
                         LightManager::RenderLights(pControlVeh, pTowedVeh, data, eMaterialType::TailLightLeft, true, shdwName, shdwSz, true, isLeftRearOk);
                     }
