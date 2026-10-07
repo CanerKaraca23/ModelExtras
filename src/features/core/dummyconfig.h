@@ -37,8 +37,9 @@ struct DummyConfig {
         CRGBA color = {255, 255, 255, 100};
         float size = 0.35f;
         uint8_t legacyMode = 255;
+        bool legacySiren = false;
         bool legacySirenBidirectional = false;
-        float legacySirenNearClip = 0.5f;
+        float legacySirenFadeSpeed = 50.0f;
         eLightingMode lightingType = eLightingMode::NonDirectional;
     } corona;
 

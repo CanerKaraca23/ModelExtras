@@ -245,10 +245,14 @@ void DataMgr::RestoreLegacySirenMetadata()
             if (!row.contains("legacy_type") || !rows.contains(id)) continue;
             auto previous = row;
             previous.erase("legacy_type");
+            previous.erase("legacy_fadespeed");
             previous.erase("legacy_nearclip");
             previous.erase("legacy_shadow_size");
             if (row["legacy_type"] == 4) previous["shadow"]["type"] = "round";
-            if (rows[id] == previous) rows[id] = row;
+            auto historical = row;
+            historical["legacy_nearclip"] = historical["legacy_fadespeed"];
+            historical.erase("legacy_fadespeed");
+            if (rows[id] == previous || rows[id] == historical) rows[id] = row;
         }
     }
 }

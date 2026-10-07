@@ -542,11 +542,17 @@ VehicleSirenMaterial::VehicleSirenMaterial(std::string_view state, int material,
 	}
 
     if (json.contains("legacy_type") && json["legacy_type"].is_number_integer() &&
-        (json["legacy_type"] == 3 || json["legacy_type"] == 4))
+        json["legacy_type"] >= 0 && json["legacy_type"] <= 4)
         LegacyType = json["legacy_type"].get<uint8_t>();
-    if (LegacyType != 255 && json.contains("legacy_nearclip") && json["legacy_nearclip"].is_number()) {
-        const float nearClip = json["legacy_nearclip"].get<float>();
-        if (std::isfinite(nearClip) && nearClip >= 0.0f) LegacyNearClip = nearClip;
+    if (LegacyType <= 2 && json.contains("type") &&
+        Type != (LegacyType == 0 ? eLightingMode::Directional :
+                 LegacyType == 1 ? eLightingMode::Inversed : eLightingMode::NonDirectional))
+        LegacyType = 255;
+    // Older EML conversions stored flash under the mistaken near-clip key.
+    const char *fadeKey = json.contains("legacy_fadespeed") ? "legacy_fadespeed" : "legacy_nearclip";
+    if (LegacyType != 255 && json.contains(fadeKey) && json[fadeKey].is_number()) {
+        const float fadeSpeed = json[fadeKey].get<float>();
+        if (std::isfinite(fadeSpeed) && fadeSpeed >= 0.0f) LegacyFadeSpeed = fadeSpeed;
     }
     if (LegacyType == 4 && json.contains("legacy_shadow_size") && json["legacy_shadow_size"].is_number()) {
         const float size = json["legacy_shadow_size"].get<float>();
@@ -1280,7 +1286,7 @@ void Sirens::EnableDummy(int id, VehicleDummy *dummy, CVehicle *vehicle, Vehicle
 {
     if (!dummy || !vehicle || !vehicle->m_pRwClump || !material) return;
     if (!dummy->Get().frame) return;
-    if ((material->LegacyType == 3 || material->LegacyType == 4) &&
+    if (material->LegacyType != 255 &&
         !FrameUtil::ContainsFrame(RpClumpGetFrame(vehicle->m_pRwClump), dummy->Get().frame)) return;
 	auto &data = m_VehData.Get(vehicle);
 	data.nLastTickFrame = CTimer::m_FrameCounter;
@@ -1297,17 +1303,20 @@ void Sirens::EnableDummy(int id, VehicleDummy *dummy, CVehicle *vehicle, Vehicle
 	pDummyConfig->corona.size = material->Size;
 	float dummyAngle = Util::NormalizeAngle(pDummyConfig->rotation.angle + material->Shadow.AngleOffset);
 
-    if (material->LegacyType == 3 || material->LegacyType == 4) {
+    if (material->LegacyType != 255) {
         const auto previousMode = pDummyConfig->corona.legacyMode;
+        const bool previousSiren = pDummyConfig->corona.legacySiren;
         const bool previousBidirectional = pDummyConfig->corona.legacySirenBidirectional;
-        const float previousNearClip = pDummyConfig->corona.legacySirenNearClip;
+        const float previousFadeSpeed = pDummyConfig->corona.legacySirenFadeSpeed;
         pDummyConfig->corona.legacyMode = material->LegacyType;
-        pDummyConfig->corona.legacySirenBidirectional = true;
-        pDummyConfig->corona.legacySirenNearClip = material->LegacyNearClip;
+        pDummyConfig->corona.legacySiren = true;
+        pDummyConfig->corona.legacySirenBidirectional = material->LegacyType == 3 || material->LegacyType == 4;
+        pDummyConfig->corona.legacySirenFadeSpeed = material->LegacyFadeSpeed;
         RenderUtil::RegisterCoronaDirectional(pDummyConfig, dummyAngle, material->Radius, 1.0f, false);
         pDummyConfig->corona.legacyMode = previousMode;
+        pDummyConfig->corona.legacySiren = previousSiren;
         pDummyConfig->corona.legacySirenBidirectional = previousBidirectional;
-        pDummyConfig->corona.legacySirenNearClip = previousNearClip;
+        pDummyConfig->corona.legacySirenFadeSpeed = previousFadeSpeed;
     }
 	else if (material->Type != eLightingMode::NonDirectional)
 	{

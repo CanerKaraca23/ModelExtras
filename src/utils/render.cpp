@@ -458,7 +458,8 @@ void RenderUtil::RegisterCoronaDirectional(const DummyConfig *pConfig, float ang
         if (CarUtil::IsDummyDamaged(pConfig->pVeh, *pConfig)) return;
         if (!gbLightCoronas || pConfig->corona.size <= 0.0f) return;
         const bool bidirectional = pConfig->corona.legacySirenBidirectional;
-        unsigned char alpha = bidirectional ? pConfig->corona.color.a : 80;
+        const bool siren = pConfig->corona.legacySiren || bidirectional;
+        unsigned char alpha = siren ? pConfig->corona.color.a : 80;
         if (pConfig->corona.legacyMode != 2) {
             if (TheCamera.m_nActiveCam >= std::size(TheCamera.m_aCams)) return;
             const auto &matrix = pConfig->frame->ltm;
@@ -471,7 +472,7 @@ void RenderUtil::RegisterCoronaDirectional(const DummyConfig *pConfig, float ang
             if (bidirectional) facing = std::abs(facing);
             else if (pConfig->corona.legacyMode != 0) facing = -facing;
             if (!std::isfinite(facing) || (!bidirectional && facing <= 0.0f)) return;
-            if (bidirectional)
+            if (siren)
                 alpha = static_cast<unsigned char>(std::min(facing * (2.0f * alpha), static_cast<float>(alpha)));
             else
                 alpha = static_cast<unsigned char>(std::min(static_cast<double>(facing) * 160.0, 80.0));
@@ -480,7 +481,7 @@ void RenderUtil::RegisterCoronaDirectional(const DummyConfig *pConfig, float ang
         CCoronas::RegisterCorona(reinterpret_cast<unsigned int>(pConfig), pConfig->pVeh,
             color.r, color.g, color.b, alpha, pConfig->position, pConfig->corona.size,
             150.0f, CORONATYPE_HEADLIGHT, FLARETYPE_NONE, true, false, 0, 0.0f, false,
-            bidirectional ? pConfig->corona.legacySirenNearClip : 0.5f, 0, 50.0f, false, false);
+            0.5f, 0, siren ? pConfig->corona.legacySirenFadeSpeed : 50.0f, false, false);
         return;
     }
     float sz = pConfig->corona.size * szMul;

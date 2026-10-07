@@ -108,7 +108,7 @@ public:
     eLightingMode Type = eLightingMode::Directional;
     bool ImVehFt = false;
     uint8_t LegacyType = 255;
-    float LegacyNearClip = 0.5f;
+    float LegacyFadeSpeed = 50.0f;
     float LegacyShadowSize = -1.0f;
     VehicleSirenShadow Shadow;
     VehicleSirenRotator *Rotator = nullptr;
