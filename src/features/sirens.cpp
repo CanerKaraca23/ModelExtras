@@ -9,6 +9,7 @@
 #include "lights/lights.h"
 #include "utils/audiomgr.h"
 #include "utils/util.h"
+#include "utils/car.h"
 #include "utils/datamgr.h"
 #include "enums/materialtype.h"
 #include "utils/meevents.h"
@@ -1287,7 +1288,8 @@ void Sirens::EnableDummy(int id, VehicleDummy *dummy, CVehicle *vehicle, Vehicle
     if (!dummy || !vehicle || !vehicle->m_pRwClump || !material) return;
     if (!dummy->Get().frame) return;
     if (material->LegacyType != 255 &&
-        !FrameUtil::ContainsFrame(RpClumpGetFrame(vehicle->m_pRwClump), dummy->Get().frame)) return;
+        (!FrameUtil::ContainsFrame(RpClumpGetFrame(vehicle->m_pRwClump), dummy->Get().frame) ||
+         CarUtil::IsLegacyParentDamaged(vehicle, dummy->Get().frame))) return;
 	auto &data = m_VehData.Get(vehicle);
 	data.nLastTickFrame = CTimer::m_FrameCounter;
 	dummy->Update();
@@ -1438,9 +1440,12 @@ void Sirens::ProcessPointLights(CVehicle *pVeh)
 			for (auto &e : data.Dummies[mat.first])
 			{
 				if (!e) continue;
-				e->Update();
-
 				DummyConfig &cfg = e->Get();
+                if (mat.second->LegacyType != 255 &&
+                    (!pVeh->m_pRwClump || !cfg.frame ||
+                     !FrameUtil::ContainsFrame(RpClumpGetFrame(pVeh->m_pRwClump), cfg.frame) ||
+                     CarUtil::IsLegacyParentDamaged(pVeh, cfg.frame))) continue;
+				e->Update();
 				RwFrame *parent = cfg.frame ? RwFrameGetParent(cfg.frame) : nullptr;
 				bool isBike = pVeh->m_nVehicleSubClass == VEHICLE_BIKE;
 				if (!isBike && (Util::IsFrameDamaged(pVeh, parent) || !FrameUtil::IsOkAtomicVisible(parent)))
