@@ -68,19 +68,22 @@ void TailLightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehL
 
         if ((tailLightFlag || indicatorOn) && !sttInstalled) {
             bool hasDedicatedBrake = LightManager::IsMaterialAvailable(pTowedVeh, {eMaterialType::BrakeLightLeft, eMaterialType::BrakeLightRight, eMaterialType::NABrakeLightLeft, eMaterialType::NABrakeLightRight, eMaterialType::STTLightLeft, eMaterialType::STTLightRight}) ||
-                                     LightManager::IsDummyAvailable(data, {eMaterialType::BrakeLightLeft, eMaterialType::BrakeLightRight, eMaterialType::NABrakeLightLeft, eMaterialType::NABrakeLightRight, eMaterialType::STTLightLeft, eMaterialType::STTLightRight});
+                                     LightManager::IsDummyAvailable(data, {eMaterialType::BrakeLightLeft, eMaterialType::BrakeLightRight, eMaterialType::NABrakeLightLeft, eMaterialType::NABrakeLightRight, eMaterialType::STTLightLeft, eMaterialType::STTLightRight}) ||
+                                     LightManager::IsDummyAvailable(LightManager::m_VehData.Get(pTowedVeh), {eMaterialType::BrakeLightLeft, eMaterialType::BrakeLightRight, eMaterialType::NABrakeLightLeft, eMaterialType::NABrakeLightRight, eMaterialType::STTLightLeft, eMaterialType::STTLightRight});
             bool isBraking = LightManager::IsBraking(pControlVeh);
             bool tailHighlight = !hasDedicatedBrake && isBraking;
 
             auto tailLightsRender = [&](bool leftOk, bool rightOk) {
-                if (LightManager::IsMaterialAvailable(pTowedVeh, {eMaterialType::TailLightLeft, eMaterialType::TailLightRight}) || LightManager::IsDummyAvailable(data, {eMaterialType::TailLightLeft, eMaterialType::TailLightRight})) {
+                if (LightManager::IsMaterialAvailable(pTowedVeh, {eMaterialType::TailLightLeft, eMaterialType::TailLightRight}) || LightManager::IsDummyAvailable(data, {eMaterialType::TailLightLeft, eMaterialType::TailLightRight}) ||
+                    LightManager::IsDummyAvailable(LightManager::m_VehData.Get(pTowedVeh), {eMaterialType::TailLightLeft, eMaterialType::TailLightRight})) {
                     if (leftOk) {
                         LightManager::RenderLights(pControlVeh, pTowedVeh, data, eMaterialType::TailLightLeft, true, shdwName, shdwSz, tailHighlight, leftOk);
                     }
                     if (rightOk) {
                         LightManager::RenderLights(pControlVeh, pTowedVeh, data, eMaterialType::TailLightRight, true, shdwName, shdwSz, tailHighlight, rightOk);
                     }
-                } else if (LightManager::IsMaterialAvailable(pTowedVeh, {eMaterialType::BrakeLightLeft, eMaterialType::BrakeLightRight}) || LightManager::IsDummyAvailable(data, {eMaterialType::BrakeLightLeft, eMaterialType::BrakeLightRight})) {
+                } else if (LightManager::IsMaterialAvailable(pTowedVeh, {eMaterialType::BrakeLightLeft, eMaterialType::BrakeLightRight}) || LightManager::IsDummyAvailable(data, {eMaterialType::BrakeLightLeft, eMaterialType::BrakeLightRight}) ||
+                    LightManager::IsDummyAvailable(LightManager::m_VehData.Get(pTowedVeh), {eMaterialType::BrakeLightLeft, eMaterialType::BrakeLightRight})) {
                     if (leftOk) {
                         LightManager::RenderLights(pControlVeh, pTowedVeh, data, eMaterialType::BrakeLightLeft, true, shdwName, shdwSz, false, leftOk);
                     }
