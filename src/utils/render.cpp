@@ -12,6 +12,7 @@
 #include "features/lights/data.h"
 #include <CPointLights.h>
 #include <CWeather.h>
+#include <CMirrors.h>
 
 inline CVector2D GetPerpRight(const CVector2D &vec)
 {
@@ -452,6 +453,7 @@ void RenderUtil::RegisterCoronaDirectional(const DummyConfig *pConfig, float ang
 {
     if (!pConfig || !pConfig->pVeh || !pConfig->frame) return;
     if (pConfig->corona.legacyMode != 255) {
+        if (CMirrors::bRenderingReflection) return;
         EnsureConfigLoaded();
         if (CarUtil::IsDummyDamaged(pConfig->pVeh, *pConfig)) return;
         if (!gbLightCoronas || pConfig->corona.size <= 0.0f) return;
@@ -618,6 +620,7 @@ void RenderUtil::RegisterShadowDirectional(const DummyConfig *pConfig, const std
     }
 
     if (pConfig->shadow.legacySize > 0) {
+        if (CMirrors::bRenderingReflection) return;
         if (CarUtil::IsDummyDamaged(pConfig->pVeh, *pConfig)) return;
         const auto &matrix = pConfig->frame->ltm;
         const auto mode = pConfig->shadow.legacyMode;
