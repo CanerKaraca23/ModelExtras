@@ -685,11 +685,11 @@ void ME_SetDirtLevel(CVehicle *pVeh, float dirtLevel) {
 
 // Remap API
 int ME_GetRemapIndex(CVehicle *pVeh) {
-  return pVeh ? pVeh->GetRemapIndex() : -1;
+  return pVeh ? Remap::GetRemapIndex(pVeh) : -1;
 }
 
 void ME_SetRemapIndex(CVehicle *pVeh, int remapIndex) {
-  if (pVeh) pVeh->SetRemap(remapIndex);
+  if (pVeh) Remap::SetRemapIndex(pVeh, remapIndex);
 }
 
 bool ME_HasRemaps(int modelIndex) {
