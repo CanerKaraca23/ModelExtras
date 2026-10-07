@@ -2,6 +2,7 @@
 #include "sirens.h"
 #include <common.h>
 #include <CShadows.h>
+#include <CMirrors.h>
 #include <rwcore.h>
 #include <rpworld.h>
 #include <CPointLights.h>
@@ -1288,7 +1289,8 @@ void Sirens::EnableDummy(int id, VehicleDummy *dummy, CVehicle *vehicle, Vehicle
     if (!dummy || !vehicle || !vehicle->m_pRwClump || !material) return;
     if (!dummy->Get().frame) return;
     if (material->LegacyType != 255 &&
-        (!FrameUtil::ContainsFrame(RpClumpGetFrame(vehicle->m_pRwClump), dummy->Get().frame) ||
+        (CMirrors::bRenderingReflection ||
+         !FrameUtil::ContainsFrame(RpClumpGetFrame(vehicle->m_pRwClump), dummy->Get().frame) ||
          CarUtil::IsLegacyParentDamaged(vehicle, dummy->Get().frame))) return;
 	auto &data = m_VehData.Get(vehicle);
 	data.nLastTickFrame = CTimer::m_FrameCounter;
@@ -1442,7 +1444,7 @@ void Sirens::ProcessPointLights(CVehicle *pVeh)
 				if (!e) continue;
 				DummyConfig &cfg = e->Get();
                 if (mat.second->LegacyType != 255 &&
-                    (!pVeh->m_pRwClump || !cfg.frame ||
+                    (CMirrors::bRenderingReflection || !pVeh->m_pRwClump || !cfg.frame ||
                      !FrameUtil::ContainsFrame(RpClumpGetFrame(pVeh->m_pRwClump), cfg.frame) ||
                      CarUtil::IsLegacyParentDamaged(pVeh, cfg.frame))) continue;
 				e->Update();
