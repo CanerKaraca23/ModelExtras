@@ -265,8 +265,8 @@ void DataMgr::LoadLegacyData()
         {
             std::error_code ec;
             std::vector<std::filesystem::path> paths;
-            for (auto it = std::filesystem::directory_iterator(root / folder, std::filesystem::directory_options::skip_permission_denied, ec);
-                 !ec && it != std::filesystem::directory_iterator(); it.increment(ec))
+            for (auto it = std::filesystem::recursive_directory_iterator(root / folder, std::filesystem::directory_options::skip_permission_denied, ec);
+                 !ec && it != std::filesystem::recursive_directory_iterator(); it.increment(ec))
             {
                 std::error_code fileError;
                 if (!it->is_regular_file(fileError)) continue;
