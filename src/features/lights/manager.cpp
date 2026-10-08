@@ -114,12 +114,20 @@ void LightManager::Process(CVehicle* pVeh) {
     data.UpdateIndicatorPhase();
 }
 
-void LightManager::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh) {
+static CVehicle* g_RenderVehicle = nullptr;
+
+void LightManager::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, CVehicle* pRenderedVeh) {
+    if (!pControlVeh || !pTowedVeh || (pRenderedVeh && pRenderedVeh != pControlVeh && pRenderedVeh != pTowedVeh)) return;
+    struct RenderScope {
+        CVehicle* previous;
+        ~RenderScope() { g_RenderVehicle = previous; }
+    } scope{g_RenderVehicle};
+    g_RenderVehicle = pRenderedVeh;
     VehLightData& data = m_VehData.Get(pControlVeh);
     eIndicatorState indState = data.nIndicatorState;
 
-    data.bLightRenderedThisFrame.fill(false);
-    if (pControlVeh != pTowedVeh) {
+    if (!pRenderedVeh || pRenderedVeh == pControlVeh) data.bLightRenderedThisFrame.fill(false);
+    if (pControlVeh != pTowedVeh && (!pRenderedVeh || pRenderedVeh == pTowedVeh)) {
         m_VehData.Get(pTowedVeh).bLightRenderedThisFrame.fill(false);
     }
 
@@ -170,6 +178,7 @@ void LightManager::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh) {
     }
 
     auto ProcessFadeOut = [](CVehicle* pVeh, VehLightData& vData) {
+        if (g_RenderVehicle && g_RenderVehicle != pVeh) return;
         for (int t = 0; t < eMaterialType::TotalMaterial; ++t) {
             eMaterialType type = static_cast<eMaterialType>(t);
             if (!vData.bLightRenderedThisFrame[type] && vData.fLightFactor[type] > 0.001f) {
@@ -374,11 +383,11 @@ void LightManager::RenderLight(CVehicle* pVeh, VehLightData& data, eMaterialType
 }
 
 void LightManager::RenderLights(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehLightData& data, eMaterialType type, bool isOn, const std::string& texture, float sz, bool highlight, bool isDummyOk, bool materialsOnly) {
-    if (data.bLightStates[type]) {
+    if ((!g_RenderVehicle || g_RenderVehicle == pControlVeh) && data.bLightStates[type]) {
         RenderLight(pControlVeh, data, type, isOn, texture, sz, highlight, isDummyOk, materialsOnly);
     }
 
-    if (pControlVeh != pTowedVeh && m_VehData.Get(pTowedVeh).bLightStates[type]) {
+    if (pControlVeh != pTowedVeh && (!g_RenderVehicle || g_RenderVehicle == pTowedVeh) && m_VehData.Get(pTowedVeh).bLightStates[type]) {
         RenderLight(pTowedVeh, m_VehData.Get(pTowedVeh), type, isOn, texture, sz, highlight, isDummyOk, materialsOnly);
     }
 }

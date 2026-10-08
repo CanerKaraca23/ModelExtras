@@ -336,20 +336,22 @@ void Lights::Init() {
 
 
 
-	ModelInfoMgr::RegisterRender([](CVehicle *pControlVeh) {
-		if (!m_bEnabled) return;
-		int model = pControlVeh->m_nModelIndex;
-
-		if (CModelInfo::IsTrailerModel(model)) {
-			return;
+	ModelInfoMgr::RegisterRender([](CVehicle *pVeh) {
+		if (!m_bEnabled || !pVeh || !CPools::ms_pVehiclePool ||
+			!CPools::ms_pVehiclePool->IsObjectValid(pVeh) || !pVeh->m_pRwClump) return;
+		CVehicle *pControlVeh = pVeh;
+		CVehicle *pTowedVeh = pVeh;
+		if (CModelInfo::IsTrailerModel(pVeh->m_nModelIndex)) {
+			CVehicle *tractor = pVeh->m_pTractor;
+			if (!tractor || !CPools::ms_pVehiclePool->IsObjectValid(tractor) ||
+				!tractor->m_pRwClump || tractor->m_pTrailer != pVeh) return;
+			pControlVeh = tractor;
+		} else if (pVeh->m_pTrailer && CPools::ms_pVehiclePool->IsObjectValid(pVeh->m_pTrailer) &&
+			pVeh->m_pTrailer->m_pRwClump && pVeh->m_pTrailer->m_pTractor == pVeh) {
+			pTowedVeh = pVeh->m_pTrailer;
 		}
-
-		CVehicle *pTowedVeh = pControlVeh;
-		if (pControlVeh->m_pTrailer) {
-			pTowedVeh = pControlVeh->m_pTrailer;
-		}
-
-		LightManager::Render(pControlVeh, pTowedVeh);
+		LightManager::Render(pControlVeh, pTowedVeh,
+			CModelInfo::IsTrailerModel(pTowedVeh->m_nModelIndex) ? pVeh : nullptr);
 	});
 }
 
