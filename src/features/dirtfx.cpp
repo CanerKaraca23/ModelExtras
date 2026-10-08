@@ -13,11 +13,10 @@ static CdeclEvent<AddressList<0x53CA75, H_CALL, 0x53CA61, H_CALL>, PRIORITY_AFTE
 static CdeclEvent<AddressList<0x5B8FFD, H_CALL>, PRIORITY_AFTER, ArgPickNone, void()> CCarFXRenderer__InitialiseDirtTextureEvent;
 
 using DirtImage = std::unique_ptr<RwImage, decltype(&RwImageDestroy)>;
-static constexpr int DirtPixelsPerTick = 131072;
 
 // SA's RwImageSetFromRaster rejects compressed rasters. Read their native
-// D3D9 format (not cFormat, which describes the pixel layout) in small chunks.
-static bool ReadDirtImage(RwTexture *texture, DirtImage &image, int &nextRow)
+// D3D9 format (not cFormat, which describes the pixel layout).
+static bool ReadDirtImage(RwTexture *texture, DirtImage &image)
 {
 	if (!texture || !texture->raster) return false;
 	RwRaster *raster = texture->raster;
@@ -30,9 +29,7 @@ static bool ReadDirtImage(RwTexture *texture, DirtImage &image, int &nextRow)
 	if (image->width != raster->width || image->height != raster->height) return false;
 	if (!RwD3D9RasterIsCompressed(raster))
 	{
-		if (!RwImageSetFromRaster(image.get(), raster)) return false;
-		nextRow = raster->height;
-		return true;
+		return RwImageSetFromRaster(image.get(), raster) != nullptr;
 	}
 
 	// The D3D9 device raster plugin starts with its native texture pointer.
@@ -54,8 +51,7 @@ static bool ReadDirtImage(RwTexture *texture, DirtImage &image, int &nextRow)
 		d3dTexture->UnlockRect(0);
 		return false;
 	}
-	const int lastRow = std::min(raster->height, nextRow + std::max(4, (DirtPixelsPerTick / raster->width) & ~3));
-	for (int by = nextRow; by < lastRow; by += 4)
+	for (int by = 0; by < raster->height; by += 4)
 	{
 		for (int bx = 0; bx < raster->width; bx += 4)
 		{
@@ -105,13 +101,12 @@ static bool ReadDirtImage(RwTexture *texture, DirtImage &image, int &nextRow)
 		}
 	}
 	d3dTexture->UnlockRect(0);
-	nextRow = lastRow;
 	return true;
 }
 
 static RwTexture *FindDirtTexture(RwTexture *clean, bool &overlay)
 {
-	if (!clean || !clean->dict) return nullptr;
+	if (!clean || !clean->dict || !clean->name) return nullptr;
 	char name[32];
 	size_t length = strnlen(clean->name, sizeof(name));
 	// Keep the existing _dt replacement convention ahead of IVF alpha overlays.
@@ -145,55 +140,6 @@ static RwTexture *FindDirtTexture(RwTexture *clean, bool &overlay)
 	return nullptr;
 }
 
-// Only one preparation job owns temporary images; no GPU lock crosses ticks.
-static struct DirtJob
-{
-	RwTexture *source = nullptr, *layer = nullptr;
-	RwRaster *sourceRaster = nullptr, *layerRaster = nullptr;
-	int level = 0, phase = 0, row = 0, width = 0, height = 0;
-	int flags = 0;
-	size_t bytes = 0;
-	bool overlay = false, hasAlpha = false;
-	DirtImage clean{nullptr, RwImageDestroy}, dirt{nullptr, RwImageDestroy}, blended{nullptr, RwImageDestroy};
-} g_DirtJob;
-
-static void CancelDirtJob()
-{
-	g_DirtJob = DirtJob{};
-}
-
-static size_t DirtRasterBytes(int width, int height, bool mipmaps)
-{
-	size_t bytes = 0;
-	do
-	{
-		bytes += static_cast<size_t>(width) * height * 4; // D3D9 RGB rasters also use 32-bit storage.
-		if (!mipmaps || (width == 1 && height == 1)) break;
-		width = std::max(1, width / 2);
-		height = std::max(1, height / 2);
-	} while (true);
-	return bytes;
-}
-
-void DirtFx::ReleaseDirtStage(DirtStages &stages, int level)
-{
-	if (RwTexture *texture = stages.textures[level])
-	{
-		stages.textures[level] = nullptr;
-		m_nCustomCacheBytes -= stages.bytes[level];
-		stages.bytes[level] = 0;
-		RwTextureDestroy(texture);
-	}
-	stages.requested &= static_cast<RwUInt16>(~(1u << level));
-	stages.attempted &= static_cast<RwUInt16>(~(1u << level));
-	stages.lastUsed[level] = 0;
-}
-
-void DirtFx::DestroyDirtStages(DirtStages &stages)
-{
-	for (int level = 1; level < 16; ++level) ReleaseDirtStage(stages, level);
-}
-
 void DirtFx::RegisterVehicleTextures(int model)
 {
 	if (!m_bEnabled || !m_bCustomReady) return;
@@ -203,8 +149,12 @@ void DirtFx::RegisterVehicleTextures(int model)
 	if (!def || !def->m_pRwDictionary) return;
 	RwTexDictionaryForAllTextures(def->m_pRwDictionary, [](RwTexture *texture, void *)
 	{
+		if (!texture || m_DirtTextures.contains(texture)) return texture;
 		bool overlay = false;
-		if (RwTexture *dirt = FindDirtTexture(texture, overlay)) InitialiseBlendTextureSingleEx(texture, dirt, overlay);
+		if (RwTexture *dirt = FindDirtTexture(texture, overlay))
+		{
+			InitialiseBlendTextureSingleEx(texture, dirt, overlay);
+		}
 		return texture;
 	}, nullptr);
 }
@@ -232,26 +182,18 @@ void DirtFx::Init()
 			[](void *object, RwInt32, RwInt32) -> void *
 			{
 				auto *texture = static_cast<RwTexture *>(object);
-				if (texture == g_DirtJob.source || texture == g_DirtJob.layer) CancelDirtJob();
-				for (auto it = m_DirtTextures.begin(); it != m_DirtTextures.end();)
+				auto it = m_DirtTextures.find(texture);
+				if (it != m_DirtTextures.end())
 				{
-					if (it->first == texture)
+					for (int level = 1; level < 16; ++level)
 					{
-						auto sources = std::move(it->second);
-						it = m_DirtTextures.erase(it);
-						for (auto &[source, stages] : sources) DestroyDirtStages(stages);
-					}
-					else
-					{
-						auto source = it->second.find(texture);
-						if (source != it->second.end())
+						if (it->second.textures[level])
 						{
-							auto stages = source->second;
-							it->second.erase(source);
-							DestroyDirtStages(stages);
+							RwTextureDestroy(it->second.textures[level]);
+							it->second.textures[level] = nullptr;
 						}
-						++it;
 					}
+					m_DirtTextures.erase(it);
 				}
 				return object;
 			}, nullptr) >= 0;
@@ -270,55 +212,6 @@ void DirtFx::Init()
 	{
 		if (vehicle) RegisterVehicleTextures(model);
 	};
-
-	// Vanilla loads selected paintjobs later than the vehicle model. Register
-	// their sources on the script tick, never inside the material render callback.
-	Events::processScriptsEvent += []()
-	{
-		if (!m_bEnabled || !m_bCustomReady || !CPools::ms_pVehiclePool) return;
-		for (CVehicle *vehicle : CPools::ms_pVehiclePool)
-		{
-			if (!vehicle || !vehicle->m_pRemapTexture) continue;
-			bool overlay = false;
-			if (RwTexture *dirt = FindDirtTexture(vehicle->m_pRemapTexture, overlay))
-			{
-				InitialiseBlendTextureSingleEx(vehicle->m_pRemapTexture, dirt, overlay);
-				continue;
-			}
-			auto *info = CModelInfo::GetModelInfo(vehicle->m_nModelIndex);
-			if (!info || info->m_nTxdIndex < 0 || !CTxdStore::ms_pTxdPool) continue;
-			auto *def = CTxdStore::ms_pTxdPool->GetAt(info->m_nTxdIndex);
-			if (!def || !def->m_pRwDictionary) continue;
-			for (auto &[dirt, sources] : m_DirtTextures)
-			{
-				if (dirt->dict != def->m_pRwDictionary || !std::any_of(sources.begin(), sources.end(),
-					[](const auto &source) { return source.first->name[0] == '#'; })) continue;
-				const size_t length = std::strlen(dirt->name);
-				overlay = length < 3 || _stricmp(dirt->name + length - 3, "_dt") != 0;
-				if (overlay) InitialiseBlendTextureSingleEx(vehicle->m_pRemapTexture, dirt, true);
-			}
-		}
-		// Finish a bounded part of one job per tick; render callbacks only request levels.
-		if (g_DirtJob.source)
-		{
-			ProcessDirtJob();
-			return;
-		}
-		for (auto &[dirt, sources] : m_DirtTextures)
-		{
-			for (auto &[source, stages] : sources)
-			{
-				for (int level = 1; level < 16; ++level)
-				{
-					if ((stages.requested & ~stages.attempted) & (1u << level))
-					{
-						InitialiseDirtStage(source, dirt, stages, level);
-						return;
-					}
-				}
-			}
-		}
-	};
 }
 
 void DirtFx::ProcessTextures(CVehicle *pVeh, RpMaterial *pMat, RwTexture *baseTexture) {
@@ -327,6 +220,8 @@ void DirtFx::ProcessTextures(CVehicle *pVeh, RpMaterial *pMat, RwTexture *baseTe
 	}
 	
 	const char *rawName = pMat->texture->name;
+	if (!rawName) return;
+
 	char first = rawName[0];
 	const float dirtLevel = std::isfinite(pVeh->m_fDirtLevel) ? pVeh->m_fDirtLevel : 0.0f;
 	int dirtLvl = static_cast<int>(std::clamp(dirtLevel, 0.0f, 15.0f));
@@ -337,10 +232,10 @@ void DirtFx::ProcessTextures(CVehicle *pVeh, RpMaterial *pMat, RwTexture *baseTe
 		if (texName == "vehiclegrunge256") {
 			target = ms_aDirtTextures[dirtLvl];
 		}
-		if (texName == "vehicle_genericmud_truck" || texName == "vehiclegrunge_iv") {
+		else if (texName == "vehicle_genericmud_truck" || texName == "vehiclegrunge_iv") {
 			target = ms_aDirtTextures_2[dirtLvl];
 		}
-		if (texName == "vehiclegrunge512") {
+		else if (texName == "vehiclegrunge512") {
 			target = ms_aDirtTextures_3[dirtLvl];
 		}
 	} else if (first == 't') {
@@ -350,23 +245,34 @@ void DirtFx::ProcessTextures(CVehicle *pVeh, RpMaterial *pMat, RwTexture *baseTe
 		}
 	}
 
-	if (!target && dirtLvl > 0 && !m_DirtTextures.empty())
+	if (!target && dirtLvl > 0)
 	{
-		bool overlay = false;
-		RwTexture *dirt = FindDirtTexture(pMat->texture, overlay);
-		if (!dirt && baseTexture) dirt = FindDirtTexture(baseTexture, overlay);
-		auto it = m_DirtTextures.find(dirt);
+		auto it = m_DirtTextures.find(pMat->texture);
 		if (it != m_DirtTextures.end())
 		{
-			auto source = it->second.find(pMat->texture);
-			if (source != it->second.end())
+			target = it->second.textures[dirtLvl];
+		}
+		else
+		{
+			bool overlay = false;
+			RwTexture *dirt = FindDirtTexture(pMat->texture, overlay);
+			if (!dirt && baseTexture) dirt = FindDirtTexture(baseTexture, overlay);
+			if (dirt)
 			{
-				source->second.requested |= static_cast<RwUInt16>(1u << dirtLvl);
-				target = source->second.textures[dirtLvl];
-				if (target) source->second.lastUsed[dirtLvl] = ++m_nTextureUse;
+				InitialiseBlendTextureSingleEx(pMat->texture, dirt, overlay);
+				auto newIt = m_DirtTextures.find(pMat->texture);
+				if (newIt != m_DirtTextures.end())
+				{
+					target = newIt->second.textures[dirtLvl];
+				}
+			}
+			else
+			{
+				m_DirtTextures[pMat->texture] = DirtStages{.initialized = true};
 			}
 		}
 	}
+
 	if (target && target != pMat->texture)
 	{
 		ModelInfoMgr::RegisterRestore(&pMat->texture, pMat->texture);
@@ -382,11 +288,18 @@ void DirtFx::Shutdown()
 
 void DirtFx::ShutdownHook()
 {
-	CancelDirtJob();
-	auto custom = std::move(m_DirtTextures);
+	for (auto &[tex, stages] : m_DirtTextures)
+	{
+		for (int level = 1; level < 16; ++level)
+		{
+			if (stages.textures[level])
+			{
+				RwTextureDestroy(stages.textures[level]);
+				stages.textures[level] = nullptr;
+			}
+		}
+	}
 	m_DirtTextures.clear();
-	for (auto &[dirt, sources] : custom)
-		for (auto &[source, stages] : sources) DestroyDirtStages(stages);
 	for (int i = 0; i < 16; i++)
 	{
 		if (ms_aDirtTextures_2[i]) { RwTextureDestroy(ms_aDirtTextures_2[i]); ms_aDirtTextures_2[i] = nullptr; }
@@ -398,119 +311,90 @@ void DirtFx::ShutdownHook()
 void DirtFx::InitialiseBlendTextureSingleEx(RwTexture *src, RwTexture *dest, bool overlay)
 {
 	if (!m_bCustomReady || !src || !dest || !src->raster || !dest->raster) return;
-	m_DirtTextures[dest].try_emplace(src).first->second.overlay = overlay;
-}
+	if (src->raster->width <= 0 || src->raster->height <= 0 || dest->raster->width <= 0 || dest->raster->height <= 0) return;
 
-void DirtFx::InitialiseDirtStage(RwTexture *src, RwTexture *dest, DirtStages &stages, int level)
-{
-	stages.attempted |= static_cast<RwUInt16>(1u << level);
-	if (!src || !dest || !src->raster || !dest->raster) return;
-	const int width = stages.overlay ? std::max(src->raster->width, dest->raster->width) : src->raster->width;
-	const int height = stages.overlay ? std::max(src->raster->height, dest->raster->height) : src->raster->height;
-	// Reject oversized/invalid inputs before allocating temporary images.
-	for (RwTexture *texture : {src, dest})
-		if (texture->raster->width <= 0 || texture->raster->height <= 0 ||
-			static_cast<uint64_t>(texture->raster->width) * texture->raster->height * 4 > CustomCacheLimit) return;
-	if (static_cast<uint64_t>(width) * height * 4 > CustomCacheLimit) return;
-	const size_t bytes = DirtRasterBytes(width, height, (RwRasterGetFormat(src->raster) & rwRASTERFORMATMIPMAP) != 0);
-	if (bytes > CustomCacheLimit) return;
-	g_DirtJob.source = src;
-	g_DirtJob.layer = dest;
-	g_DirtJob.sourceRaster = src->raster;
-	g_DirtJob.layerRaster = dest->raster;
-	g_DirtJob.level = level;
-	g_DirtJob.width = width;
-	g_DirtJob.height = height;
-	g_DirtJob.overlay = stages.overlay;
-	g_DirtJob.flags = rwRASTERTYPETEXTURE | (RwRasterGetFormat(src->raster) & rwRASTERFORMATMIPMAP);
-	g_DirtJob.bytes = bytes;
-}
+	auto it = m_DirtTextures.find(src);
+	if (it != m_DirtTextures.end() && it->second.initialized) return;
 
-void DirtFx::ProcessDirtJob()
-{
-	auto &job = g_DirtJob;
-	if (!job.source || !job.layer || job.source->raster != job.sourceRaster || job.layer->raster != job.layerRaster)
+	DirtImage cleanImage{nullptr, RwImageDestroy};
+	DirtImage dirtImage{nullptr, RwImageDestroy};
+
+	if (!ReadDirtImage(src, cleanImage) || !ReadDirtImage(dest, dirtImage) || !cleanImage || !dirtImage)
 	{
-		CancelDirtJob();
+		m_DirtTextures[src] = DirtStages{.initialized = true};
 		return;
 	}
-	if (job.phase < 2)
+
+	const int width = overlay ? std::max(cleanImage->width, dirtImage->width) : cleanImage->width;
+	const int height = overlay ? std::max(cleanImage->height, dirtImage->height) : cleanImage->height;
+	if (width <= 0 || height <= 0) return;
+
+	DirtStages stages;
+	stages.initialized = true;
+
+	const int flags = rwRASTERTYPETEXTURE | (RwRasterGetFormat(src->raster) & rwRASTERFORMATMIPMAP);
+
+	DirtImage blendedImage{RwImageCreate(width, height, 32), RwImageDestroy};
+	if (!blendedImage || !RwImageAllocatePixels(blendedImage.get()))
 	{
-		DirtImage &image = job.phase == 0 ? job.clean : job.dirt;
-		if (!ReadDirtImage(job.phase == 0 ? job.source : job.layer, image, job.row))
+		m_DirtTextures[src] = stages;
+		return;
+	}
+
+	for (int level = 1; level < 16; ++level)
+	{
+		const float factor = static_cast<float>(level) / 15.0f;
+		bool hasAlpha = false;
+
+		for (int y = 0; y < height; ++y)
 		{
-			CancelDirtJob();
-			return;
-		}
-		if (job.row == image->height) { ++job.phase; job.row = 0; }
-		return;
-	}
-	const int width = job.overlay ? std::max(job.clean->width, job.dirt->width) : job.clean->width;
-	const int height = job.overlay ? std::max(job.clean->height, job.dirt->height) : job.clean->height;
-	if (width != job.width || height != job.height) { CancelDirtJob(); return; }
-	if (job.phase == 2)
-	{
-		job.blended.reset(RwImageCreate(width, height, 32));
-		if (!job.blended || !RwImageAllocatePixels(job.blended.get())) { CancelDirtJob(); return; }
-		++job.phase;
-		return;
-	}
-	if (job.phase == 3)
-	{
-		const float factor = static_cast<float>(job.level) / 15.0f;
-		const int lastRow = std::min(height, job.row + std::max(1, DirtPixelsPerTick / width));
-		for (int y = job.row; y < lastRow; ++y)
-		{
-			const auto *cleanRow = reinterpret_cast<const RwRGBA *>(job.clean->cpPixels + (static_cast<size_t>(y) * job.clean->height / height) * job.clean->stride);
-			const auto *dirtRow = reinterpret_cast<const RwRGBA *>(job.dirt->cpPixels + (static_cast<size_t>(y) * job.dirt->height / height) * job.dirt->stride);
-			auto *out = reinterpret_cast<RwRGBA *>(job.blended->cpPixels + y * job.blended->stride);
+			const auto *cleanRow = reinterpret_cast<const RwRGBA *>(cleanImage->cpPixels + (static_cast<size_t>(y) * cleanImage->height / height) * cleanImage->stride);
+			const auto *dirtRow = reinterpret_cast<const RwRGBA *>(dirtImage->cpPixels + (static_cast<size_t>(y) * dirtImage->height / height) * dirtImage->stride);
+			auto *out = reinterpret_cast<RwRGBA *>(blendedImage->cpPixels + y * blendedImage->stride);
+
 			for (int x = 0; x < width; ++x)
 			{
-				const RwRGBA &a = cleanRow[static_cast<size_t>(x) * job.clean->width / width], &b = dirtRow[static_cast<size_t>(x) * job.dirt->width / width];
-				const float weight = job.overlay ? factor * b.alpha / 255.0f : factor;
-				out[x] = {static_cast<RwUInt8>(a.red * (1.0f - weight) + b.red * weight),
+				const RwRGBA &a = cleanRow[static_cast<size_t>(x) * cleanImage->width / width];
+				const RwRGBA &b = dirtRow[static_cast<size_t>(x) * dirtImage->width / width];
+				const float weight = overlay ? factor * b.alpha / 255.0f : factor;
+
+				out[x] = {
+					static_cast<RwUInt8>(a.red * (1.0f - weight) + b.red * weight),
 					static_cast<RwUInt8>(a.green * (1.0f - weight) + b.green * weight),
 					static_cast<RwUInt8>(a.blue * (1.0f - weight) + b.blue * weight),
-					job.overlay ? a.alpha : static_cast<RwUInt8>(a.alpha * (1.0f - factor) + b.alpha * factor)};
-				job.hasAlpha |= out[x].alpha != 255;
+					overlay ? a.alpha : static_cast<RwUInt8>(a.alpha * (1.0f - factor) + b.alpha * factor)
+				};
+				hasAlpha |= (out[x].alpha != 255);
 			}
 		}
-		job.row = lastRow;
-		if (job.row == height) ++job.phase;
-		return;
+
+		RwRaster *raster = RwRasterCreate(width, height, hasAlpha ? 32 : 24,
+			flags | (hasAlpha ? rwRASTERFORMAT8888 : rwRASTERFORMAT888));
+		if (raster)
+		{
+			if (RwRasterSetFromImage(raster, blendedImage.get()) &&
+				(!(flags & rwRASTERFORMATMIPMAP) || RwTextureRasterGenerateMipmaps(raster, blendedImage.get())))
+			{
+				RwTexture *texture = RwTextureCreate(raster);
+				if (texture)
+				{
+					RwTextureSetName(texture, src->name);
+					texture->filterAddressing = src->filterAddressing;
+					stages.textures[level] = texture;
+				}
+				else
+				{
+					RwRasterDestroy(raster);
+				}
+			}
+			else
+			{
+				RwRasterDestroy(raster);
+			}
+		}
 	}
-	auto &stages = m_DirtTextures.at(job.layer).at(job.source);
-	// Evict the least recently rendered copies before allocating the new raster.
-	while (m_nCustomCacheBytes > CustomCacheLimit - job.bytes)
-	{
-		DirtStages *oldest = nullptr;
-		int oldLevel = 0;
-		uint64_t age = UINT64_MAX;
-		for (auto &[dirt, sources] : m_DirtTextures)
-			for (auto &[source, cached] : sources)
-				for (int level = 1; level < 16; ++level)
-					if (cached.textures[level] && cached.lastUsed[level] < age)
-					{ oldest = &cached; oldLevel = level; age = cached.lastUsed[level]; }
-		if (!oldest) { CancelDirtJob(); return; }
-		ReleaseDirtStage(*oldest, oldLevel);
-	}
-	RwRaster *raster = RwRasterCreate(width, height, job.hasAlpha ? 32 : 24,
-		job.flags | (job.hasAlpha ? rwRASTERFORMAT8888 : rwRASTERFORMAT888));
-	RwTexture *texture = nullptr;
-	if (raster && RwRasterSetFromImage(raster, job.blended.get()) &&
-		(!(job.flags & rwRASTERFORMATMIPMAP) || RwTextureRasterGenerateMipmaps(raster, job.blended.get())))
-		texture = RwTextureCreate(raster);
-	if (texture)
-	{
-		RwTextureSetName(texture, job.source->name);
-		texture->filterAddressing = job.source->filterAddressing;
-		stages.textures[job.level] = texture;
-		stages.lastUsed[job.level] = ++m_nTextureUse;
-		stages.bytes[job.level] = job.bytes;
-		m_nCustomCacheBytes += job.bytes;
-	}
-	else if (raster) RwRasterDestroy(raster);
-	CancelDirtJob();
+
+	m_DirtTextures[src] = stages;
 }
 
 void DirtFx::InitialiseBlendTextureSingle(const char *CleanName, const char *DirtName, RwTexture **TextureArray)
