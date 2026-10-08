@@ -3,6 +3,7 @@
 #include "enums/featurematrix.h"
 #include "utils/util.h"
 #include <algorithm>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -33,6 +34,7 @@ public:
   virtual void ReloadConfig();
   virtual void Reload() {}
   virtual void Reload(CVehicle *pVeh) {}
+  virtual void ResetVehicle(CVehicle *pVeh) {}
 
   // Centralized processing hooks
   virtual bool HasProcessTick() const { return false; }
@@ -51,6 +53,13 @@ public:
       : CBaseFeature(std::move(name), std::move(configSection), featureId) {}
 
   virtual ~CVehFeature() = default;
+
+  void ResetVehicle(CVehicle *pVeh) override {
+    if (!pVeh) return;
+    auto *data = std::addressof(m_VehData.Get(pVeh));
+    std::destroy_at(data);
+    std::construct_at(data, pVeh);
+  }
 
   T &GetVehData(CVehicle *pVeh) { return m_VehData.Get(pVeh); }
 

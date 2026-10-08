@@ -443,6 +443,13 @@ void Lights::Reload(CVehicle* pVeh) {
 	LightManager::Reload(pVeh);
 }
 
+void Lights::ResetVehicle(CVehicle* pVeh) {
+    if (!pVeh) return;
+    auto *data = std::addressof(LightManager::m_VehData.Get(pVeh));
+    std::destroy_at(data);
+    std::construct_at(data, pVeh);
+}
+
 VehLightData& Lights::GetVehicleData(CVehicle* pVeh) {
     return LightManager::m_VehData.Get(pVeh);
 }

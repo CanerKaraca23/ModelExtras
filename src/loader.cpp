@@ -145,6 +145,15 @@ void ModelExtras::Init()
         }
     }
 
+    Events::vehicleSetModelEvent.after += [](CVehicle *pVeh, int)
+    {
+        if (!pVeh || !CPools::ms_pVehiclePool || !CPools::ms_pVehiclePool->IsObjectValid(pVeh) ||
+            pVeh->m_nModelIndex < 0 || pVeh->m_nModelIndex >= CModelInfo::ms_modelInfoCount) return;
+        ModelInfoMgr::ResetVehicle(pVeh);
+        for (const auto &feature : m_Features)
+            if (feature) feature->ResetVehicle(pVeh);
+    };
+
     Events::processScriptsEvent += []()
     {
         InputMgr::Update();

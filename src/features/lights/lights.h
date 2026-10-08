@@ -11,6 +11,7 @@ public:
     Lights() : CBaseFeature("StandardLights", "LIGHTS", eFeatureMatrix::StandardLights) {}
     void ReloadConfig() override;
     void Reload(CVehicle* pVeh) override;
+    void ResetVehicle(CVehicle* pVeh) override;
 
     bool HasProcessTick() const override { return true; }
     bool HasProcessVehicle() const override { return true; }

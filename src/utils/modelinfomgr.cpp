@@ -323,6 +323,12 @@ void ModelInfoMgr::Reload(CVehicle *pVeh) {
   }
 }
 
+void ModelInfoMgr::ResetVehicle(CVehicle *pVeh) {
+  if (!pVeh) return;
+  m_VehData.Get(pVeh) = VehModelData{};
+  if (pCurVeh == pVeh) pCurVeh = nullptr;
+}
+
 void ModelInfoMgr::OnRender(CVehicle *vehicle) {
   for (const auto &e : renders) {
     e(vehicle);
