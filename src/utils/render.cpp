@@ -777,6 +777,41 @@ void RenderUtil::RegisterLegacyHeadlightShadow(CVehicle *vehicle, const CMatrix 
         6.0f, false, 1.0f, nullptr, vehicle == FindPlayerVehicle(-1, false));
 }
 
+void RenderUtil::RegisterLegacyTailShadow(CVehicle *vehicle, CVector dummy, bool twin, bool right,
+    unsigned char mode, RwTexture *texture)
+{
+    if (!vehicle || !vehicle->m_pRwClump || !vehicle->m_matrix || !texture) return;
+    EnsureConfigLoaded();
+    extern bool gbProperShadersDetected;
+    if (!gbLightShadows || gbProperShadersDetected) return;
+    const float distance = MathUtil::DistanceSquared(vehicle->GetPosition(), TheCamera.GetPosition());
+    const float brightness = CWeather::TrafficLightsBrightness;
+    if (!std::isfinite(distance) || !std::isfinite(gfLightShadowDistance) || gfLightShadowDistance < 0.0f
+        || distance > gfLightShadowDistance * gfLightShadowDistance
+        || !std::isfinite(brightness) || !std::isfinite(dummy.x) || !std::isfinite(dummy.y) || !std::isfinite(dummy.z)) return;
+    const float width = twin ? static_cast<float>(std::abs(dummy.x) * 2.0 + 1.8) : 2.1f;
+    const float height = twin ? 2.7f : 2.5f;
+    dummy.x = twin ? 0.0f : (right ? std::abs(dummy.x) : -std::abs(dummy.x));
+    dummy.y = static_cast<float>(dummy.y - 1.4);
+    CVector position = vehicle->TransformFromObjectSpace(dummy);
+    const auto &forward = vehicle->m_matrix->up;
+    if (!std::isfinite(forward.x) || !std::isfinite(forward.y) || (forward.x == 0.0f && forward.y == 0.0f)) return;
+    float angle = static_cast<float>(CGeneral::GetATanOfXY(forward.x, forward.y) * 57.2957763671875 - 90.0);
+    if (angle < 0.0f) angle += 360.0f;
+    const float radians = static_cast<float>(angle * 0.01745329238474369);
+    const float perpendicular = static_cast<float>((angle + 90.0) * 0.01745329238474369);
+    const float topX = static_cast<float>(cos(perpendicular) * height * 0.5), topY = static_cast<float>(sin(perpendicular) * height * 0.5);
+    const float sideX = static_cast<float>(cos(radians) * width * 0.5), sideY = static_cast<float>(sin(radians) * width * 0.5);
+    if (!std::isfinite(position.x) || !std::isfinite(position.y) || !std::isfinite(position.z)
+        || !std::isfinite(topX) || !std::isfinite(topY) || !std::isfinite(sideX) || !std::isfinite(sideY)) return;
+    const unsigned base = mode == 1 ? 50 : mode == 2 ? 20 : mode == 3 ? 70 : 0;
+    const double color = base * static_cast<double>(std::max(brightness, 0.2f)) * (twin ? 1.0 : 0.5)
+        * GetShadowIntensity(eMaterialType::TailLightLeft) / 80.0;
+    if (!(color > 0.0)) return;
+    CShadows::StoreShadowToBeRendered(2, texture, &position, topX, topY, sideX, sideY, 1,
+        static_cast<unsigned char>(std::fmod(color, 256.0)), 0, 0, 2.0f, false, 1.0f, nullptr, true);
+}
+
 void RenderUtil::RegisterShadow(CEntity *pEntity, CVector position, CRGBA col, float angle,
                                 eDummyPos dummyPos, const std::string &shadwTexName,
                                 CVector2D shdwSz, CVector2D shdwOffset, RwTexture *pTexture)

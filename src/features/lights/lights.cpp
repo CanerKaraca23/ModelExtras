@@ -119,10 +119,13 @@ static void __declspec(naked) NativeHeadPointLightBridge()
 }
 
 // Native rear flags are ready during SetupRender, after the pre-render dummy lights.
-static void RegisterNativeTailPointLight(CVehicle *veh, CVehicle *control)
+static RwTexture *g_LegacyTailShadowTexture = nullptr;
+static void RegisterNativeTailLights(CVehicle *veh, CVehicle *control)
 {
     const auto &cfg = LightsConfig::Get();
-    if (!cfg.bLegacyTailPointLights || !Lights::m_bEnabled || !gbLightPointLights || !veh || !control
+    const bool pointOn = cfg.bLegacyTailPointLights && gbLightPointLights;
+    const bool shadowOn = cfg.bLegacyTailShadows && g_LegacyTailShadowTexture;
+    if ((!pointOn && !shadowOn) || !Lights::m_bEnabled || !veh || !control
         || !CPools::ms_pVehiclePool || !CPools::ms_pVehiclePool->IsObjectValid(veh)
         || !CPools::ms_pVehiclePool->IsObjectValid(control) || !veh->m_pRwClump || !control->m_pRwClump
         || !(veh->m_fHealth > 0.0f) || !(control->m_fHealth > 0.0f) || !veh->GetIsOnScreen()
@@ -137,7 +140,7 @@ static void RegisterNativeTailPointLight(CVehicle *veh, CVehicle *control)
     const float distance = MathUtil::DistanceSquared(veh->GetPosition(), TheCamera.GetPosition());
     if (!model->m_pVehicleStruct || family == VEHICLE_BMX || family == VEHICLE_BOAT
         || family == VEHICLE_HELI || family == VEHICLE_PLANE
-        || !std::isfinite(distance) || distance > 75.0f * 75.0f) return;
+        || !std::isfinite(distance) || (!shadowOn && distance > 75.0f * 75.0f)) return;
     const bool tailOn = CarUtil::AreLightsOn(control);
     const bool braking = LightManager::IsBraking(control);
     if (!tailOn && !braking) return;
@@ -164,6 +167,9 @@ static void RegisterNativeTailPointLight(CVehicle *veh, CVehicle *control)
     CVector dummy = model->m_pVehicleStruct->m_avDummyPos[1];
     if (!std::isfinite(dummy.x) || !std::isfinite(dummy.y) || !std::isfinite(dummy.z)
         || (dummy.x == 0.0f && dummy.y == 0.0f && dummy.z == 0.0f)) return;
+    if (shadowOn) RenderUtil::RegisterLegacyTailShadow(veh, dummy, left && right, !left,
+        control->bEngineOn ? (braking ? 3 : 1) : 2, g_LegacyTailShadowTexture);
+    if (!pointOn || distance > 75.0f * 75.0f) return;
     dummy.x = left && right ? 0.0f : (left ? -std::abs(dummy.x) : std::abs(dummy.x));
     const CVector point = veh->TransformFromObjectSpace(dummy);
     dummy.y -= 1.0f;
@@ -190,6 +196,8 @@ static void PrepareLegacyHeadShadows()
     } else {
         g_LegacyHeadShadowTextures[0] = g_LegacyHeadShadowTextures[1] = nullptr;
     }
+    g_LegacyTailShadowTexture = LightsConfig::Get().bLegacyTailShadows ? TextureMgr::Get("taillight") : nullptr;
+    if (g_LegacyTailShadowTexture) RenderUtil::ReloadConfig();
 }
 
 static void __fastcall Hooked_DoHeadLightReflection(CVehicle *veh, void *, CMatrix &matrix,
@@ -370,6 +378,7 @@ void Lights::Init() {
     Events::shutdownRwEvent += [] {
         g_LegacyHeadShadowReady = false;
         g_LegacyHeadShadowTextures[0] = g_LegacyHeadShadowTextures[1] = nullptr;
+        g_LegacyTailShadowTexture = nullptr;
     };
 
     ModelInfoMgr::RegisterMaterial([](CVehicle *pVeh, RpMaterial *pMat) {
@@ -418,7 +427,7 @@ void Lights::Init() {
 		LightManager::Render(pControlVeh, pTowedVeh,
 			CModelInfo::IsTrailerModel(pTowedVeh->m_nModelIndex) ? pVeh : nullptr);
 		if (pControlVeh != pVeh) LightManager::ProcessPointLights(pVeh, pControlVeh);
-		RegisterNativeTailPointLight(pVeh, pControlVeh);
+		RegisterNativeTailLights(pVeh, pControlVeh);
 	});
 }
 

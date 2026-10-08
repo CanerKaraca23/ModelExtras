@@ -26,6 +26,8 @@ public:
     static void RegisterLegacySirenShadow(const DummyConfig *pConfig, float size, RwTexture *texture);
     static void RegisterLegacyHeadlightShadow(CVehicle *vehicle, const CMatrix &matrix, CVector dummy,
         bool twin, bool right, RwTexture *texture, CRGBA color);
+    static void RegisterLegacyTailShadow(CVehicle *vehicle, CVector dummy, bool twin, bool right,
+        unsigned char mode, RwTexture *texture);
     static void ReloadConfig();
     static float GetCoronaDistanceMul();
     static float GetHeadLightCoronaDistanceMul();
