@@ -80,7 +80,7 @@ bool IndicatorComponent::TryRegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const
 
 static bool GetCarPathLinkPosition(CCarPathLinkAddress &address, CVector2D &outPos) {
     uint16_t raw = *reinterpret_cast<uint16_t*>(&address);
-    if (raw == 0xFFFF || raw == 0) return false;
+    if (raw == 0xFFFF) return false;
 
     uint16_t linkId = raw & 0x3FF;
     uint16_t areaId = (raw >> 10) & 0x3F;
