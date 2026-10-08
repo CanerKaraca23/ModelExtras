@@ -19,7 +19,7 @@ public:
     static void RegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const std::string_view name);
     
     static void Process(CVehicle* pVeh);
-    static void ProcessPointLights(CVehicle* pVeh);
+    static void ProcessPointLights(CVehicle* pVeh, CVehicle* pControlVeh = nullptr);
     static void Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, CVehicle* pRenderedVeh = nullptr);
 
     static DummyConfig CreateBaseConfig(CVehicle* pVeh, RwFrame* pFrame);

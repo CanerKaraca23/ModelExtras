@@ -352,6 +352,7 @@ void Lights::Init() {
 		}
 		LightManager::Render(pControlVeh, pTowedVeh,
 			CModelInfo::IsTrailerModel(pTowedVeh->m_nModelIndex) ? pVeh : nullptr);
+		if (pControlVeh != pVeh) LightManager::ProcessPointLights(pVeh, pControlVeh);
 	});
 }
 

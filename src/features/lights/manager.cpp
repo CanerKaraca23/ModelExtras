@@ -433,21 +433,30 @@ bool LightManager::IsIndicatorOn(CVehicle* pVeh) {
            IsMaterialAvailable(pVeh, {eMaterialType::STTLightLeft, eMaterialType::STTLightRight});
 }
 
-void LightManager::ProcessPointLights(CVehicle *pVeh) {
-    if (!LightsConfig::Get().gbLightPointLights || !pVeh || pVeh->m_fHealth <= 0.0f || pVeh->m_nVehicleSubClass == VEHICLE_BMX || pVeh->m_nVehicleSubClass == VEHICLE_BOAT || pVeh->m_nVehicleSubClass == VEHICLE_TRAILER) {
+void LightManager::ProcessPointLights(CVehicle *pVeh, CVehicle *pControlVeh) {
+    if (!LightsConfig::Get().gbLightPointLights || !pVeh || pVeh->m_fHealth <= 0.0f || pVeh->m_nVehicleSubClass == VEHICLE_BMX || pVeh->m_nVehicleSubClass == VEHICLE_BOAT) {
         return;
     }
+    if (pVeh->m_nVehicleSubClass == VEHICLE_TRAILER) {
+        if (!pVeh->m_pRwClump || !pControlVeh || !CPools::ms_pVehiclePool ||
+            !CPools::ms_pVehiclePool->IsObjectValid(pControlVeh) || !pControlVeh->m_pRwClump ||
+            pControlVeh->m_fHealth <= 0.0f || pVeh->m_pTractor != pControlVeh || pControlVeh->m_pTrailer != pVeh) return;
+    } else if (pControlVeh && pControlVeh != pVeh) {
+        return;
+    }
+    if (!pControlVeh) pControlVeh = pVeh;
 
     if (MathUtil::DistanceSquared(pVeh->GetPosition(), TheCamera.GetPosition()) > (75.0f * 75.0f)) {
         return;
     }
 
     VehLightData &data = m_VehData.Get(pVeh);
+    VehLightData &controlData = m_VehData.Get(pControlVeh);
 
-    if (LightsConfig::Get().bLightsRequireEngine && Util::IsEngineOff(pVeh)) {
-        pVeh->bLightsOn = false;
-        bool isAlarmActive = pVeh->m_nAlarmState != 0 && pVeh->m_nAlarmState != 0xFFFF;
-        if (!isAlarmActive && data.nIndicatorState == eIndicatorState::Off) {
+    if (LightsConfig::Get().bLightsRequireEngine && Util::IsEngineOff(pControlVeh)) {
+        pControlVeh->bLightsOn = false;
+        bool isAlarmActive = pControlVeh->m_nAlarmState != 0 && pControlVeh->m_nAlarmState != 0xFFFF;
+        if (!isAlarmActive && controlData.nIndicatorState == eIndicatorState::Off) {
             return;
         }
     }
@@ -455,7 +464,11 @@ void LightManager::ProcessPointLights(CVehicle *pVeh) {
     pVeh->UpdateRwFrame();
 
     for (const auto& comp : m_Components) {
-        comp->ProcessPointLights(pVeh, data);
+        if (pControlVeh == pVeh) {
+            comp->ProcessPointLights(pVeh, data);
+        } else if (auto* tail = dynamic_cast<TailLightComponent*>(comp.get())) {
+            tail->ProcessPointLights(pControlVeh, pVeh, data, controlData);
+        }
     }
 }
 

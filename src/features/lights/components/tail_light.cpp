@@ -113,8 +113,12 @@ void TailLightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehL
 }
 
 void TailLightComponent::ProcessPointLights(CVehicle* pVeh, VehLightData& data) {
-    bool isHeadlightsOn = CarUtil::AreLightsOn(pVeh);
-    bool isBraking = LightManager::IsBraking(pVeh);
+    ProcessPointLights(pVeh, pVeh, data, data);
+}
+
+void TailLightComponent::ProcessPointLights(CVehicle* pControlVeh, CVehicle* pVeh, VehLightData& data, const VehLightData& controlData) {
+    bool isHeadlightsOn = CarUtil::AreLightsOn(pControlVeh);
+    bool isBraking = LightManager::IsBraking(pControlVeh);
     bool isBike = CModelInfo::IsBikeModel(pVeh->m_nModelIndex);
     bool hasDedicatedBrakeDummy = LightManager::IsDummyAvailable(data, {eMaterialType::BrakeLightLeft, eMaterialType::BrakeLightRight, eMaterialType::STTLightLeft, eMaterialType::STTLightRight, eMaterialType::NABrakeLightLeft, eMaterialType::NABrakeLightRight});
 
@@ -143,10 +147,10 @@ void TailLightComponent::ProcessPointLights(CVehicle* pVeh, VehLightData& data) 
                 continue;
             }
 
-            if (data.bUsingGlobalIndicators && !LightManager::IsMaterialAvailable(pVeh, INDICATOR_LIGHTS_TYPE)) {
-                if (data.nIndicatorState == eIndicatorState::BothOn) continue;
-                if (data.nIndicatorState == eIndicatorState::LeftOn && isLeft) continue;
-                if (data.nIndicatorState == eIndicatorState::RightOn && !isLeft) continue;
+            if (controlData.bUsingGlobalIndicators && !LightManager::IsMaterialAvailable(pVeh, INDICATOR_LIGHTS_TYPE)) {
+                if (controlData.nIndicatorState == eIndicatorState::BothOn) continue;
+                if (controlData.nIndicatorState == eIndicatorState::LeftOn && isLeft) continue;
+                if (controlData.nIndicatorState == eIndicatorState::RightOn && !isLeft) continue;
             }
 
             for (auto& e : data.dummies[actualType]) {

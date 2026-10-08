@@ -9,4 +9,5 @@ public:
     bool TryRegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const std::string_view name, VehLightData& data) override;
     void Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehLightData& data) override;
     void ProcessPointLights(CVehicle* pVeh, VehLightData& data) override;
+    void ProcessPointLights(CVehicle* pControlVeh, CVehicle* pVeh, VehLightData& data, const VehLightData& controlData);
 };
