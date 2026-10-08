@@ -89,7 +89,7 @@ void FogLightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehLi
     bool isFogLightOn = (data.bFogLightsOn || isFoggy) && (legacy || !LightsConfig::Get().bFoglightTiedToHeadlight || !CarUtil::IsLightsForcedOff(pControlVeh));
 
     if (!isFogLightOn || !shouldRenderFog) return;
-    bool isFogOk = !Util::IsPanelDamaged(pControlVeh, ePanels::BUMP_FRONT);
+    bool isFogOk = !Util::IsPanelDamaged(LightManager::GetRenderVehicle(pControlVeh), ePanels::BUMP_FRONT);
     LightManager::RenderLights(pControlVeh, pTowedVeh, data, eMaterialType::FogLightLeft, true, "foglight", 3.0f, false, isFogOk);
     LightManager::RenderLights(pControlVeh, pTowedVeh, data, eMaterialType::FogLightRight, true, "foglight", 3.0f, false, isFogOk);
 }

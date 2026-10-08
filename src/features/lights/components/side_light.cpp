@@ -35,7 +35,7 @@ bool SideLightComponent::TryRegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const
 
 void SideLightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehLightData& data) {
     if (!CarUtil::AreLightsOn(pControlVeh)) return;
-    auto damage = LightDamageState::Get(pControlVeh, pTowedVeh);
+    auto damage = LightDamageState::Get(LightManager::GetRenderVehicle(pControlVeh), pTowedVeh);
     bool isLeftMiddleOk = damage.isMiddleLeftOk;
     bool isRightMiddleOk = damage.isMiddleRightOk;
     LightManager::RenderLights(pControlVeh, pTowedVeh, data, eMaterialType::SideLightLeft, true, "indicator", 1.85f, false, isLeftMiddleOk);

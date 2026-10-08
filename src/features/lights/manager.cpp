@@ -116,6 +116,10 @@ void LightManager::Process(CVehicle* pVeh) {
 
 static CVehicle* g_RenderVehicle = nullptr;
 
+CVehicle* LightManager::GetRenderVehicle(CVehicle* pControlVeh) {
+    return g_RenderVehicle ? g_RenderVehicle : pControlVeh;
+}
+
 void LightManager::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, CVehicle* pRenderedVeh) {
     if (!pControlVeh || !pTowedVeh || (pRenderedVeh && pRenderedVeh != pControlVeh && pRenderedVeh != pTowedVeh)) return;
     struct RenderScope {

@@ -210,7 +210,7 @@ void IndicatorComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehL
 
     if (!data.IsIndicatorPhaseOn() || data.nIndicatorState == eIndicatorState::Off) return;
 
-    auto damage = LightDamageState::Get(pControlVeh, pTowedVeh);
+    auto damage = LightDamageState::Get(LightManager::GetRenderVehicle(pControlVeh), pTowedVeh);
     bool isLeftFrontOk = damage.isFrontLeftOk;
     bool isRightFrontOk = damage.isFrontRightOk;
     bool isLeftRearOk = damage.isRearLeftOk;

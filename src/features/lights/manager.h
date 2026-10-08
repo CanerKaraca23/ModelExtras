@@ -21,6 +21,7 @@ public:
     static void Process(CVehicle* pVeh);
     static void ProcessPointLights(CVehicle* pVeh, CVehicle* pControlVeh = nullptr);
     static void Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, CVehicle* pRenderedVeh = nullptr);
+    static CVehicle* GetRenderVehicle(CVehicle* pControlVeh);
 
     static DummyConfig CreateBaseConfig(CVehicle* pVeh, RwFrame* pFrame);
     static void RenderLight(CVehicle* pVeh, VehLightData& data, eMaterialType type, bool isOn, const std::string& texture = "", float sz = 1.0f, bool highlight = false, bool isDummyOk = true, bool materialsOnly = false);
