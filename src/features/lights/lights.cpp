@@ -118,6 +118,64 @@ static void __declspec(naked) NativeHeadPointLightBridge()
     }
 }
 
+// Native rear flags are ready during SetupRender, after the pre-render dummy lights.
+static void RegisterNativeTailPointLight(CVehicle *veh, CVehicle *control)
+{
+    const auto &cfg = LightsConfig::Get();
+    if (!cfg.bLegacyTailPointLights || !Lights::m_bEnabled || !gbLightPointLights || !veh || !control
+        || !CPools::ms_pVehiclePool || !CPools::ms_pVehiclePool->IsObjectValid(veh)
+        || !CPools::ms_pVehiclePool->IsObjectValid(control) || !veh->m_pRwClump || !control->m_pRwClump
+        || !(veh->m_fHealth > 0.0f) || !(control->m_fHealth > 0.0f) || !veh->GetIsOnScreen()
+        || (cfg.bLightsRequireEngine && Util::IsEngineOff(control))) return;
+    if (control != veh && (veh->m_nVehicleSubClass != VEHICLE_TRAILER
+        || veh->m_pTractor != control || control->m_pTrailer != veh)) return;
+    if (veh->m_nModelIndex < 0 || veh->m_nModelIndex >= CModelInfo::ms_modelInfoCount) return;
+    auto *base = CModelInfo::GetModelInfo(veh->m_nModelIndex);
+    if (!base || base->GetModelType() != MODEL_INFO_VEHICLE) return;
+    auto *model = static_cast<CVehicleModelInfo *>(base);
+    const auto family = veh->m_nVehicleSubClass;
+    const float distance = MathUtil::DistanceSquared(veh->GetPosition(), TheCamera.GetPosition());
+    if (!model->m_pVehicleStruct || family == VEHICLE_BMX || family == VEHICLE_BOAT
+        || family == VEHICLE_HELI || family == VEHICLE_PLANE
+        || !std::isfinite(distance) || distance > 75.0f * 75.0f) return;
+    const bool tailOn = CarUtil::AreLightsOn(control);
+    const bool braking = LightManager::IsBraking(control);
+    if (!tailOn && !braking) return;
+    auto &data = LightManager::m_VehData.Get(veh);
+    auto available = [&](bool left) {
+        const auto tail = left ? eMaterialType::TailLightLeft : eMaterialType::TailLightRight;
+        const auto brake = left ? eMaterialType::BrakeLightLeft : eMaterialType::BrakeLightRight;
+        const auto stt = left ? eMaterialType::STTLightLeft : eMaterialType::STTLightRight;
+        const auto na = left ? eMaterialType::NABrakeLightLeft : eMaterialType::NABrakeLightRight;
+        if (LightManager::IsDummyAvailable(data, {tail, brake, stt, na})
+            || Util::IsLightDamaged(veh, left ? eLights::LIGHT_REAR_LEFT : eLights::LIGHT_REAR_RIGHT)
+            || Util::IsPanelDamaged(veh, left ? ePanels::WING_REAR_LEFT : ePanels::WING_REAR_RIGHT)) return false;
+        const bool dedicated = LightManager::IsMaterialAvailable(veh, {brake, stt, na});
+        const bool brakeAllowed = dedicated
+            ? ((data.bLightStates[brake] && LightManager::IsMaterialAvailable(veh, {brake}))
+                || (data.bLightStates[stt] && LightManager::IsMaterialAvailable(veh, {stt}))
+                || (data.bLightStates[na] && LightManager::IsMaterialAvailable(veh, {na})))
+            : data.bLightStates[tail];
+        return (tailOn && data.bLightStates[tail]) || (braking && brakeAllowed);
+    };
+    const bool left = veh->m_renderLights.m_bLeftRear && available(true);
+    const bool right = veh->m_renderLights.m_bRightRear && available(false);
+    if (!left && !right) return;
+    CVector dummy = model->m_pVehicleStruct->m_avDummyPos[1];
+    if (!std::isfinite(dummy.x) || !std::isfinite(dummy.y) || !std::isfinite(dummy.z)
+        || (dummy.x == 0.0f && dummy.y == 0.0f && dummy.z == 0.0f)) return;
+    dummy.x = left && right ? 0.0f : (left ? -std::abs(dummy.x) : std::abs(dummy.x));
+    const CVector point = veh->TransformFromObjectSpace(dummy);
+    dummy.y -= 1.0f;
+    CVector direction = veh->TransformFromObjectSpace(dummy) - point;
+    const float length = std::sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z);
+    if (!std::isfinite(point.x) || !std::isfinite(point.y) || !std::isfinite(point.z)
+        || !std::isfinite(length) || length <= 0.0f || !std::isfinite(cfg.fPointLightIntensity) || cfg.fPointLightIntensity <= 0.0f) return;
+    direction.x /= length; direction.y /= length; direction.z /= length;
+    CPointLights::AddLight(1, point, direction, left && right ? 2.5f : 1.25f,
+        0.5f * cfg.fPointLightIntensity, 0.0f, 0.0f, left && right ? 1 : 0, left && right, nullptr);
+}
+
 static RwTexture *g_LegacyHeadShadowTextures[2]{};
 static bool g_LegacyHeadShadowReady = false;
 
@@ -353,6 +411,7 @@ void Lights::Init() {
 		LightManager::Render(pControlVeh, pTowedVeh,
 			CModelInfo::IsTrailerModel(pTowedVeh->m_nModelIndex) ? pVeh : nullptr);
 		if (pControlVeh != pVeh) LightManager::ProcessPointLights(pVeh, pControlVeh);
+		RegisterNativeTailPointLight(pVeh, pControlVeh);
 	});
 }
 
