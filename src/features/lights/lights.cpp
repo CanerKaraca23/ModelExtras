@@ -289,8 +289,15 @@ static void __cdecl RegisterTailCorona(unsigned int id, CEntity *attach,
     auto &cfg = LightsConfig::Get();
     if (cfg.bLegacyTailCoronas && Lights::m_bEnabled && cfg.gbLightCoronasFeature) {
         auto *veh = static_cast<CVehicle *>(attach); // Only CVehicle::DoTailLightEffect calls this hook.
+        CVehicle *control = veh;
+        if (veh && CPools::ms_pVehiclePool && CPools::ms_pVehiclePool->IsObjectValid(veh)
+            && veh->m_nVehicleSubClass == VEHICLE_TRAILER) {
+            control = veh->m_pTractor;
+            if (!control || !CPools::ms_pVehiclePool->IsObjectValid(control) || !control->m_pRwClump
+                || !(control->m_fHealth > 0.0f) || control->m_pTrailer != veh) control = nullptr;
+        }
         if (veh && CPools::ms_pVehiclePool && CPools::ms_pVehiclePool->IsObjectValid(veh) && veh->m_pRwClump
-            && !veh->m_pTrailer && veh->m_fHealth > 0.0f && (!cfg.bLightsRequireEngine || !Util::IsEngineOff(veh))) {
+            && control && !veh->m_pTrailer && veh->m_fHealth > 0.0f && (!cfg.bLightsRequireEngine || !Util::IsEngineOff(control))) {
             auto &data = LightManager::m_VehData.Get(veh);
             const bool left = pos.x <= 0.0f;
             const bool right = pos.x >= 0.0f;
@@ -305,8 +312,8 @@ static void __cdecl RegisterTailCorona(unsigned int id, CEntity *attach,
                     eMaterialType::NABrakeLightLeft, eMaterialType::NABrakeLightRight};
                 const bool dedicatedBrake = LightManager::IsDummyAvailable(data, brakeTypes)
                     || LightManager::IsMaterialAvailable(veh, brakeTypes);
-                red = red && (!dedicatedBrake || CarUtil::AreLightsOn(veh)) ? 100 : 0;
-                alpha = !dedicatedBrake && veh->m_fBreakPedal > 0.0f && veh->m_pDriver && !veh->bIsHandbrakeOn ? 200 : 120;
+                red = red && (!dedicatedBrake || CarUtil::AreLightsOn(control)) ? 100 : 0;
+                alpha = !dedicatedBrake && control->m_fBreakPedal > 0.0f && control->m_pDriver && !control->bIsHandbrakeOn ? 200 : 120;
                 radius = static_cast<float>(static_cast<double>(radius) * 1.5
                     + static_cast<double>(CWeather::Foggyness) * 1.7999999523162842);
             }
