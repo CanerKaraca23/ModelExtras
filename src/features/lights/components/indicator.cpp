@@ -107,6 +107,13 @@ void IndicatorComponent::Process(CVehicle* pVeh, VehLightData& data) {
     bool hasIndicatorMats = LightManager::IsMaterialAvailable(pVeh, INDICATOR_LIGHTS_TYPE) ||
                             LightManager::IsMaterialAvailable(pVeh, {eMaterialType::STTLightLeft, eMaterialType::STTLightRight});
     bool hasIndicatorDummies = LightManager::IsDummyAvailable(data, INDICATOR_LIGHTS_TYPE);
+    CVehicle *trailer = pVeh->m_pTrailer;
+    if (trailer && CPools::ms_pVehiclePool && CPools::ms_pVehiclePool->IsObjectValid(trailer) &&
+        trailer->m_pRwClump && trailer->m_pTractor == pVeh && CModelInfo::IsTrailerModel(trailer->m_nModelIndex)) {
+        hasIndicatorMats |= LightManager::IsMaterialAvailable(trailer, INDICATOR_LIGHTS_TYPE) ||
+                            LightManager::IsMaterialAvailable(trailer, {eMaterialType::STTLightLeft, eMaterialType::STTLightRight});
+        hasIndicatorDummies |= LightManager::IsDummyAvailable(LightManager::m_VehData.Get(trailer), INDICATOR_LIGHTS_TYPE);
+    }
 
     data.bUsingGlobalIndicators = LightsConfig::Get().gbGlobalIndicatorLights &&
                                   !hasIndicatorMats && !hasIndicatorDummies &&
@@ -196,7 +203,8 @@ void IndicatorComponent::Process(CVehicle* pVeh, VehLightData& data) {
 }
 
 void IndicatorComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehLightData& data) {
-    if (!data.bUsingGlobalIndicators && !LightManager::IsMaterialAvailable(pControlVeh, INDICATOR_LIGHTS_TYPE) && !LightManager::IsDummyAvailable(data, INDICATOR_LIGHTS_TYPE)) {
+    if (!data.bUsingGlobalIndicators && !LightManager::IsMaterialAvailable(pControlVeh, INDICATOR_LIGHTS_TYPE) && !LightManager::IsDummyAvailable(data, INDICATOR_LIGHTS_TYPE) &&
+        !LightManager::IsMaterialAvailable(pTowedVeh, INDICATOR_LIGHTS_TYPE) && !LightManager::IsDummyAvailable(LightManager::m_VehData.Get(pTowedVeh), INDICATOR_LIGHTS_TYPE)) {
         return;
     }
 
