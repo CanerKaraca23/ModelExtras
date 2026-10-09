@@ -174,6 +174,7 @@ void DirtFx::ReloadConfig()
 void DirtFx::Init()
 {
 	ReloadConfig();
+    if (!m_bEnabled) return;
 	Events::attachRwPluginsEvent += []()
 	{
 		// Release cached copies when either source streams out; pointer reuse must

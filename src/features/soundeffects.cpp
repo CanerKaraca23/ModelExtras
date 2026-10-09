@@ -62,7 +62,7 @@ static bool IsVehicleEligible(int model, const char *jsonKey, bool onlySelected,
 
 void SoundEffects::ReloadConfig()
 {
-    CBaseFeature::ReloadConfig();
+    CVehFeature::ReloadConfig();
     std::string line = gConfig.ReadString("TABLE", "BigVehicleModels", "");
     ValidForReverseSound.clear();
     Util::GetModelsFromIni(line, ValidForReverseSound);
@@ -86,6 +86,15 @@ void SoundEffects::ReloadConfig()
     bBrakePadSounds = gConfig.ReadBoolean("SOUND", "BrakePadSound", false);
     bBrakePadOnlySelected = gConfig.ReadBoolean("SOUND", "BrakePadOnlySelected", true);
     fBrakePadVolume = std::clamp(gConfig.ReadFloat("SOUND", "BrakePadVolume", 0.7f), 0.0f, 1.0f);
+    if (CPools::ms_pVehiclePool) for (auto *vehicle : CPools::ms_pVehiclePool) if (vehicle) {
+        auto &data = m_VehData.Get(vehicle);
+        auto *player = FindPlayerPed();
+        bool permitted = m_bActive && (!bOnlyPlayerVehicle || (player && vehicle->IsDriver(player)));
+        if (!permitted || !bDoorChimeSounds || !IsVehicleEligible(vehicle->m_nModelIndex, "door_chime", bDoorChimeOnlySelected, ValidForDoorChime))
+            AudioMgr::StopLoopStream(data.m_hDoorChimeStream);
+        if (!permitted || !bBrakePadSounds || !IsVehicleEligible(vehicle->m_nModelIndex, "brake_pad", bBrakePadOnlySelected, ValidForBrakePad))
+            AudioMgr::StopLoopStream(data.m_hBrakePadStream);
+    }
 }
 
 void SoundEffects::Reload(CVehicle *pVeh)

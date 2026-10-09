@@ -51,6 +51,8 @@ void __fastcall ExhaustFx::hkAddExhaustParticles2(CVehicle *pVeh)
 
 char __fastcall ExhaustFx::hkDoNitroEffect1(CAutomobile* pVeh, float power)
 {
+    if (!pVeh) return 0;
+    if (!CBaseFeature::IsEnabled(eFeatureMatrix::ExhaustFx)) return ogNitro1 ? ogNitro1(pVeh, power) : 0;
     auto& data = m_VehData.Get(pVeh);
     if (pVeh->m_fGasPedal > 0.05f && pVeh->m_fNitroValue < 0.0f) {
         data.lastNitroFrame = CTimer::m_FrameCounter;
@@ -64,6 +66,8 @@ char __fastcall ExhaustFx::hkDoNitroEffect1(CAutomobile* pVeh, float power)
 
 char __fastcall ExhaustFx::hkDoNitroEffect2(CAutomobile* pVeh, float power)
 {
+    if (!pVeh) return 0;
+    if (!CBaseFeature::IsEnabled(eFeatureMatrix::ExhaustFx)) return ogNitro2 ? ogNitro2(pVeh, power) : 0;
     auto& data = m_VehData.Get(pVeh);
     if (pVeh->m_fGasPedal > 0.05f && pVeh->m_fNitroValue < 0.0f) {
         data.lastNitroFrame = CTimer::m_FrameCounter;
@@ -77,6 +81,8 @@ char __fastcall ExhaustFx::hkDoNitroEffect2(CAutomobile* pVeh, float power)
 
 char __fastcall ExhaustFx::hkDoNitroEffect3(CAutomobile* pVeh, float power)
 {
+    if (!pVeh) return 0;
+    if (!CBaseFeature::IsEnabled(eFeatureMatrix::ExhaustFx)) return ogNitro3 ? ogNitro3(pVeh, power) : 0;
     auto& data = m_VehData.Get(pVeh);
     if (data.isUsed) {
         return 1;
@@ -489,6 +495,23 @@ void ExhaustFx::Reload(CVehicle* pVeh)
     nReloadCount++;
 }
 
+void ExhaustFx::RefreshConfig(CVehicle *pVeh)
+{
+    if (!pVeh || !pVeh->m_pRwClump) return;
+    auto &data = m_VehData.Get(pVeh);
+    for (auto &[name, info] : data.m_pDummies) {
+        if (!info.pFrame) continue;
+        auto next = LoadData(pVeh, info.pFrame);
+        next.pFxSysem = info.pFxSysem;
+        if (!next.bNitroEffect && next.pFxSysem) {
+            next.pFxSysem->Kill();
+            next.pFxSysem = nullptr;
+        }
+        info = std::move(next);
+    }
+    data.reloadCount = nReloadCount;
+}
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -553,3 +576,9 @@ extern "C"
 #ifdef __cplusplus
 }
 #endif
+
+void ExhaustFx::OnToggle(CVehicle *vehicle, bool enabled) {
+    if (enabled) return;
+    for (auto &[name, e] : m_VehData.Get(vehicle).m_pDummies)
+        if (e.pFxSysem) { e.pFxSysem->Kill(); e.pFxSysem = nullptr; }
+}

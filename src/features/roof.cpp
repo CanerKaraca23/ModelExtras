@@ -37,7 +37,7 @@ static uint32_t g_nRoofToggleKey = 'T';
 
 void ConvertibleRoof::ReloadConfig()
 {
-    CBaseFeature::ReloadConfig();
+    CVehFeature::ReloadConfig();
     g_nRoofToggleKey = gConfig.ReadInteger("KEYS", "RoofToggleKey", 'T');
 }
 
@@ -58,6 +58,8 @@ void ConvertibleRoof::Init()
             return;
         }
 
+        if (!pVeh || !pFrame) return;
+        CaptureState(pVeh, pFrame);
         RoofConfig c;
         c.pFrame = pFrame;
         auto &jsonData = DataMgr::Get(pVeh->m_nModelIndex);
@@ -76,7 +78,7 @@ void ConvertibleRoof::Init()
                                     if (isRoof)
                                     {
                                         bool isRainy = (CWeather::Rain > 0.05f) || (CWeather::WetRoads > 0.1f) || (CWeather::NewWeatherType == eWeatherType::WEATHER_RAINY_SF || CWeather::OldWeatherType == eWeatherType::WEATHER_RAINY_SF || CWeather::NewWeatherType == eWeatherType::WEATHER_RAINY_COUNTRYSIDE || CWeather::OldWeatherType == eWeatherType::WEATHER_RAINY_COUNTRYSIDE);
-                                        if (!data.m_bRoofTargetExpanded && !isRainy)
+                                        if (CBaseFeature::IsEnabled(eFeatureMatrix::ConvertibleRoof) && !data.m_bRoofTargetExpanded && !isRainy)
                                         {
                                             MatrixUtil::SetRotationXAbsolute(&pFrame->modelling, c.targetRot - c.prevRot);
                                             c.prevRot = c.targetRot;
@@ -184,4 +186,11 @@ void ConvertibleRoof::Init()
             }
         }
     };
+}
+
+void ConvertibleRoof::OnToggle(CVehicle *vehicle, bool enabled) {
+    if (enabled) return;
+    auto &data = m_VehData.Get(vehicle);
+    data.m_bRoofTargetExpanded = data.m_bPrevTarget = true; data.m_phase = AnimPhase::Idle;
+    for (auto *group : {&data.m_Roofs, &data.m_Boots}) for (auto &e : *group) e.currentRot = e.prevRot = 0.0f;
 }

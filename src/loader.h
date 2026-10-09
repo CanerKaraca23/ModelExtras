@@ -19,6 +19,8 @@ public:
         return ptr;
     }
 
+    static void ReloadConfig();
     static void Init();
     static void Reload();
+    static void ReloadModels();
 };

@@ -33,6 +33,40 @@ static std::string ReadFileContent(const std::filesystem::path &p)
     return str;
 }
 
+static bool RejectMaterialColorAliases(const nlohmann::json &config, const std::string &path)
+{
+    const auto rejectFlatColors = [&](const std::string &prefix, const nlohmann::json &settings) {
+        if (!settings.is_object()) return false;
+        for (const auto *key : {"color", "color_off"})
+        {
+            if (!settings.contains(key)) continue;
+            LOG(ERROR) << std::format("JSONC file '{}' uses unsupported '{}.{}'; move the value to '{}.material.{}'", path, prefix, key, prefix, key);
+            return true;
+        }
+        return false;
+    };
+
+    for (const auto *section : {"plate", "license_plate"})
+        if (config.contains(section) && rejectFlatColors(section, config[section])) return true;
+
+    for (const auto *section : {"lights", "leds"})
+    {
+        if (!config.contains(section) || !config[section].is_object()) continue;
+        for (const auto &[name, settings] : config[section].items())
+            if (rejectFlatColors(std::string(section) + "." + name, settings)) return true;
+    }
+
+    for (const auto *section : {"spotlights", "spotlight"})
+    {
+        if (config.contains(section))
+        {
+            LOG(ERROR) << std::format("JSONC file '{}' uses unsupported section '{}'; configure lights.spotlights.material instead", path, section);
+            return true;
+        }
+    }
+    return false;
+}
+
 static std::filesystem::path GetSelfDirectory()
 {
     std::error_code ec;
@@ -460,6 +494,7 @@ void DataMgr::LoadModLoaderData()
                 if (cand.format == ConfigFormat::Jsonc)
                 {
                     auto jsonData = nlohmann::json::parse(content, nullptr, true, true);
+                    if (RejectMaterialColorAliases(jsonData, cand.path.string())) continue;
                     if (jsonData.contains("metadata") && jsonData["metadata"].contains("minver"))
                     {
                         if (gConfig.ReadBoolean("CONFIG", "ModelVersionCheck", true))
@@ -598,6 +633,7 @@ void DataMgr::LoadFile(const std::filesystem::directory_entry &e)
         try
         {
             auto jsonData = nlohmann::json::parse(content, nullptr, true, true);
+            if (RejectMaterialColorAliases(jsonData, e.path().string())) return;
 
             if (jsonData.contains("metadata") && jsonData["metadata"].contains("minver"))
             {
@@ -660,4 +696,22 @@ void DataMgr::RegisterListener(std::string_view name, ModelDataListener_t listen
     {
         listener(model, jsonData);
     }
+}
+
+void DataMgr::SetPreview(int model, const nlohmann::json &value)
+{
+    if (model > 0 && model < 20000 && value.is_object()) data[model] = value;
+}
+
+void DataMgr::RemovePreview(int model)
+{
+    data.erase(model);
+}
+
+void DataMgr::NotifyChanged(int model, std::string_view feature)
+{
+    const auto *value = Find(model);
+    static const auto empty = nlohmann::json::object();
+    for (const auto &[name, listener] : listeners)
+        if (listener && name == feature) listener(model, value ? *value : empty);
 }

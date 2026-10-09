@@ -40,6 +40,8 @@ void RotateDoor::Init()
     ModelInfoMgr::RegisterDummy([](CVehicle* pVeh, RwFrame* pFrame, const std::string_view name)
     {
         if (!name.starts_with("x_rd_")) return;
+        if (!pVeh || !pFrame) return;
+        CaptureState(pVeh, pFrame);
 
         auto& jsonData = DataMgr::Get(pVeh->m_nModelIndex);
         RotateDoorData& data = m_VehData.Get(pVeh);
@@ -78,4 +80,10 @@ void RotateDoor::Init()
         UpdateDoorGroup(pVeh, data.boot,       BOOT,             true);
         UpdateDoorGroup(pVeh, data.bonnet,     BONNET,           true);
     });
+}
+void RotateDoor::OnToggle(CVehicle *vehicle, bool enabled) {
+    if (enabled) return;
+    auto &data = m_VehData.Get(vehicle);
+    for (auto *group : {&data.leftFront, &data.rightFront, &data.leftRear, &data.rightRear, &data.boot, &data.bonnet})
+        for (auto &e : *group) e.prevRot = 0.0f;
 }
