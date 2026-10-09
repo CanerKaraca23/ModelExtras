@@ -92,13 +92,13 @@ bool HeadlightComponent::TryRegisterDummy(CVehicle* pVeh, RwFrame* pFrame, const
         return true;
     }
 
-    if (name == "headlight_l" || name == "headlight_r" || name == "headlights_l" || name == "headlights_r") {
+    if (name == "headlights_l" || name == "headlights_r") {
         if (pFrame && !rwLinkListEmpty(&pFrame->objectList)) {
             return false;
         }
         DummyConfig c = LightManager::CreateBaseConfig(pVeh, pFrame);
         c.dummyPos = eDummyPos::Front;
-        bool isLeft = (name == "headlight_l" || name == "headlights_l");
+        bool isLeft = (name == "headlights_l");
         c.lightType = isLeft ? eMaterialType::HeadLightLeft : eMaterialType::HeadLightRight;
         c.corona.size = LightsConfig::Get().gfHeadLightCoronaSize;
         c.corona.color = {250, 250, 250, static_cast<unsigned char>(LightsConfig::Get().gHeadLightCoronaIntensity)};
