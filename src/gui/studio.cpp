@@ -41,7 +41,7 @@ std::vector<IniRow> iniRows;
 struct ModelChoice { int id; char label[48]; };
 std::vector<ModelChoice> models;
 StudioConfig::IniChanges iniChanges;
-std::string iniSource, status;
+std::string iniSource, status, workshopError;
 bool iniExisted = false;
 StudioConfig::IniChanges bootSettings;
 const IniSpec *bindingTarget = nullptr;
@@ -220,6 +220,7 @@ void LoadModel(int model) {
         draft.path = std::filesystem::path(gConfig.GetIniPath()).parent_path() / "ModelExtras" / "data" / (std::to_string(model) + ".jsonc");
     draft.existed = std::filesystem::exists(draft.path);
     draft.source = StudioFile::Read(draft.path);
+    workshopError.clear(); status.clear();
     requestedModel = model;
     modelLoaded = true;
 }
@@ -427,7 +428,7 @@ void ModelTab() {
     StudioTheme::SameLineFor("Use current vehicle");
     if (ImGui::Button("Use current vehicle")) {
         if (auto *vehicle = FindPlayerVehicle(-1, false)) { requestedModel = vehicle->m_nModelIndex; loadRequested = true; }
-        else status = "Enter a vehicle or select a model ID.";
+        else { status = "Enter a vehicle or select a model ID."; workshopError = status; }
     }
     ImGui::EndDisabled();
     if (!modelLoaded) return;
@@ -439,7 +440,7 @@ void ModelTab() {
     if (ImGui::Button("Revert")) modelRevertRequested = true;
     StudioTheme::SameLineFor("Reload JSONC");
     if (ImGui::Button("Reload JSONC")) {
-        if (draft.dirty) status = "Save or revert JSONC changes before reloading.";
+        if (draft.dirty) { status = "Save or revert JSONC changes before reloading."; workshopError = status; }
         else jsonReloadRequested = true;
     }
     ModelInformation(selected);
@@ -561,12 +562,22 @@ void Draw() {
     bool visible = open;
     StudioTheme::BeginShell(page, visible, MOD_VERSION);
     if (bindingTarget && (page != 0 || ImGui::IsMouseClicked(0))) { bindingTarget = nullptr; pendingBinding = 0; }
-    if (page != 0 && !status.empty()) { ImGui::TextWrapped("%s", status.c_str()); ImGui::Separator(); }
+    if (page == 1 && !workshopError.empty()) {
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(.25f, .075f, .085f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(.72f, .20f, .23f, 1.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.0f * appearance.scale);
+        if (ImGui::BeginChild("##workshopError", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders)) {
+            ImGui::TextColored(ImVec4(1.0f, .55f, .55f, 1.0f), "This change was not applied");
+            ImGui::TextWrapped("%s", workshopError.c_str());
+        }
+        ImGui::EndChild();
+        ImGui::PopStyleVar(); ImGui::PopStyleColor(2);
+    } else if (page != 0 && !status.empty()) { ImGui::TextWrapped("%s", status.c_str()); ImGui::Separator(); }
     if (iniRows.empty()) ImGui::TextUnformatted("Loading settings...");
     else {
         if (page == 0) IniTab();
         if (page == 1) {
-            try { ModelTab(); } catch (const std::exception &error) { status = error.what(); }
+            try { ModelTab(); } catch (const std::exception &error) { status = workshopError = error.what(); }
         }
         if (page == 2) AppearanceTab();
         if (page == 3) AboutTab();
@@ -653,7 +664,10 @@ void Studio::Tick() {
                     draft.hadData = DataMgr::Has(draft.model);
                 }
             }
-            if (iniConflict || modelConflict) status = "Files reloaded while Studio had edits. Drafts retained; revert the affected draft to resolve the conflict.";
+            if (iniConflict || modelConflict) {
+                status = "Files reloaded while Studio had edits. Drafts retained; revert the affected draft to resolve the conflict.";
+                if (modelConflict) workshopError = status;
+            }
         }
         if (loadRequested) {
             loadRequested = false;
@@ -721,6 +735,7 @@ void Studio::Tick() {
             if (modelConflict) throw std::runtime_error("Revert the JSONC draft after reloading files before previewing new edits.");
             const auto &next = draft.value;
             StudioConfig::Validate(next);
+            workshopError.clear(); status.clear();
             if (next != draft.applied) {
                 DataMgr::SetPreview(draft.model, next);
                 StudioLive::ApplyModel(draft.model, draft.applied, next);
@@ -753,6 +768,7 @@ void Studio::Tick() {
             StudioFile::Save(draft.path, draft.source, draft.existed, output);
             draft.source = output; draft.existed = true; draft.hadData = true;
             draft.original = draft.value; draft.dirty = false; draft.queued = true;
+            workshopError.clear();
             status = "JSONC saved.";
         }
         if (iniReloadRequested) {
@@ -775,11 +791,12 @@ void Studio::Tick() {
             StudioLive::ApplyModel(draft.model, draft.applied, next);
             if (!std::filesystem::exists(draft.path)) DataMgr::RemovePreview(draft.model);
             LoadModel(draft.model); modelConflict = false;
+            workshopError.clear();
             status = "Selected model JSONC reloaded.";
         }
 
     } catch (const std::exception &error) {
-        status = error.what();
+        status = workshopError = error.what();
         draft.queued = false;
     }
 }
@@ -790,7 +807,7 @@ void Studio::Init() {
     }
     Events::drawingEvent += [] {
         try { Draw(); } catch (const std::exception &error) {
-            status = error.what();
+            status = workshopError = error.what();
             // End an interrupted UI frame, then recover on the next drawing event.
             if (context) { ContextScope scope; ImGui::EndFrame(); }
         }

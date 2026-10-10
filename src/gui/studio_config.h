@@ -253,8 +253,12 @@ inline void Validate(const Json &value, bool referenceOnly = false) {
                 if (key == "red" || key == "green" || key == "blue" || key == "alpha" || key == "r" || key == "g" || key == "b" || key == "a")
                     if (number < 0 || number > 255) throw std::runtime_error(path + "/" + key + ": color must be 0..255");
                 if ((key == "maxrpm" || key == "maxspeed") && (number < 1 || std::floor(number) != number)) throw std::runtime_error(path + "/" + key + ": must be a positive integer");
-                if (key == "maxrpm" || key == "maxspeed" || key == "maxturbo" || key == "time" || key == "strobedelay")
+                if (key == "strobedelay" && number < 0)
+                    throw std::runtime_error(path + "/" + key + ": must be nonnegative");
+                if (key == "maxrpm" || key == "maxspeed" || key == "maxturbo")
                     if (number <= 0) throw std::runtime_error(path + "/" + key + ": must be positive");
+                if (key == "time" && number < 0)
+                    throw std::runtime_error(path + "/" + key + ": must be nonnegative");
                 if (key == "size" || key == "lifetime" || key == "inertia"
                     || ((first == "roofs" || first == "exhausts") && key == "speed")
                     || (first == "rollback_bed" && (key == "move_speed" || key == "rot_speed"))
@@ -284,7 +288,7 @@ inline void Validate(const Json &value, bool referenceOnly = false) {
     }
     if (value.contains("sirens")) {
         const auto &sirens = value.at("sirens");
-        if (sirens.contains("imvehft") && !sirens.at("imvehft").is_boolean()) throw std::runtime_error("sirens/imvehft must be boolean");
+        if (sirens.contains("imvehft") && !sirens.at("imvehft").is_boolean() && !sirens.at("imvehft").is_number()) throw std::runtime_error("sirens/imvehft must be a boolean or number");
         if (sirens.contains("references")) {
             const auto &refs = sirens.at("references");
             if (!refs.is_object()) throw std::runtime_error("siren references must be an object");
@@ -311,17 +315,17 @@ inline void Validate(const Json &value, bool referenceOnly = false) {
                 if (key.empty() || key[0] < '0' || key[0] > '9') continue;
                 size_t consumed = 0;
                 auto index = std::stoi(key, &consumed);
-                if (consumed != key.size() || index < 0 || index > 256) throw std::runtime_error("siren material index must be 0..256");
+                if (consumed != key.size() || index < 0) throw std::runtime_error("siren material index must be a nonnegative integer");
                 CheckShape(material, templates.at("sirens")["states"]["1. default"]["1"], "sirens/" + key);
                 if (!referenceOnly && material.value("type", std::string()) == "rotator" && !material.contains("rotator") && !material.contains("reference")) throw std::runtime_error("rotator type requires a rotator object");
                 if (material.contains("delay") && (!material.at("delay").is_number() || material.at("delay").get<double>() < 0)) throw std::runtime_error("siren delay must be nonnegative");
-                if (material.contains("imvehft") && !material.at("imvehft").is_boolean()) throw std::runtime_error("siren material imvehft must be boolean");
+                if (material.contains("imvehft") && !material.at("imvehft").is_boolean() && !material.at("imvehft").is_number()) throw std::runtime_error("siren material imvehft must be a boolean or number");
                 if (material.contains("rotator")) CheckShape(material.at("rotator"), Json{{"direction","clockwise"},{"type","linear"},{"time",1000},{"offset",0.0},{"radius",360.0}}, "sirens/rotator");
                 if (material.contains("colors")) {
                     const auto &sequence = material.at("colors");
                     if (!sequence.is_array() || sequence.size() > 1024) throw std::runtime_error("siren color sequence must be an array of up to 1024 steps");
                     for (const auto &step : sequence) {
-                        if (!step.is_array() || step.size() != 2 || !step[0].is_number_integer() || step[0].get<int>() < 1 || step[0].get<int>() > 60000) throw std::runtime_error("siren color step requires time and RGBA");
+                        if (!step.is_array() || step.size() != 2 || !step[0].is_number_integer() || step[0].get<int>() < 0 || step[0].get<int>() > 1000000) throw std::runtime_error("siren color step requires time 0..1000000 ms and RGBA");
                         const auto *color = &step[1];
                         if (color->is_string() && sirens.contains("references") && sirens.at("references").contains("colors")) {
                             const auto &refs = sirens.at("references").at("colors");
@@ -337,11 +341,11 @@ inline void Validate(const Json &value, bool referenceOnly = false) {
                     size_t expanded = 0;
                     for (const auto &step : material.at("pattern")) {
                         if (step.is_array()) {
-                            if (step.size() < 2 || !step[0].is_number_integer() || step[0].get<int>() < 1 || step[0].get<int>() > 100) throw std::runtime_error("invalid repeated siren pattern");
+                            if (step.size() < 2 || !step[0].is_number_integer() || step[0].get<int>() < 1 || step[0].get<int>() > 1024) throw std::runtime_error("invalid repeated siren pattern");
                             expanded += step[0].get<int>() * (step.size() - 1);
-                            for (size_t i = 1; i < step.size(); ++i) if (!step[i].is_number_integer() || step[i].get<int>() < 0 || step[i].get<int>() > 60000) throw std::runtime_error("pattern time must be 0..60000 ms");
+                            for (size_t i = 1; i < step.size(); ++i) if (!step[i].is_number_integer() || step[i].get<int>() < 0 || step[i].get<int>() > 1000000) throw std::runtime_error("pattern time must be 0..1000000 ms");
                         } else {
-                            if (!step.is_number_integer() || step.get<int>() < 0 || step.get<int>() > 60000) throw std::runtime_error("pattern time must be 0..60000 ms");
+                            if (!step.is_number_integer() || step.get<int>() < 0 || step.get<int>() > 1000000) throw std::runtime_error("pattern time must be 0..1000000 ms");
                             ++expanded;
                         }
                     }
