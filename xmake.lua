@@ -9,6 +9,8 @@ if not PLUGIN_SDK_DIR or not os.isdir(PLUGIN_SDK_DIR) then
         PLUGIN_SDK_DIR = "plugin-sdk"
     elseif os.isdir("D:/Dev/plugin-sdk") then
         PLUGIN_SDK_DIR = "D:/Dev/plugin-sdk"
+    elseif os.isdir("C:/Users/caner/OneDrive/Documents/plugin-sdk") then
+        PLUGIN_SDK_DIR = "C:/Users/caner/OneDrive/Documents/plugin-sdk"
     end
 end
 local GAME_DIR = os.getenv("GTASA_DIR") or "D:/Games/GTA San Andreas"

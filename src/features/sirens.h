@@ -208,12 +208,8 @@ public:
     bool m_bPlayingCustomSiren = false;
 
     VehicleSiren(CVehicle *_vehicle = nullptr);
-    ~VehicleSiren()
+    void ClearDummies()
     {
-        if (m_nSirenStream) {
-            AudioMgr::StopSirenStream(m_nSirenStream);
-            m_nSirenStream = 0;
-        }
         for (auto &pair : Dummies) {
             for (auto *dummy : pair.second) {
                 delete dummy;
@@ -221,6 +217,16 @@ public:
         }
         Dummies.clear();
         ActiveRotators.clear();
+        bUsesSirenChecked = false;
+    }
+
+    ~VehicleSiren()
+    {
+        if (m_nSirenStream) {
+            AudioMgr::StopSirenStream(m_nSirenStream);
+            m_nSirenStream = 0;
+        }
+        ClearDummies();
     }
 
     std::vector<VehicleDummy *> ActiveRotators;
