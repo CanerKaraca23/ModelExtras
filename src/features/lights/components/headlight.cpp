@@ -245,7 +245,7 @@ void HeadlightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehL
 
     bool isOpen = AreHeadlightsOpen(pControlVeh, data);
 
-    auto damage = LightDamageState::Get(pControlVeh, pTowedVeh);
+    auto damage = LightDamageState::Get(pControlVeh);
     bool isHeadlightLeftOk = isNightOrOn && isOpen && damage.isHeadlightLeftOk;
     bool isHeadlightRightOk = isNightOrOn && isOpen && damage.isHeadlightRightOk;
 
@@ -270,6 +270,7 @@ void HeadlightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehL
         if (data.bLongLightsOn) {
             LightManager::RenderLights(pControlVeh, pTowedVeh, data, eMaterialType::HighBeamRight, true, "", LightsConfig::Get().headlightSz, isFoggy, true);
         }
+    }
     }
 }
 
