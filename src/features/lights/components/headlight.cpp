@@ -245,7 +245,7 @@ void HeadlightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehL
 
     bool isOpen = AreHeadlightsOpen(pControlVeh, data);
 
-    auto damage = LightDamageState::Get(pControlVeh, pTowedVeh);
+    auto damage = LightDamageState::Get(pControlVeh);
     bool isHeadlightLeftOk = isNightOrOn && isOpen && damage.isHeadlightLeftOk;
     bool isHeadlightRightOk = isNightOrOn && isOpen && damage.isHeadlightRightOk;
 
@@ -260,15 +260,15 @@ void HeadlightComponent::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehL
     bool highlight = isFoggy || data.bLongLightsOn;
 
     if (isHeadlightLeftOk) {
-        LightManager::RenderLights(pControlVeh, pTowedVeh, data, eMaterialType::HeadLightLeft, true, shadow ? texName : "", LightsConfig::Get().headlightSz, highlight, true);
+        LightManager::RenderLight(pControlVeh, data, eMaterialType::HeadLightLeft, true, shadow ? texName : "", LightsConfig::Get().headlightSz, highlight, true);
         if (data.bLongLightsOn) {
-            LightManager::RenderLights(pControlVeh, pTowedVeh, data, eMaterialType::HighBeamLeft, true, "", LightsConfig::Get().headlightSz, isFoggy, true);
+            LightManager::RenderLight(pControlVeh, data, eMaterialType::HighBeamLeft, true, "", LightsConfig::Get().headlightSz, isFoggy, true);
         }
     }
     if (isHeadlightRightOk) {
-        LightManager::RenderLights(pControlVeh, pTowedVeh, data, eMaterialType::HeadLightRight, true, shadow ? texName : "", LightsConfig::Get().headlightSz, highlight, true);
+        LightManager::RenderLight(pControlVeh, data, eMaterialType::HeadLightRight, true, shadow ? texName : "", LightsConfig::Get().headlightSz, highlight, true);
         if (data.bLongLightsOn) {
-            LightManager::RenderLights(pControlVeh, pTowedVeh, data, eMaterialType::HighBeamRight, true, "", LightsConfig::Get().headlightSz, isFoggy, true);
+            LightManager::RenderLight(pControlVeh, data, eMaterialType::HighBeamRight, true, "", LightsConfig::Get().headlightSz, isFoggy, true);
         }
     }
 }
