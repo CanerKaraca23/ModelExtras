@@ -508,6 +508,7 @@ void ExhaustFx::Reload(CVehicle* pVeh)
     }
     nReloadCount++;
 }
+
 void ExhaustFx::RefreshConfig(CVehicle *pVeh)
 {
     if (!pVeh || !pVeh->m_pRwClump) return;
