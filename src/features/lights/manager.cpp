@@ -6,6 +6,7 @@
 #include "utils/car.h"
 #include "utils/datamgr.h"
 #include "defines.h"
+#include "damage.h"
 #include "components/headlight.h"
 #include "components/indicator.h"
 #include "components/reverse_light.h"
@@ -187,7 +188,7 @@ void LightManager::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh) {
                         bool isBike = pVeh->m_nVehicleSubClass == VEHICLE_BIKE;
                         bool isDamaged = Util::IsFrameDamaged(pVeh, parent) || !FrameUtil::IsOkAtomicVisible(parent);
                         bool atomicCheck = !isBike && pVeh->GetIsOnScreen() && isDamaged;
-                        if (atomicCheck || (c.dummyPos == eDummyPos::Rear && pVeh->m_pTrailer)) continue;
+                        if (atomicCheck) continue;
 
                         float szMul = 1.0f;
                         if (type == eMaterialType::HeadLightLeft || type == eMaterialType::HeadLightRight) {
@@ -302,7 +303,7 @@ void LightManager::RenderLight(CVehicle* pVeh, VehLightData& data, eMaterialType
             }
             bool atomicCheck = !isBike && pVeh->GetIsOnScreen() && isDamaged;
 
-            if (atomicCheck || (c.dummyPos == eDummyPos::Rear && pVeh->m_pTrailer) || !isDummyOk) {
+            if (atomicCheck || !isDummyOk) {
                 continue;
             }
 
@@ -356,8 +357,30 @@ void LightManager::RenderLight(CVehicle* pVeh, VehLightData& data, eMaterialType
         }
     }
 
-    if (!isAvailable || hasActiveDummy) {
+    if ((!isAvailable || hasActiveDummy) && isDummyOk) {
         ModelInfoMgr::EnableMaterial(pVeh, type);
+    }
+}
+
+static bool IsTrailerCompatibleLight(eMaterialType type) {
+    switch (type) {
+        case eMaterialType::TailLightLeft:
+        case eMaterialType::TailLightRight:
+        case eMaterialType::BrakeLightLeft:
+        case eMaterialType::BrakeLightRight:
+        case eMaterialType::ReverseLightLeft:
+        case eMaterialType::ReverseLightRight:
+        case eMaterialType::IndicatorLightLeftRear:
+        case eMaterialType::IndicatorLightRightRear:
+        case eMaterialType::IndicatorLightLeftMiddle:
+        case eMaterialType::IndicatorLightRightMiddle:
+        case eMaterialType::STTLightLeft:
+        case eMaterialType::STTLightRight:
+        case eMaterialType::NABrakeLightLeft:
+        case eMaterialType::NABrakeLightRight:
+            return true;
+        default:
+            return false;
     }
 }
 
@@ -366,8 +389,37 @@ void LightManager::RenderLights(CVehicle* pControlVeh, CVehicle* pTowedVeh, VehL
         RenderLight(pControlVeh, data, type, isOn, texture, sz, highlight, isDummyOk, materialsOnly);
     }
 
-    if (pControlVeh != pTowedVeh && m_VehData.Get(pTowedVeh).bLightStates[type]) {
-        RenderLight(pTowedVeh, m_VehData.Get(pTowedVeh), type, isOn, texture, sz, highlight, isDummyOk, materialsOnly);
+    if (pControlVeh != pTowedVeh && IsTrailerCompatibleLight(type) && m_VehData.Get(pTowedVeh).bLightStates[type]) {
+        auto towedDamage = LightDamageState::Get(pTowedVeh);
+        bool isTowedOk = true;
+        switch (type) {
+            case eMaterialType::TailLightLeft:
+            case eMaterialType::BrakeLightLeft:
+            case eMaterialType::ReverseLightLeft:
+            case eMaterialType::IndicatorLightLeftRear:
+            case eMaterialType::STTLightLeft:
+            case eMaterialType::NABrakeLightLeft:
+                isTowedOk = towedDamage.isRearLeftOk;
+                break;
+            case eMaterialType::TailLightRight:
+            case eMaterialType::BrakeLightRight:
+            case eMaterialType::ReverseLightRight:
+            case eMaterialType::IndicatorLightRightRear:
+            case eMaterialType::STTLightRight:
+            case eMaterialType::NABrakeLightRight:
+                isTowedOk = towedDamage.isRearRightOk;
+                break;
+            case eMaterialType::IndicatorLightLeftMiddle:
+                isTowedOk = towedDamage.isMiddleLeftOk;
+                break;
+            case eMaterialType::IndicatorLightRightMiddle:
+                isTowedOk = towedDamage.isMiddleRightOk;
+                break;
+            default:
+                isTowedOk = true;
+                break;
+        }
+        RenderLight(pTowedVeh, m_VehData.Get(pTowedVeh), type, isOn, texture, sz, highlight, isTowedOk, materialsOnly);
     }
 }
 
