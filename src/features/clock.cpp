@@ -10,6 +10,21 @@ void DigitalClockFeature::Init()
     ModelInfoMgr::RegisterDummy([](CVehicle *pVeh, RwFrame *pFrame, const std::string_view nodeName)
     {
         if (!pVeh || !pFrame || !CBaseFeature::IsEnabled(eFeatureMatrix::Clock)) return;
+
+        if (nodeName == "hour" || nodeName == "clock_hour") {
+            ClockData &data = m_VehData.Get(pVeh);
+            CaptureState(pVeh, pFrame);
+            data.m_pHourHand = pFrame;
+            return;
+        }
+
+        if (nodeName == "minute" || nodeName == "clock_minute") {
+            ClockData &data = m_VehData.Get(pVeh);
+            CaptureState(pVeh, pFrame);
+            data.m_pMinuteHand = pFrame;
+            return;
+        }
+
         if (nodeName.starts_with("x_dclock")) {
             ClockData &data = m_VehData.Get(pVeh);
             data.m_pRootFrame = pFrame;
@@ -81,11 +96,26 @@ void DigitalClockFeature::Init()
         }
         ClockData &data = m_VehData.Get(pVeh);
 
-        if (!data.m_pDigitPos[0] || !data.m_pDigitPos[1] || !data.m_pDigitPos[2] || !data.m_pDigitPos[3])
-            return;
-
         int hour = CClock::ms_nGameClockHours;
         int min = CClock::ms_nGameClockMinutes;
+
+        // 1. Analog Clock Hands
+        if (data.m_pHourHand) {
+            float targetHourAngle = ((hour % 12) + min / 60.0f) * 30.0f;
+            float delta = targetHourAngle - data.curHourAngle;
+            FrameUtil::SetRotationY(data.m_pHourHand, delta);
+            data.curHourAngle = targetHourAngle;
+        }
+        if (data.m_pMinuteHand) {
+            float targetMinAngle = (min + CClock::ms_nGameClockSeconds / 60.0f) * 6.0f;
+            float delta = targetMinAngle - data.curMinAngle;
+            FrameUtil::SetRotationY(data.m_pMinuteHand, delta);
+            data.curMinAngle = targetMinAngle;
+        }
+
+        // 2. Digital Clock Digits
+        if (!data.m_pDigitPos[0] || !data.m_pDigitPos[1] || !data.m_pDigitPos[2] || !data.m_pDigitPos[3])
+            return;
 
         if (data.m_b12HourFormat)
         {
@@ -103,4 +133,18 @@ void DigitalClockFeature::Init()
         FrameUtil::HideAllAtomicsExcept(data.m_pDigitPos[2], abs(m1 - 9));
         FrameUtil::HideAllAtomicsExcept(data.m_pDigitPos[3], abs(m2 - 9));
     });
+}
+
+void DigitalClockFeature::OnToggle(CVehicle *vehicle, bool enabled)
+{
+    if (!vehicle) return;
+    ClockData &data = m_VehData.Get(vehicle);
+    if (data.m_pHourHand) {
+        FrameUtil::SetRotationY(data.m_pHourHand, -data.curHourAngle);
+        data.curHourAngle = 0.0f;
+    }
+    if (data.m_pMinuteHand) {
+        FrameUtil::SetRotationY(data.m_pMinuteHand, -data.curMinAngle);
+        data.curMinAngle = 0.0f;
+    }
 }

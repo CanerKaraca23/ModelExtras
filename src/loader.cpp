@@ -33,6 +33,19 @@
 #include "features/wheel.h"
 #include "features/neon.h"
 #include "features/rollbackbed.h"
+#include "features/cardan.h"
+#include "features/caliper.h"
+#include "features/springs.h"
+#include "features/powerwindows.h"
+#include "features/tipper.h"
+#include "features/crane.h"
+#include "features/articulated.h"
+#include "features/liftaxle.h"
+#include "features/cabtilt.h"
+#include "features/drivetrain.h"
+#include "features/trailer.h"
+#include "features/digitaldash.h"
+#include "utils/adconfig.h" 
 #include "utils/frameextension.h"
 #include "utils/meevents.h"
 #include "utils/samp.h"
@@ -52,6 +65,7 @@ void ModelExtras::ReloadConfig() {
 void ModelExtras::Init()
 {
     ReloadConfig();
+    ADConfig::Init();
     AudioMgr::Init();
     ModelInfoMgr::Init();
     RwFrameExtension::Init();
@@ -140,6 +154,19 @@ void ModelExtras::Init()
     RegisterFeature<Sirens>();
     RegisterFeature<SoundEffects>();
     RegisterFeature<SpotLights>();
+    RegisterFeature<CardanShaftFeature>();
+    RegisterFeature<BrakeCaliperFeature>();
+    RegisterFeature<SuspensionSpringsFeature>();
+    RegisterFeature<PowerWindowsFeature>();
+    RegisterFeature<TipperHydraulicsFeature>();
+    RegisterFeature<MobileCraneFeature>();
+    RegisterFeature<ArticulatedVehicleFeature>();
+    RegisterFeature<LiftAxleFeature>();
+    RegisterFeature<CabTiltFeature>();
+    RegisterFeature<DrivetrainTransferCaseFeature>();
+    RegisterFeature<TrailerHitchFeature>();
+    RegisterFeature<DigitalDashboardFeature>();
+    RegisterFeature<AuxGauges>();
     static std::vector<CBaseFeature *> s_ActiveTickFeatures;
     static std::vector<CBaseFeature *> s_ActiveVehicleFeatures;
 
@@ -191,6 +218,7 @@ void ModelExtras::Reload()
     Studio::PreserveRestartSettings();
     ReloadConfig();
     AudioMgr::ReloadConfig();
+    ADConfig::Reload();
     RenderUtil::ReloadConfig();
     LightsConfig::Get().InitConfig();
     ModelInfoMgr::ReloadConfig();

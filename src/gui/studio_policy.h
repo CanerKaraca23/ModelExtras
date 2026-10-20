@@ -17,7 +17,7 @@ inline const char *RestartReason(std::string_view section, std::string_view key)
         for (auto live : {"AnimatedGasMeter", "Carcols", "DashboardLED", "ExhaustFx", "Neon", "TextureRemapper", "PedCols", "BackfireEffect", "BackfireEffect_OnlySelectedModels"})
             if (key == live) return nullptr;
         for (auto animated : {"AnimatedChain", "AnimatedDoors", "AnimatedGearMeter", "AnimatedOdoMeter", "AnimatedRpmMeter",
-            "AnimatedSpeedMeter", "AnimatedSpoiler", "AnimatedTurboMeter", "ConvertibleRoof", "RollbackBed", "ExtraWheels", "RotatingWheelHubs"})
+            "AnimatedSpeedMeter", "AnimatedSpoiler", "AnimatedTurboMeter", "ConvertibleRoof", "RollbackBed", "ExtraWheels", "RotatingWheelHubs", "CardanShaft", "BrakeCaliper", "SuspensionSprings", "PowerWindows", "TipperHydraulics", "MobileCrane", "ArticulatedVehicle", "LiftAxle", "CabTilt", "DrivetrainTransferCase", "TrailerHitch", "DigitalDashboard", "AuxGauges"})
             if (key == animated) return nullptr;
     }
     if (section == "CONFIG") {
@@ -42,7 +42,7 @@ inline const char *RestartReason(std::string_view section, std::string_view key)
     }
     if (section == "KEYS") {
         for (auto live : {"FogLightKey", "IndicatorLightBothKey", "IndicatorLightLeftKey", "IndicatorLightRightKey", "IndicatorLightNoneKey",
-            "LongLightKey", "RollbackBedToggleKey", "RoofToggleKey", "SirenLightKey", "SpotLightKey", "ImGuiKey", "ImGuiKeyCombination"})
+            "LongLightKey", "RollbackBedToggleKey", "RoofToggleKey", "SirenLightKey", "SpotLightKey", "ImGuiKey", "ImGuiKeyCombination", "TrailerHitchKey", "DriveFWDKey", "DriveAWDKey", "DriveRWDKey", "DriveLowRangeKey", "LiftAxleToggleKey", "CargoDoorsToggleKey"})
             if (key == live) return nullptr;
     }
     if (section == "TABLE") {

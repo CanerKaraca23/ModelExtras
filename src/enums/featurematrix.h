@@ -49,5 +49,19 @@ enum class eFeatureMatrix
     ExtraWheels,
     Neon,
 
+    // Active Dashboard Additions
+    CardanShaft,
+    BrakeCaliper,
+    SuspensionSprings,
+    PowerWindows,
+    TipperHydraulics,
+    MobileCrane,
+    ArticulatedVehicle,
+    LiftAxle,
+    CabTilt,
+    DrivetrainTransferCase,
+    TrailerHitch,
+    DigitalDashboard,
+
     FeatureCount
 };

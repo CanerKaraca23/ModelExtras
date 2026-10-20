@@ -95,7 +95,7 @@ void ExhaustFx::FindNodes(CVehicle *pVeh, RwFrame *pFrame)
     if (pFrame)
     {
         std::string_view name = GetSafeFrameNodeName(pFrame);
-        if (name.starts_with(NODE_NAME))
+        if (name.starts_with(NODE_NAME) || name.contains("diesel") || name == "kara_duman")
         {
             auto &data = m_VehData.Get(pVeh);
             data.isUsed = true;
@@ -274,6 +274,11 @@ ExhaustData ExhaustFx::LoadData(CVehicle *pVeh, RwFrame *pFrame)
     f.bNitroEffect = true;
 
     auto &jsonData = DataMgr::Get(pVeh->m_nModelIndex);
+    if (f.sName.contains("diesel") || f.sName == "kara_duman") {
+        f.Color = {35, 35, 35, 230};
+        f.fSizeMul = 1.8f;
+        f.fLifeTime = 1.4f;
+    }
     if (jsonData.contains("exhausts") && jsonData["exhausts"].contains(f.sName))
     {
         auto &data = jsonData["exhausts"][f.sName];

@@ -3,9 +3,9 @@ name: Build ModelExtras
 
 on:
   push:
-    branches: [main, test]
+    branches: [main, test, feat/active-dashboard-replacement]
   pull_request:
-    branches: [main, test]
+    branches: [main, test, feat/active-dashboard-replacement]
   workflow_dispatch:
     inputs:
       build_type:

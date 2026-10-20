@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "lights.h"
 #include "manager.h"
+#include "components/ad_light_meshes.h"
 #include "utils/meevents.h"
 #include "utils/datamgr.h"
 #include "ModelExtrasAPI.h"
@@ -87,6 +88,7 @@ void Lights::Init() {
 
 	ModelInfoMgr::RegisterDummy([](CVehicle *pVeh, RwFrame *pFrame, const std::string_view nodeName) {
         LightManager::RegisterDummy(pVeh, pFrame, nodeName);
+        ADLightMeshesManager::RegisterNode(pVeh, pFrame, nodeName);
     });
 
 	ModelInfoMgr::RegisterReset([](CVehicle *pVeh) {
@@ -120,6 +122,10 @@ void Lights::Init() {
 		}
 
 		LightManager::Render(pControlVeh, pTowedVeh);
+		ADLightMeshesManager::Update(pControlVeh);
+		if (pTowedVeh != pControlVeh) {
+			ADLightMeshesManager::Update(pTowedVeh);
+		}
 	});
 }
 

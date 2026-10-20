@@ -35,7 +35,7 @@ struct MileageIndicatorData {
   double dCurrentDistance = 0.0;
   float fLastWheelRot = 0.0f;
   std::vector<RwFrame *> vecFrameList;
-  int lastDigits[6] = {-1, -1, -1, -1, -1, -1};
+  int lastDigits[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
   float fMul = 160.9f;
 };
 
@@ -65,6 +65,7 @@ struct RPMGaugeData {
   int iPrevGear = -1;
   float fCurRotation = 0.0f;
   float fMaxRotation = 260.0f;
+  bool bReverse = false;
 };
 
 struct VehRPMData
@@ -93,6 +94,7 @@ struct SpeedGaugeData {
   float fMul = 1.0f;
   float fCurRotation = 0.0f;
   float fMaxRotation = 260.0f;
+  bool bReverse = false;
 };
 
 struct VehSpeedData
@@ -162,4 +164,40 @@ protected:
 
 public:
   FixedGauge() : CVehFeature<VehFixedGaugeData>("AnimatedGasMeter", "FEATURES", eFeatureMatrix::AnimatedGasMeter) {}
+};
+
+enum class eAuxGaugeType {
+    Oil,
+    Temperature,
+    Volts,
+    Ampers
+};
+
+struct AuxGaugeEntry {
+    RwFrame *frame = nullptr;
+    eAuxGaugeType type = eAuxGaugeType::Oil;
+    float curRotation = 0.0f;
+    float maxRotation = 90.0f;
+    float mul = 1.0f;
+    bool isReverse = false;
+};
+
+struct VehAuxGaugeData {
+    FeatureFrameState frameState;
+    std::vector<AuxGaugeEntry> gauges;
+    float engineTemp = 40.0f;
+    bool bInitialized = false;
+
+    VehAuxGaugeData(CVehicle *) {}
+    ~VehAuxGaugeData() {}
+};
+
+class AuxGauges : public CVehFeature<VehAuxGaugeData>
+{
+protected:
+    void OnToggle(CVehicle *vehicle, bool enabled) override;
+    void Init() override;
+
+public:
+    AuxGauges() : CVehFeature<VehAuxGaugeData>("AuxGauges", "FEATURES", eFeatureMatrix::AnimatedGasMeter) {}
 };

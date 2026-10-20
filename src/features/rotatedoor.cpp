@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "rotatedoor.h"
+#include "utils/adconfig.h"
 #include "utils/datamgr.h"
+#include "utils/inputmgr.h"
 #include "utils/modelinfomgr.h"
 
 void RotateDoor::UpdateSingleFrame(CVehicle* pVeh, RotateDoorConfig& config, eDoors doorID, bool isBootBonnet)
@@ -39,8 +41,14 @@ void RotateDoor::Init()
 {
     ModelInfoMgr::RegisterDummy([](CVehicle* pVeh, RwFrame* pFrame, const std::string_view name)
     {
-        if (!name.starts_with("x_rd_")) return;
+        if (!name.starts_with("x_rd_") && !name.starts_with("doorbuda_")) return;
         if (!pVeh || !pFrame) return;
+
+        // If dummy has child, use child frame
+        if (name.ends_with("_dummy") && pFrame->child) {
+            pFrame = pFrame->child;
+        }
+
         CaptureState(pVeh, pFrame);
 
         auto& jsonData = DataMgr::Get(pVeh->m_nModelIndex);
@@ -60,8 +68,8 @@ void RotateDoor::Init()
 
         if (name.starts_with("x_rd_lf"))      data.leftFront.push_back(cfg);
         else if (name.starts_with("x_rd_rf")) data.rightFront.push_back(cfg);
-        else if (name.starts_with("x_rd_lr")) data.leftRear.push_back(cfg);
-        else if (name.starts_with("x_rd_rr")) data.rightRear.push_back(cfg);
+        else if (name.starts_with("x_rd_lr") || name.starts_with("doorbuda_lr")) data.leftRear.push_back(cfg);
+        else if (name.starts_with("x_rd_rr") || name.starts_with("doorbuda_rr")) data.rightRear.push_back(cfg);
         else if (name.starts_with("x_rd_boot"))   data.boot.push_back(cfg);
         else if (name.starts_with("x_rd_bonnet")) data.bonnet.push_back(cfg);
     });
@@ -73,6 +81,26 @@ void RotateDoor::Init()
 
         RotateDoorData& data = m_VehData.Get(pVeh);
 
+        // Player toggle key for cargo box doors
+        if (!data.leftRear.empty() || !data.rightRear.empty()) {
+            bool canToggle = false;
+            CVehicle *playerVeh = FindPlayerVehicle(-1, false);
+            if (playerVeh == pVeh) {
+                canToggle = true;
+            } else if (!playerVeh && FindPlayerPed()) {
+                if ((FindPlayerPed()->GetPosition() - pVeh->GetPosition()).Magnitude() < 5.0f) {
+                    canToggle = true;
+                }
+            }
+
+            if (canToggle && InputMgr::IsKeyJustDown(ADConfig::Keys().keyCargoDoorsToggle)) {
+                float curRatio = pVeh->GetDooorAngleOpenRatio(DOOR_REAR_LEFT);
+                float target = (curRatio > 0.5f) ? 0.0f : 1.0f;
+                pVeh->OpenDoor(nullptr, 0, DOOR_REAR_LEFT, target, true);
+                pVeh->OpenDoor(nullptr, 0, DOOR_REAR_RIGHT, target, true);
+            }
+        }
+
         UpdateDoorGroup(pVeh, data.leftFront,  DOOR_FRONT_LEFT,  false);
         UpdateDoorGroup(pVeh, data.rightFront, DOOR_FRONT_RIGHT, false);
         UpdateDoorGroup(pVeh, data.leftRear,   DOOR_REAR_LEFT,   false);
@@ -81,6 +109,7 @@ void RotateDoor::Init()
         UpdateDoorGroup(pVeh, data.bonnet,     BONNET,           true);
     });
 }
+
 void RotateDoor::OnToggle(CVehicle *vehicle, bool enabled) {
     if (enabled) return;
     auto &data = m_VehData.Get(vehicle);
