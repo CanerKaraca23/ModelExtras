@@ -195,7 +195,7 @@ void LightManager::Render(CVehicle* pControlVeh, CVehicle* pTowedVeh) {
                         RwFrame *parent = RwFrameGetParent(dummy->Get().frame);
                         bool isBike = pVeh->m_nVehicleSubClass == VEHICLE_BIKE;
                         bool isDamaged = Util::IsFrameDamaged(pVeh, parent) || !FrameUtil::IsOkAtomicVisible(parent);
-                        bool atomicCheck = !isBike && pVeh->GetIsOnScreen() && type != eMaterialType::HeadLightLeft && type != eMaterialType::HeadLightRight && isDamaged;
+                        bool atomicCheck = !isBike && pVeh->GetIsOnScreen() && isDamaged;
                         if (atomicCheck) continue;
 
                         float szMul = 1.0f;
