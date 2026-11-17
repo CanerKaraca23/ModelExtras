@@ -27,7 +27,7 @@ inline const char *RestartReason(std::string_view section, std::string_view key)
     if (section == "LIGHTS") {
         if (key == "SpotLights") return nullptr;
         for (auto live : {"LightCoronas", "LightShadows", "LightPointLights", "HeadLightBeams", "SirenPointLights", "AutoIndicatorsOnSteer",
-            "GlobalIndicatorLights", "PlayerIdleBrakeLights",
+            "GlobalIndicatorLights", "PlayerIdleBrakeLights", "FoglightTiedToHeadlight", "LightsRequireEngine", "SirensRequireEngine",
             "HeadLightCoronaDistanceMul", "TailLightCoronaDistanceMul", "LightCoronaDistanceMul", "LightShadowDistance",
             "LightPointLightIntensity", "LightPointLightSizeMul", "LightPointLightOffsetMul",
             "SirenCoronas", "SirenCoronaDistanceMul", "SirenShadows",
