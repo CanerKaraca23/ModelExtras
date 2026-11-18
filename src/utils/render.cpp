@@ -436,21 +436,36 @@ void RenderUtil::RegisterCoronaDirectional(const DummyConfig *pConfig, float ang
             targetAngle += 180.0f;
         }
 
-        float vehicleAngle = Util::NormalizeAngle(static_cast<float>(Util::RadToDeg(pConfig->pVeh->GetHeading())));
-        float cameraAngle = Util::NormalizeAngle(static_cast<float>(Util::RadToDeg(TheCamera.GetHeading())));
-        float dummyAngle = Util::NormalizeAngle(vehicleAngle + targetAngle);
-        float diffAngle = Util::NormalizeAngle(cameraAngle - dummyAngle);
-        float cutoff = (radius / 2.0f);
-        float angleFromCenter = std::fabs(diffAngle - 180.0f);
-
-        if (angleFromCenter >= cutoff)
+        if (radius <= 0.0f)
         {
             return;
         }
 
-        // Smooth cosine falloff from 1.0 at center facing camera to 0.0 at cutoff edge
-        float normAngle = (angleFromCenter / cutoff) * 1.57079632679f; // PI / 2
-        float angleMul = std::cos(normAngle);
+        // Visibility is a 3D cone around the lamp, tested against the camera position
+        // rather than the camera's view heading, mirroring vanilla DoLightEffectImpl.
+        // A light only shows when the camera actually stands in front of it, so a
+        // headlight corona can no longer bleed through the body when seen from behind,
+        // and vehicle axes keep the test correct on ramps and while the car rolls.
+        const CMatrix &vehMat = pConfig->pVeh->GetMatrix();
+        const float yawRad = DegToRad(targetAngle);
+        const CVector emitDir = vehMat.up * std::cos(yawRad) + vehMat.right * std::sin(yawRad);
+
+        CVector toCam = TheCamera.GetPosition() - GetDummyWorldPosition(pConfig);
+        if (toCam.NormalizeAndMag() < 1e-4f)
+        {
+            return;
+        }
+
+        // radius is the full cone opening in degrees (180 = front hemisphere, 360 = all around)
+        const float cosLimit = std::cos(DegToRad(std::clamp(radius, 0.0f, 360.0f) * 0.5f));
+        const float cosAngle = CVector::Dot(emitDir, toCam);
+        if (cosAngle <= cosLimit)
+        {
+            return;
+        }
+
+        // Linear falloff in cos, like vanilla: full when face-on, gone at the cone edge
+        float angleMul = std::clamp((cosAngle - cosLimit) / (1.0f - cosLimit), 0.0f, 1.0f);
         col.a = static_cast<unsigned char>(col.a * angleMul);
     }
 
