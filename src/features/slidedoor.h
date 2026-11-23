@@ -5,6 +5,7 @@
 
 struct SlideDoorConfig {
         RwFrame* frame = nullptr;
+        RwV3d origPos{};
         float mul = 1.0f;
         float popOutAmount = 0.2f;
     };

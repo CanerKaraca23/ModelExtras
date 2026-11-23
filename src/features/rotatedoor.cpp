@@ -12,14 +12,14 @@ void RotateDoor::UpdateSingleFrame(CVehicle* pVeh, RotateDoorConfig& config, eDo
 
     if (isBootBonnet) {
         // Boot/Bonnet Logic (Z-Translation, X-Rotation)
-        config.frame->modelling.pos.z = popFactor * config.popOutAmount;
+        config.frame->modelling.pos.z = config.origPos.z + (popFactor * config.popOutAmount);
         float targetRot = ratio * config.mul * 45.0f;
         MatrixUtil::SetRotationXAbsolute(&config.frame->modelling, targetRot - config.prevRot);
         config.prevRot = targetRot;
     } else {
         // Side Door Logic (X-Translation, Z-Rotation)
         float sideMult = (doorID == DOOR_FRONT_LEFT || doorID == DOOR_REAR_LEFT) ? 1.0f : -1.0f;
-        config.frame->modelling.pos.x = popFactor * config.popOutAmount * sideMult;
+        config.frame->modelling.pos.x = config.origPos.x + (popFactor * config.popOutAmount * sideMult);
         float targetRot = ratio * config.mul * 90.0f * sideMult;
         MatrixUtil::SetRotationZAbsolute(&config.frame->modelling, targetRot - config.prevRot);
         config.prevRot = targetRot;
@@ -52,11 +52,11 @@ void RotateDoor::Init()
 
         if (jsonData.contains("doors") && jsonData["doors"].contains(nameStr)) {
             mul = jsonData["doors"][nameStr].value("mul", 1.0f);
-            popOutAmount = jsonData["doors"][nameStr].value("popout", 0.15f);
+            popOutAmount = jsonData["doors"][nameStr].value("popout", 0.0f);
         }
 
         float orgRot = static_cast<float>(MatrixUtil::GetRotationZ(&pFrame->modelling));
-        RotateDoorConfig cfg = { pFrame, orgRot, mul, popOutAmount };
+        RotateDoorConfig cfg = { pFrame, pFrame->modelling.pos, orgRot, mul, popOutAmount };
 
         if (name.starts_with("x_rd_lf"))      data.leftFront.push_back(cfg);
         else if (name.starts_with("x_rd_rf")) data.rightFront.push_back(cfg);

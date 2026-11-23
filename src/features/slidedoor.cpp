@@ -18,10 +18,10 @@ void SlideDoor::UpdateDoorGroup(CVehicle *pVeh, std::vector<SlideDoorConfig> &co
             continue;
 
         // Sliding movement (Y axis)
-        config.frame->modelling.pos.y = config.mul * ratio * -1.0f;
+        config.frame->modelling.pos.y = config.origPos.y + (config.mul * ratio * -1.0f);
 
         // Pop-out movement (X axis)
-        config.frame->modelling.pos.x = popFactor * config.popOutAmount * sideMult;
+        config.frame->modelling.pos.x = config.origPos.x + (popFactor * config.popOutAmount * sideMult);
 
         RwMatrixUpdate(&config.frame->modelling);
     }
@@ -52,7 +52,7 @@ void SlideDoor::Init()
             popOutAmount = jsonData["doors"][name].value("popout", 0.15f);
         }
 
-        SlideDoorConfig cfg = { pFrame, mul, popOutAmount };
+        SlideDoorConfig cfg = { pFrame, pFrame->modelling.pos, mul, popOutAmount };
 
         if (isLF)      data.leftFront.push_back(cfg);
         else if (isRF) data.rightFront.push_back(cfg);
