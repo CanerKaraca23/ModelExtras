@@ -2,6 +2,7 @@
 #include "headlight.h"
 #include "utils/util.h"
 #include "utils/car.h"
+#include "utils/samp.h"
 #include "utils/audiomgr.h"
 #include "utils/render.h"
 #include "../damage.h"
@@ -163,6 +164,7 @@ void HeadlightComponent::Process(CVehicle* pVeh, VehLightData& data) {
     bool isAlarmActive = pVeh->m_nAlarmState != 0 && pVeh->m_nAlarmState != 0xFFFF;
     bool isAlarmLightOn = isAlarmActive && ((pVeh->m_nAlarmState & 0x100) != 0);
 
+    static const bool bSAMP = SAMP::IsPresent();
     bool isNight = Util::IsNightTime() && !CarUtil::IsEngineOff(pVeh);
     bool isForcedOn = CarUtil::IsLightsForcedOn(pVeh);
     bool isForcedOff = CarUtil::IsLightsForcedOff(pVeh);
@@ -175,12 +177,18 @@ void HeadlightComponent::Process(CVehicle* pVeh, VehLightData& data) {
         } else if (isForcedOn) {
             pVeh->bLightsOn = true;
             data.bAutoNightLights = false;
-        } else if (isNight) {
-            pVeh->bLightsOn = true;
-            data.bAutoNightLights = true;
-        } else if (data.bAutoNightLights) {
-            pVeh->bLightsOn = false;
-            data.bAutoNightLights = false;
+        } else if (!bSAMP) {
+            // In SA-MP, server sync owns bLightsOn without setting m_nOverrideLights,
+            // so auto-toggling it would wipe forced lights during brief engine dips on enter/exit at night.
+            if (isNight) {
+                if (!pVeh->bLightsOn) {
+                    pVeh->bLightsOn = true;
+                    data.bAutoNightLights = true;
+                }
+            } else if (data.bAutoNightLights) {
+                pVeh->bLightsOn = false;
+                data.bAutoNightLights = false;
+            }
         }
     }
 
