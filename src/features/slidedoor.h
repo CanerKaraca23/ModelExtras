@@ -7,7 +7,8 @@ struct SlideDoorConfig {
         RwFrame* frame = nullptr;
         RwV3d origPos{};
         float mul = 1.0f;
-        float popOutAmount = 0.2f;
+        float popOutAmount = 0.15f;
+        DoorDamageState damage;
     };
 
 struct SlideDoorData {
@@ -23,6 +24,7 @@ struct SlideDoorData {
 class SlideDoor : public CVehFeature<SlideDoorData>
 {
 protected:
+    void OnToggle(CVehicle *vehicle, bool enabled) override;
     void Init() override;
     
 

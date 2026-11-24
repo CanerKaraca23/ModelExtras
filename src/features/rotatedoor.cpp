@@ -7,6 +7,8 @@ void RotateDoor::UpdateSingleFrame(CVehicle* pVeh, RotateDoorConfig& config, eDo
 {
     if (!config.frame) return;
 
+    CarUtil::SyncDoorDamageVisibility(pVeh, config.frame, doorID, config.damage);
+
     float ratio = pVeh->GetDooorAngleOpenRatio(doorID);
     float popFactor = std::min(1.0f, ratio * 5.0f);
 
@@ -41,10 +43,21 @@ void RotateDoor::Init()
     {
         if (!name.starts_with("x_rd_")) return;
         if (!pVeh || !pFrame) return;
-        CaptureState(pVeh, pFrame);
 
-        auto& jsonData = DataMgr::Get(pVeh->m_nModelIndex);
         RotateDoorData& data = m_VehData.Get(pVeh);
+        std::vector<RotateDoorConfig>* group = nullptr;
+        eDoors doorID = DOOR_FRONT_LEFT;
+
+        if      (name.starts_with("x_rd_lf"))     { group = &data.leftFront;  doorID = DOOR_FRONT_LEFT; }
+        else if (name.starts_with("x_rd_rf"))     { group = &data.rightFront; doorID = DOOR_FRONT_RIGHT; }
+        else if (name.starts_with("x_rd_lr"))     { group = &data.leftRear;   doorID = DOOR_REAR_LEFT; }
+        else if (name.starts_with("x_rd_rr"))     { group = &data.rightRear;  doorID = DOOR_REAR_RIGHT; }
+        else if (name.starts_with("x_rd_boot"))   { group = &data.boot;       doorID = BOOT; }
+        else if (name.starts_with("x_rd_bonnet")) { group = &data.bonnet;     doorID = BONNET; }
+        if (!group) return;
+
+        CaptureState(pVeh, pFrame);
+        auto& jsonData = DataMgr::Get(pVeh->m_nModelIndex);
 
         float mul = 1.0f;
         float popOutAmount = 0.0f;
@@ -55,15 +68,9 @@ void RotateDoor::Init()
             popOutAmount = jsonData["doors"][nameStr].value("popout", 0.0f);
         }
 
-        float orgRot = static_cast<float>(MatrixUtil::GetRotationZ(&pFrame->modelling));
-        RotateDoorConfig cfg = { pFrame, pFrame->modelling.pos, orgRot, mul, popOutAmount };
-
-        if (name.starts_with("x_rd_lf"))      data.leftFront.push_back(cfg);
-        else if (name.starts_with("x_rd_rf")) data.rightFront.push_back(cfg);
-        else if (name.starts_with("x_rd_lr")) data.leftRear.push_back(cfg);
-        else if (name.starts_with("x_rd_rr")) data.rightRear.push_back(cfg);
-        else if (name.starts_with("x_rd_boot"))   data.boot.push_back(cfg);
-        else if (name.starts_with("x_rd_bonnet")) data.bonnet.push_back(cfg);
+        RotateDoorConfig cfg = { pFrame, pFrame->modelling.pos, mul, popOutAmount };
+        CarUtil::InitDoorDamageState(pVeh, pFrame, doorID, cfg.damage);
+        group->push_back(cfg);
     });
 
     ModelInfoMgr::RegisterRender([](CVehicle* pVeh)
@@ -85,5 +92,8 @@ void RotateDoor::OnToggle(CVehicle *vehicle, bool enabled) {
     if (enabled) return;
     auto &data = m_VehData.Get(vehicle);
     for (auto *group : {&data.leftFront, &data.rightFront, &data.leftRear, &data.rightRear, &data.boot, &data.bonnet})
-        for (auto &e : *group) e.prevRot = 0.0f;
+        for (auto &e : *group) {
+            e.prevRot = 0.0f;
+            e.damage.prevStatus = 0xFF;
+        }
 }

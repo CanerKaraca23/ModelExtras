@@ -6,10 +6,10 @@
 struct RotateDoorConfig {
         RwFrame* frame = nullptr;
         RwV3d origPos{};
-        float originalRot = 0.0f;
         float mul = 1.0f;
         float popOutAmount = 0.0f;
         float prevRot = 0.0f;
+        DoorDamageState damage;
     };
 
 struct RotateDoorData {

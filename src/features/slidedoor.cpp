@@ -17,6 +17,8 @@ void SlideDoor::UpdateDoorGroup(CVehicle *pVeh, std::vector<SlideDoorConfig> &co
         if (!config.frame)
             continue;
 
+        CarUtil::SyncDoorDamageVisibility(pVeh, config.frame, doorID, config.damage);
+
         // Sliding movement (Y axis)
         config.frame->modelling.pos.y = config.origPos.y + (config.mul * ratio * -1.0f);
 
@@ -52,12 +54,16 @@ void SlideDoor::Init()
             popOutAmount = jsonData["doors"][name].value("popout", 0.15f);
         }
 
-        SlideDoorConfig cfg = { pFrame, pFrame->modelling.pos, mul, popOutAmount };
+        std::vector<SlideDoorConfig>* group = nullptr;
+        eDoors doorID = eDoors::DOOR_FRONT_LEFT;
+        if      (isLF) { group = &data.leftFront;  doorID = eDoors::DOOR_FRONT_LEFT; }
+        else if (isRF) { group = &data.rightFront; doorID = eDoors::DOOR_FRONT_RIGHT; }
+        else if (isLR) { group = &data.leftRear;   doorID = eDoors::DOOR_REAR_LEFT; }
+        else if (isRR) { group = &data.rightRear;  doorID = eDoors::DOOR_REAR_RIGHT; }
 
-        if (isLF)      data.leftFront.push_back(cfg);
-        else if (isRF) data.rightFront.push_back(cfg);
-        else if (isLR) data.leftRear.push_back(cfg);
-        else if (isRR) data.rightRear.push_back(cfg);
+        SlideDoorConfig cfg = { pFrame, pFrame->modelling.pos, mul, popOutAmount };
+        CarUtil::InitDoorDamageState(pVeh, pFrame, doorID, cfg.damage);
+        group->push_back(cfg);
     });
 
     ModelInfoMgr::RegisterRender([](CVehicle *pVeh)
@@ -70,4 +76,11 @@ void SlideDoor::Init()
         UpdateDoorGroup(pVeh, data.rightFront, eDoors::DOOR_FRONT_RIGHT);
         UpdateDoorGroup(pVeh, data.leftRear,   eDoors::DOOR_REAR_LEFT);
         UpdateDoorGroup(pVeh, data.rightRear,  eDoors::DOOR_REAR_RIGHT); });
+}
+
+void SlideDoor::OnToggle(CVehicle *vehicle, bool enabled) {
+    if (enabled) return;
+    auto &data = m_VehData.Get(vehicle);
+    for (auto *group : {&data.leftFront, &data.rightFront, &data.leftRear, &data.rightRear})
+        for (auto &e : *group) e.damage.prevStatus = 0xFF;
 }

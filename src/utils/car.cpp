@@ -11,8 +11,60 @@
 #include <CColModel.h>
 #include <CBike.h>
 #include <CAutomobile.h>
+#include <CVisibilityPlugins.h>
 #include <cmath>
 #include <algorithm>
+
+static constexpr bool HasAutomobileDamage(const CVehicle *pVeh) noexcept {
+    if (!pVeh) return false;
+    switch (pVeh->m_nVehicleSubClass) {
+        case VEHICLE_AUTOMOBILE:
+        case VEHICLE_MTRUCK:
+        case VEHICLE_QUAD:
+        case VEHICLE_HELI:
+        case VEHICLE_PLANE:
+        case VEHICLE_TRAILER:
+            return true;
+        default:
+            return false;
+    }
+}
+
+static constexpr int GetCarNodeIndexForDoor(eDoors doorID) noexcept {
+    switch (doorID) {
+        case eDoors::BONNET:           return eCarNodes::CAR_BONNET;
+        case eDoors::BOOT:             return eCarNodes::CAR_BOOT;
+        case eDoors::DOOR_FRONT_LEFT:  return eCarNodes::CAR_DOOR_LF;
+        case eDoors::DOOR_FRONT_RIGHT: return eCarNodes::CAR_DOOR_RF;
+        case eDoors::DOOR_REAR_LEFT:   return eCarNodes::CAR_DOOR_LR;
+        case eDoors::DOOR_REAR_RIGHT:  return eCarNodes::CAR_DOOR_RR;
+        default:                       return -1;
+    }
+}
+
+static void ScanDoorDamageFlags(RwFrame *pFrame, DoorDamageState &state) {
+    if (!pFrame) return;
+    RwFrameForAllObjects(pFrame, [](RwObject *obj, void *data) -> RwObject * {
+        if (RwObjectGetType(obj) == rpATOMIC) {
+            auto flags = static_cast<uint16_t>(CVisibilityPlugins::GetUserValue(reinterpret_cast<RpAtomic *>(obj)));
+            auto *s = static_cast<DoorDamageState *>(data);
+            if (flags & 0x1) s->hasOk = true;  // ATOMIC_OK
+            if (flags & 0x2) s->hasDam = true; // ATOMIC_DAMAGED
+        }
+        return obj;
+    }, &state);
+    for (RwFrame *child = pFrame->child; child; child = child->next) {
+        ScanDoorDamageFlags(child, state);
+    }
+}
+
+static void SetDoorVisibilityRecursive(CVehicle *pVeh, RwFrame *pFrame, uint32_t state) {
+    if (!pFrame) return;
+    pVeh->SetComponentVisibility(pFrame, state);
+    for (RwFrame *child = pFrame->child; child; child = child->next) {
+        SetDoorVisibilityRecursive(pVeh, child, state);
+    }
+}
 
 bool CarUtil::IsLightsForcedOn(CVehicle *pVeh)
 {
@@ -94,6 +146,49 @@ bool CarUtil::IsDoorDamaged(CVehicle *pVeh, eDoors door) {
     }
 
     return pAutoMobile->m_damageManager.GetDoorStatus(door);
+}
+
+void CarUtil::InitDoorDamageState(CVehicle *pVeh, RwFrame *pFrame, eDoors doorID, DoorDamageState &state) {
+    state = {};
+    if (!pVeh || !pFrame) return;
+
+    ScanDoorDamageFlags(pFrame, state);
+    if (!state.hasOk && !state.hasDam) return;
+
+    if (pVeh->m_nVehicleSubClass != VEHICLE_AUTOMOBILE &&
+        pVeh->m_nVehicleSubClass != VEHICLE_MTRUCK &&
+        pVeh->m_nVehicleSubClass != VEHICLE_QUAD &&
+        pVeh->m_nVehicleSubClass != VEHICLE_TRAILER) {
+        return;
+    }
+
+    int nodeIdx = GetCarNodeIndexForDoor(doorID);
+    if (nodeIdx < 0) return;
+
+    // Moving _ok/_dam out of native door dummies prevents PreprocessHierarchy from marking the door damageable.
+    if (auto *pInfo = static_cast<CVehicleModelInfo *>(GetSafeModelInfo(pVeh->m_nModelIndex))) {
+        if (pInfo->m_pVehicleStruct) {
+            pInfo->m_pVehicleStruct->m_nMaskComponentsDamagable |= (1u << nodeIdx);
+        }
+    }
+}
+
+void CarUtil::SyncDoorDamageVisibility(CVehicle *pVeh, RwFrame *pFrame, eDoors doorID, DoorDamageState &state) {
+    if (!pVeh || !pFrame || (!state.hasOk && !state.hasDam) || !HasAutomobileDamage(pVeh)) return;
+
+    uint8_t status = static_cast<uint8_t>(static_cast<CAutomobile *>(pVeh)->m_damageManager.GetDoorStatus(doorID));
+    if (status == state.prevStatus) return;
+    state.prevStatus = status;
+
+    uint32_t targetVisibility = 0; // ATOMIC_NONE
+    if (status == eDamageState::DAMSTATE_OK || status == eDamageState::DAMSTATE_OPENED) {
+        targetVisibility = state.hasOk ? 1u : 0u; // ATOMIC_OK
+    } else if (status == eDamageState::DAMSTATE_DAMAGED || status == eDamageState::DAMSTATE_OPENED_DAMAGED) {
+        // Keep intact mesh visible on vehicles that move _ok without a _dam counterpart.
+        targetVisibility = state.hasDam ? 2u : (state.hasOk ? 1u : 0u);
+    }
+
+    SetDoorVisibilityRecursive(pVeh, pFrame, targetVisibility);
 }
 
 bool CarUtil::IsPanelDamaged(CVehicle *pVeh, ePanels panel) {
